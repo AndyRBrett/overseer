@@ -1,58 +1,73 @@
 {
-  "generated": "2026-06-19T17:35:49Z",
+  "generated": "2026-06-19T18:24:30Z",
   "status": "completed",
-  "summary": "WEEKLY REVIEW \u2014 3 projects\n\nISSUES FOUND\n- None confirmed. No bugs filed.\n- crypto-trading: log read returned not_configured (TRADING_DB_PATH unset) \u2014 monitoring is blind, but this is a setup gap, not a confirmed failure, so no issue filed.\n- volleyball: results read returned not_configured (VOLLEYBALL_RESULTS_PATH unset) \u2014 same situation, no issue filed.\n- ufc-dashboard: HEALTHY \u2014 50/50 runs succeeded this week (100%), no last error, data fresh.\n\nENHANCEMENT IDEAS (ranked by effort/impact)\n1. [crypto-trading #15] Add TRADING_DB_PATH config + healthcheck.py \u2014 LOW effort / HIGH impact. Document the env var in .env.example and add a script asserting the SQLite DB exists and has a recent fill, so silent failures (CCXT auth expiry, zero fills) don't go unnoticed for a week. Unblocks all future reviews.\n2. [volleyball #1] Emit structured results.json at VOLLEYBALL_RESULTS_PATH \u2014 LOW effort / HIGH impact. Serialize already-computed metrics (ball-detection rate, failed/dropped frames, frames processed, model version) per run to enable regression tracking.\n3. [ufc-dashboard #9] Snapshot odds per run + compute opening-vs-current deltas \u2014 LOW effort / MEDIUM impact. Persist timestamped odds rows instead of overwriting, then derive line-movement deltas to flag steam moves. Purely additive; project is otherwise healthy.\n\nNote: two of three read tools are not_configured, so the top priority this week is wiring up logging/metrics paths (#15, #1) so future reviews have real data to inspect.",
+  "summary": "WEEKLY OVERSEER REVIEW\n\nISSUES FOUND\n- None confirmed this week. No failures or errors to file.\n- Note (not bugs): Trading bot (crypto-trading) and Volleyball pipeline both returned not_configured \u2014 TRADING_DB_PATH and VOLLEYBALL_RESULTS_PATH are unset, so neither could be reviewed. No issues filed against unconfigured projects; see enhancements to restore visibility.\n\nSTATUS\n- UFC scraper: healthy \u2014 50/50 runs over 7d (100%), no last error.\n- Overseer (self): run succeeded (1/1), but blind on 2/3 projects this cycle \u2014 see self-review enhancement.\n- Trading bot: NOT CONFIGURED (no data path).\n- Volleyball: NOT CONFIGURED (no data path).\n\nENHANCEMENT IDEAS\n- crypto-trading #16 [low/high]: Pin trade log to a documented default TRADING_DB_PATH and write it every run (even zero fills) so P&L/win-rate are observable; today the highest-value bot has zero monitoring.\n- volleyball #2 [low/high]: Always emit results JSON to VOLLEYBALL_RESULTS_PATH, including {\"footage_processed\":0} on idle weeks, to distinguish \"idle\" from \"broken.\"\n- ufc-dashboard #10 [low/high]: Add a freshness assertion separate from scrape success \u2014 flag when consecutive successful runs return identical odds timestamps/event hash for >N hours, to catch silently frozen upstream data.\n- overseer #1 [low/high]: Treat not_configured/error reads as WARN blind-spots, not silent passes. Track per-project last-successful-read, show a BLIND badge, and notify when a project is blind >1 cycle. This week 2/3 projects were unreadable while self-status showed 100% \u2014 dangerous green.\n- overseer #2 [medium/medium]: Add unit tests for read-tool parsing and digest assembly (ok/not_configured/error fixtures per tool) so a schema change can't silently skip a project.",
   "counts": {
-    "tools": 7,
+    "tools": 10,
     "errors": 0,
     "issues": 0,
-    "enhancements": 3
+    "enhancements": 5
   },
   "timeline": [
     {
-      "ts": "17:34:54",
+      "ts": "18:23:11",
       "label": "reasoning",
-      "text": "I'll start by reading through all three project logs to get a complete picture."
+      "text": "I'll start by reading all the statuses together since they're independent operations."
     },
     {
-      "ts": "17:34:54",
+      "ts": "18:23:11",
       "label": "read_trading_bot_log (investigate)",
-      "text": "{\"status\": \"not_configured\", \"detail\": \"Set TRADING_DB_PATH to your SQLite trade log.\"}"
+      "text": "not_configured \u2014 Set TRADING_DB_PATH to your SQLite trade log."
     },
     {
-      "ts": "17:34:54",
+      "ts": "18:23:11",
       "label": "read_volleyball_results (investigate)",
-      "text": "{\"status\": \"not_configured\", \"detail\": \"Set VOLLEYBALL_RESULTS_PATH to your pipeline's output JSON.\"}"
+      "text": "not_configured \u2014 Set VOLLEYBALL_RESULTS_PATH to your pipeline's output JSON."
     },
     {
-      "ts": "17:34:57",
+      "ts": "18:23:14",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "{\"status\": \"ok\", \"runs_7d\": 50, \"success_rate_7d\": 1.0, \"last_error\": null}"
+      "text": "ok"
     },
     {
-      "ts": "17:35:22",
+      "ts": "18:23:16",
+      "label": "read_overseer_status (investigate)",
+      "text": "ok"
+    },
+    {
+      "ts": "18:23:57",
       "label": "reasoning",
-      "text": "I'm noticing a tension between two requirements: the instruction says not to file issues for unconfigured repos, but it also says to always propose at least one enhancement per project. The key distinction is that \"not_configured\" from the\u2026"
+      "text": "I'm seeing a tension here\u2014the instructions say not to file issues for unconfigured projects, but also to propose at least one enhancement per project. For these two projects marked as not_configured, the repo itself is known and configured\u2026"
     },
     {
-      "ts": "17:35:24",
+      "ts": "18:24:00",
       "label": "propose_enhancement (idea)",
-      "text": "{\"status\": \"logged\", \"number\": 15, \"url\": \"https://github.com/AndyRBrett/crypto-trading/issues/15\", \"effort\": \"low\", \"impact\": \"high\"}"
+      "text": "AndyRBrett/crypto-trading \u2014 Emit trade log to a stable, documented TRADING_DB_PATH so monitoring isn't blind (effort low, impact high)"
     },
     {
-      "ts": "17:35:28",
+      "ts": "18:24:03",
       "label": "propose_enhancement (idea)",
-      "text": "{\"status\": \"logged\", \"number\": 1, \"url\": \"https://github.com/AndyRBrett/volleyball/issues/1\", \"effort\": \"low\", \"impact\": \"high\"}"
+      "text": "AndyRBrett/volleyball \u2014 Always write results JSON to VOLLEYBALL_RESULTS_PATH (even on zero-footage weeks) (effort low, impact high)"
     },
     {
-      "ts": "17:35:31",
+      "ts": "18:24:06",
       "label": "propose_enhancement (idea)",
-      "text": "{\"status\": \"logged\", \"number\": 9, \"url\": \"https://github.com/AndyRBrett/ufc-dashboard/issues/9\", \"effort\": \"low\", \"impact\": \"medium\"}"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Add a data-freshness assertion distinct from HTTP/scrape success (effort low, impact high)"
     },
     {
-      "ts": "17:35:40",
+      "ts": "18:24:10",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Treat not_configured/error reads as WARN blind-spots, not silent passes (effort low, impact high)"
+    },
+    {
+      "ts": "18:24:13",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Add unit tests for read-tool parsing and digest assembly (effort medium, impact medium)"
+    },
+    {
+      "ts": "18:24:23",
       "label": "publish_digest (tool)",
-      "text": "{\"status\": \"published\"}"
+      "text": "digest published"
     }
   ]
 }
