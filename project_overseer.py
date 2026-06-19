@@ -45,11 +45,13 @@ PROJECTS = {
     "volleyball": {
         "label": "Volleyball CV pipeline (ball + player tracking, coaching feedback)",
         "repo": os.getenv("VOLLEYBALL_REPO"),
-        "results_path": os.getenv("VOLLEYBALL_RESULTS_PATH"),
+        "results_path": os.getenv("VOLLEYBALL_RESULTS_PATH"),                       # local
+        "status_path": os.getenv("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
     },
     "ufc": {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
-        "repo": os.getenv("UFC_REPO"),  # also the repo whose Actions runs we read
+        "repo": os.getenv("UFC_REPO"),  # repo whose Actions runs + status file we read
+        "status_path": os.getenv("UFC_STATUS_PATH", "overseer-status.json"),
     },
     "overseer": {
         "label": "Project Overseer itself — this agent: the weekly-review runner, "
@@ -232,14 +234,19 @@ def read_trading_bot_log(days=7):
                       f"{cfg['status_path']} to TRADING_REPO (cloud)."}
 
 def read_volleyball_results(days=7):
-    path = PROJECTS["volleyball"]["results_path"]
-    if not path:
-        return {"status": "not_configured", "detail": "Set VOLLEYBALL_RESULTS_PATH to your pipeline's output JSON."}
-    if not os.path.exists(path):
-        return {"status": "error", "detail": f"VOLLEYBALL_RESULTS_PATH does not exist: {path}"}
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    return {"status": "ok", "days": days, "results": data}
+    cfg = PROJECTS["volleyball"]
+    # Local: read the pipeline's output JSON directly.
+    if cfg["results_path"]:
+        if not os.path.exists(cfg["results_path"]):
+            return {"status": "error", "detail": f"VOLLEYBALL_RESULTS_PATH does not exist: {cfg['results_path']}"}
+        with open(cfg["results_path"], encoding="utf-8") as f:
+            return {"status": "ok", "days": days, "results": json.load(f)}
+    # Cloud: read the status file the pipeline publishes to its repo.
+    if cfg["repo"]:
+        return _read_status_file(cfg["repo"], cfg["status_path"])
+    return {"status": "not_configured",
+            "detail": "Set VOLLEYBALL_RESULTS_PATH (local) or have the pipeline publish "
+                      f"{cfg['status_path']} to VOLLEYBALL_REPO (cloud)."}
 
 def _workflow_health(repo_slug, workflow_file=None, days=7):
     """Success rate + last failure over the window, from a repo's Actions runs.
@@ -270,10 +277,22 @@ def _workflow_health(repo_slug, workflow_file=None, days=7):
     }
 
 def read_ufc_scraper_status():
-    repo_slug = PROJECTS["ufc"]["repo"]
+    cfg = PROJECTS["ufc"]
+    repo_slug = cfg["repo"]
     if not repo_slug:
         return {"status": "not_configured", "detail": "Set UFC_REPO (owner/name) to read its GitHub Actions runs."}
-    return _workflow_health(repo_slug)
+    health = _workflow_health(repo_slug)  # scrape RUN success
+    # Data freshness — distinct from run success (ufc-dashboard #10): if the
+    # scraper publishes a status file with a data timestamp, surface its age so
+    # silently-frozen upstream data is caught even when runs keep "succeeding".
+    status = _read_status_file(repo_slug, cfg["status_path"])
+    if status.get("status") == "ok":
+        health["data"] = status["data"]
+        if "age_hours" in status:
+            health["data_age_hours"] = status["age_hours"]
+        if status.get("stale"):
+            health["data_stale"] = True
+    return health
 
 def read_overseer_status():
     """Overseer reviewing itself: health of its own weekly-review workflow."""
