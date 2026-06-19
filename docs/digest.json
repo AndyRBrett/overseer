@@ -1,7 +1,58 @@
 {
-  "generated": "1970-01-01T00:00:00Z",
-  "status": "no runs yet",
-  "summary": "The first weekly run hasn't happened yet. Trigger it from the Actions tab (workflow_dispatch) to populate this.",
-  "counts": { "tools": 0, "issues": 0, "enhancements": 0, "errors": 0 },
-  "timeline": []
+  "generated": "2026-06-19T17:35:49Z",
+  "status": "completed",
+  "summary": "WEEKLY REVIEW \u2014 3 projects\n\nISSUES FOUND\n- None confirmed. No bugs filed.\n- crypto-trading: log read returned not_configured (TRADING_DB_PATH unset) \u2014 monitoring is blind, but this is a setup gap, not a confirmed failure, so no issue filed.\n- volleyball: results read returned not_configured (VOLLEYBALL_RESULTS_PATH unset) \u2014 same situation, no issue filed.\n- ufc-dashboard: HEALTHY \u2014 50/50 runs succeeded this week (100%), no last error, data fresh.\n\nENHANCEMENT IDEAS (ranked by effort/impact)\n1. [crypto-trading #15] Add TRADING_DB_PATH config + healthcheck.py \u2014 LOW effort / HIGH impact. Document the env var in .env.example and add a script asserting the SQLite DB exists and has a recent fill, so silent failures (CCXT auth expiry, zero fills) don't go unnoticed for a week. Unblocks all future reviews.\n2. [volleyball #1] Emit structured results.json at VOLLEYBALL_RESULTS_PATH \u2014 LOW effort / HIGH impact. Serialize already-computed metrics (ball-detection rate, failed/dropped frames, frames processed, model version) per run to enable regression tracking.\n3. [ufc-dashboard #9] Snapshot odds per run + compute opening-vs-current deltas \u2014 LOW effort / MEDIUM impact. Persist timestamped odds rows instead of overwriting, then derive line-movement deltas to flag steam moves. Purely additive; project is otherwise healthy.\n\nNote: two of three read tools are not_configured, so the top priority this week is wiring up logging/metrics paths (#15, #1) so future reviews have real data to inspect.",
+  "counts": {
+    "tools": 7,
+    "errors": 0,
+    "issues": 0,
+    "enhancements": 3
+  },
+  "timeline": [
+    {
+      "ts": "17:34:54",
+      "label": "reasoning",
+      "text": "I'll start by reading through all three project logs to get a complete picture."
+    },
+    {
+      "ts": "17:34:54",
+      "label": "read_trading_bot_log (investigate)",
+      "text": "{\"status\": \"not_configured\", \"detail\": \"Set TRADING_DB_PATH to your SQLite trade log.\"}"
+    },
+    {
+      "ts": "17:34:54",
+      "label": "read_volleyball_results (investigate)",
+      "text": "{\"status\": \"not_configured\", \"detail\": \"Set VOLLEYBALL_RESULTS_PATH to your pipeline's output JSON.\"}"
+    },
+    {
+      "ts": "17:34:57",
+      "label": "read_ufc_scraper_status (investigate)",
+      "text": "{\"status\": \"ok\", \"runs_7d\": 50, \"success_rate_7d\": 1.0, \"last_error\": null}"
+    },
+    {
+      "ts": "17:35:22",
+      "label": "reasoning",
+      "text": "I'm noticing a tension between two requirements: the instruction says not to file issues for unconfigured repos, but it also says to always propose at least one enhancement per project. The key distinction is that \"not_configured\" from the\u2026"
+    },
+    {
+      "ts": "17:35:24",
+      "label": "propose_enhancement (idea)",
+      "text": "{\"status\": \"logged\", \"number\": 15, \"url\": \"https://github.com/AndyRBrett/crypto-trading/issues/15\", \"effort\": \"low\", \"impact\": \"high\"}"
+    },
+    {
+      "ts": "17:35:28",
+      "label": "propose_enhancement (idea)",
+      "text": "{\"status\": \"logged\", \"number\": 1, \"url\": \"https://github.com/AndyRBrett/volleyball/issues/1\", \"effort\": \"low\", \"impact\": \"high\"}"
+    },
+    {
+      "ts": "17:35:31",
+      "label": "propose_enhancement (idea)",
+      "text": "{\"status\": \"logged\", \"number\": 9, \"url\": \"https://github.com/AndyRBrett/ufc-dashboard/issues/9\", \"effort\": \"low\", \"impact\": \"medium\"}"
+    },
+    {
+      "ts": "17:35:40",
+      "label": "publish_digest (tool)",
+      "text": "{\"status\": \"published\"}"
+    }
+  ]
 }
