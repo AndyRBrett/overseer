@@ -1,0 +1,5 @@
+anthropic>=0.40.0
+
+# Add as you wire the stubs to real data:
+# PyGithub>=2.0      # file_issue / propose_enhancement / search_existing_issues
+# requests>=2.31     # send_telegram_summary (Telegram Bot API)

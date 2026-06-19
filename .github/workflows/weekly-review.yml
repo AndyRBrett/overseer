@@ -1,0 +1,32 @@
+name: Weekly Project Review
+
+on:
+  schedule:
+    # 14:00 UTC every Monday. Adjust to taste (cron is in UTC).
+    - cron: "0 14 * * 1"
+  workflow_dispatch: {}   # allow manual runs from the Actions tab
+
+jobs:
+  overseer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run overseer
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Uncomment as you wire the corresponding stubs:
+          # GITHUB_TOKEN is provided automatically by Actions, but a PAT with
+          # cross-repo issue scope is needed to file into your project repos:
+          # OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          # TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python project_overseer.py
