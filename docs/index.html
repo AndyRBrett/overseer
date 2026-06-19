@@ -12,29 +12,55 @@
     * { box-sizing: border-box; }
     body { font: 15px/1.55 -apple-system, system-ui, sans-serif; margin: 0;
            background: #0f172a; color: #e2e8f0;
-           padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+           padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+           overflow-wrap: anywhere; }              /* never let long tokens overflow */
     header { padding: 22px 18px 10px; }
     header h1 { margin: 0; font-size: 19px; }
     header .sub { color: #94a3b8; font-size: 13px; margin-top: 2px; }
     main { padding: 8px 18px 40px; max-width: 780px; margin: 0 auto; }
+
     .stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
     .stat { background: #1e293b; border: 1px solid #334155; border-radius: 10px;
             padding: 10px 14px; flex: 1; min-width: 70px; }
     .stat .n { font-size: 22px; font-weight: 700; }
     .stat .l { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
+
     .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px;
-            padding: 16px; margin: 12px 0; }
-    .digest { white-space: pre-wrap; word-break: break-word; font-size: 14.5px; }
-    .item { border-left: 3px solid #475569; padding: 6px 0 6px 12px; margin: 8px 0; }
-    .item .meta { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
-    .item .body { font-size: 13.5px; color: #cbd5e1; }
+            padding: 16px; margin: 12px 0; overflow: hidden; }   /* clip stray overflow */
+    .section-label { font-size: 11px; color: #94a3b8; text-transform: uppercase;
+                     letter-spacing: .05em; margin: 0 0 10px; }
+
+    /* Readable digest: headings + bullet rows instead of one raw text blob */
+    .digest h3 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+                 color: #f8fafc; margin: 16px 0 6px; }
+    .digest h3:first-child { margin-top: 0; }
+    .digest ul { margin: 0; padding: 0; list-style: none; }
+    .digest li { position: relative; padding: 6px 0 6px 16px; border-bottom: 1px solid #273449;
+                 font-size: 14px; color: #cbd5e1; }
+    .digest li:last-child { border-bottom: 0; }
+    .digest li::before { content: "•"; position: absolute; left: 2px; color: #64748b; }
+    .digest p { margin: 4px 0; color: #cbd5e1; }
+
+    /* Timeline rows — label as a chip, detail wraps under it */
+    .item { border-left: 3px solid #475569; padding: 8px 0 8px 12px; margin: 10px 0; min-width: 0; }
+    .item .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+                  font-size: 11px; color: #94a3b8; }
+    .chip { text-transform: uppercase; letter-spacing: .04em; font-weight: 600;
+            font-size: 10px; padding: 2px 8px; border-radius: 999px;
+            background: #334155; color: #cbd5e1; }
+    .chip.idea { background: #78350f; color: #fde68a; }
+    .chip.bug { background: #7f1d1d; color: #fecaca; }
+    .chip.investigate { background: #1e3a8a; color: #bfdbfe; }
+    .chip.error { background: #7f1d1d; color: #fecaca; }
+    .item .body { font-size: 13.5px; color: #cbd5e1; margin-top: 4px; }
+
     button { font: inherit; background: #2563eb; color: #fff; border: 0; border-radius: 10px;
              padding: 12px 16px; width: 100%; cursor: pointer; }
-    button.secondary { background: #334155; }
     .muted { color: #94a3b8; font-size: 13px; }
     textarea { width: 100%; min-height: 110px; background: #0b1220; color: #93c5fd;
-               border: 1px solid #334155; border-radius: 8px; padding: 8px; font: 12px/1.4 monospace; }
-    code { background: #0b1220; border-radius: 5px; padding: 1px 6px; }
+               border: 1px solid #334155; border-radius: 8px; padding: 8px;
+               font: 12px/1.4 monospace; }
+    code { background: #0b1220; border-radius: 5px; padding: 1px 6px; word-break: break-all; }
     .hidden { display: none; }
     a { color: #60a5fa; }
   </style>
@@ -54,11 +80,14 @@
     </div>
 
     <div class="card">
-      <div class="meta muted">Latest digest</div>
+      <div class="section-label">Latest digest</div>
       <div class="digest" id="digest">No run yet.</div>
     </div>
 
-    <div id="timeline"></div>
+    <div class="card">
+      <div class="section-label">What the agent did</div>
+      <div id="timeline"></div>
+    </div>
   </main>
   <script src="app.js"></script>
 </body>

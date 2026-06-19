@@ -111,7 +111,7 @@ class RunTracer:
             if ev["kind"] == "tool_call":
                 label = "error" if ev["is_error"] else ev["category"]
                 timeline.append({"ts": ev["ts"], "label": f"{ev['name']} ({label})",
-                                 "text": _oneline(ev["result"], 200)})
+                                 "text": _tool_summary(ev)})
             elif ev["kind"] == "thinking":
                 timeline.append({"ts": ev["ts"], "label": "reasoning",
                                  "text": _oneline(ev["text"], 240)})
@@ -138,6 +138,32 @@ class RunTracer:
             enhancements=c["enhancements"], errors=c["errors"],
             timeline="\n".join(rows),
         )
+
+
+def _tool_summary(ev: dict) -> str:
+    """A human-readable one-liner for a tool call, instead of raw JSON."""
+    name, inp = ev["name"], ev.get("input", {})
+    if ev["is_error"]:
+        return _oneline(ev["result"], 200)
+    try:
+        result = json.loads(ev["result"])
+    except (ValueError, TypeError):
+        result = {}
+    if name == "propose_enhancement":
+        return (f"{inp.get('repo', '')} — {inp.get('title', '')} "
+                f"(effort {inp.get('effort', '?')}, impact {inp.get('impact', '?')})")
+    if name == "file_issue":
+        n = result.get("number")
+        return f"{inp.get('repo', '')} — {inp.get('title', '')}" + (f" (#{n})" if n else "")
+    if name == "search_existing_issues":
+        return f"searched {inp.get('repo', '')}: {len(result.get('matches', []))} match(es)"
+    if name.startswith("read_"):
+        status = result.get("status", "ok")
+        extra = result.get("detail") or result.get("last_error") or ""
+        return _oneline(f"{status}" + (f" — {extra}" if extra else ""), 160)
+    if name == "publish_digest":
+        return "digest published"
+    return _oneline(ev["result"], 160)
 
 
 def _oneline(text: str, limit: int = 160) -> str:

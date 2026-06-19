@@ -82,8 +82,8 @@ def _github():
                 "No GitHub token. Set OVERSEER_GITHUB_TOKEN (a PAT with Issues "
                 "read/write on your project repos)."
             )
-        from github import Github  # PyGithub
-        _gh = Github(token)
+        from github import Auth, Github  # PyGithub
+        _gh = Github(auth=Auth.Token(token))
     return _gh
 
 # ── TOOL DEFINITIONS ─────────────────────────────────────────────────────

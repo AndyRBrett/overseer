@@ -1,9 +1,42 @@
 // Project Overseer dashboard — fetches the latest digest the weekly run
-// committed, renders it, and lets you opt into push notifications.
+// committed, renders it readably, and lets you opt into push notifications.
 
 const $ = (id) => document.getElementById(id);
 
-// ── render the latest digest ────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+}
+
+// Turn the plain-text digest into headings + bullet lists so it's scannable.
+function formatDigest(text) {
+  const lines = String(text).split("\n");
+  let html = "";
+  let inList = false;
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeList(); continue; }
+
+    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    if (bullet) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${escapeHtml(bullet[1])}</li>`;
+      continue;
+    }
+
+    closeList();
+    // All-caps line (e.g. "ISSUES FOUND") → section heading; otherwise a lead line.
+    if (/^[A-Z][A-Z0-9 /&,'()-]*$/.test(line)) {
+      html += `<h3>${escapeHtml(line)}</h3>`;
+    } else {
+      html += `<p>${escapeHtml(line)}</p>`;
+    }
+  }
+  closeList();
+  return html || "<p>(no summary)</p>";
+}
+
 async function loadDigest() {
   try {
     const res = await fetch("digest.json?" + Date.now()); // bust cache
@@ -12,7 +45,7 @@ async function loadDigest() {
 
     $("generated").textContent =
       "Last run: " + new Date(d.generated).toLocaleString() + " — " + (d.status || "");
-    $("digest").textContent = d.summary || "(no summary)";
+    $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};
     $("stats").innerHTML = [
@@ -24,17 +57,19 @@ async function loadDigest() {
       `<div class="stat"><div class="n">${c[k] ?? 0}</div><div class="l">${label}</div></div>`
     ).join("");
 
-    $("timeline").innerHTML = (d.timeline || []).map((t) =>
-      `<div class="item"><div class="meta">${t.ts} · ${t.label}</div>
-       <div class="body">${escapeHtml(t.text)}</div></div>`
-    ).join("");
+    $("timeline").innerHTML = (d.timeline || []).map((t) => {
+      const m = String(t.label || "").match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+      const name = m ? m[1] : (t.label || "");
+      const cat = m ? m[2] : "";
+      const known = ["idea", "bug", "investigate", "error", "search"].includes(cat) ? cat : "";
+      return `<div class="item">
+        <div class="meta">${cat ? `<span class="chip ${known}">${escapeHtml(cat)}</span>` : ""}
+          <span>${escapeHtml(t.ts)} · ${escapeHtml(name)}</span></div>
+        <div class="body">${escapeHtml(t.text)}</div></div>`;
+    }).join("");
   } catch (e) {
     $("generated").textContent = "No digest published yet.";
   }
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
 // ── service worker (required for push + installability) ──────────────────
