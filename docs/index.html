@@ -54,6 +54,19 @@
     .chip.error { background: #7f1d1d; color: #fecaca; }
     .item .body { font-size: 13.5px; color: #cbd5e1; margin-top: 4px; }
 
+    /* Per-project health (blind-spot tracking) */
+    .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 9px 0; border-bottom: 1px solid #273449; }
+    .prow:last-child { border-bottom: 0; }
+    .prow .pname { font-size: 14px; }
+    .prow .pmeta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .pbadge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+              padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .pbadge.ok { background: #064e3b; color: #6ee7b7; }
+    .pbadge.blind { background: #78350f; color: #fde68a; }
+    .pbadge.error { background: #7f1d1d; color: #fecaca; }
+    .prow.alert .pname::after { content: " — dark >1 cycle"; color: #f59e0b; font-size: 11px; }
+
     button { font: inherit; background: #2563eb; color: #fff; border: 0; border-radius: 10px;
              padding: 12px 16px; width: 100%; cursor: pointer; }
     .muted { color: #94a3b8; font-size: 13px; }
@@ -77,6 +90,11 @@
       <button id="enable">Enable weekly push notifications</button>
       <div id="notif-help" class="muted hidden" style="margin-top:12px"></div>
       <textarea id="sub" class="hidden" readonly></textarea>
+    </div>
+
+    <div class="card" id="projects-card" style="display:none">
+      <div class="section-label">Project health</div>
+      <div id="projects"></div>
     </div>
 
     <div class="card">

@@ -47,6 +47,8 @@ class RunTracer:
         self.counts = {"tools": 0, "errors": 0, "issues": 0, "enhancements": 0}
         self.digest_text = None
         self.status = "running"
+        self.read_tools = {}          # {tool_name: project_label} — set by caller
+        self.prev_projects = {}       # last run's per-project health, for continuity
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -105,6 +107,40 @@ class RunTracer:
             f.write(self._render_html())
         print(f"[{_now()}] wrote {self.html_path} and {self.jsonl_path}")
 
+    def project_health(self) -> dict:
+        """Per-project read health with blind-spot continuity (self-review #1).
+
+        A project read returning "ok" resets it; "not_configured"/"error"/a raised
+        tool marks it BLIND and increments a cross-run blind_cycles counter so the
+        dashboard and notification can flag a project that's been dark >1 cycle —
+        instead of a green run hiding the fact that we couldn't see it.
+        """
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        projects = {}
+        for ev in self.events:
+            if ev["kind"] != "tool_call" or ev["name"] not in self.read_tools:
+                continue
+            label = self.read_tools[ev["name"]]
+            if ev["is_error"]:
+                status, reason = "error", _oneline(ev["result"], 120)
+            else:
+                try:
+                    rs = json.loads(ev["result"]).get("status", "ok")
+                except (ValueError, TypeError):
+                    rs = "ok"
+                if rs == "ok":
+                    status, reason = "ok", None
+                else:
+                    status, reason = "blind", ("not configured" if rs == "not_configured" else rs)
+            prev = self.prev_projects.get(label, {})
+            if status == "ok":
+                projects[label] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+            else:
+                projects[label] = {"status": status, "reason": reason,
+                                   "last_ok": prev.get("last_ok"),
+                                   "blind_cycles": prev.get("blind_cycles", 0) + 1}
+        return projects
+
     def write_digest(self, path: str) -> None:
         """Emit docs/digest.json — what the installable web app reads."""
         timeline = []
@@ -121,6 +157,7 @@ class RunTracer:
             "status": self.status,
             "summary": self.digest_text or "(no digest produced this run)",
             "counts": dict(self.counts),
+            "projects": self.project_health(),
             "timeline": timeline,
         }
         with open(path, "w", encoding="utf-8") as f:

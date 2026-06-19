@@ -20,11 +20,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-import anthropic
-
 from tracer import RunTracer
-
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
 # Safety bound on the agentic loop. Without this, a model that keeps calling
 # tools would never terminate. On the final iteration we drop the tools so the
@@ -60,6 +56,15 @@ PROJECTS = {
         # Defaults to the repo the Action runs in (GITHUB_REPOSITORY); override with OVERSEER_REPO.
         "repo": os.getenv("OVERSEER_REPO") or os.getenv("GITHUB_REPOSITORY"),
     },
+}
+
+# Maps each read tool to the project it reports on — used to track per-project
+# read health (blind-spot detection) across runs. (overseer self-review #1)
+READ_TOOLS = {
+    "read_trading_bot_log": "Trading bot",
+    "read_volleyball_results": "Volleyball",
+    "read_ufc_scraper_status": "UFC dashboard",
+    "read_overseer_status": "Overseer",
 }
 
 # SQL used by read_trading_bot_log. Adjust the table/column names to match your
@@ -333,8 +338,21 @@ say what to change and why."""
 
 # ── AGENTIC LOOP ─────────────────────────────────────────────────────────
 
+def _load_prev_projects():
+    """Per-project health from the last run, for blind-spot continuity."""
+    try:
+        with open(DIGEST_PATH, encoding="utf-8") as f:
+            return json.load(f).get("projects", {})
+    except (FileNotFoundError, ValueError):
+        return {}
+
 def run_overseer():
+    import anthropic
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+
     tracer = RunTracer()
+    tracer.read_tools = READ_TOOLS
+    tracer.prev_projects = _load_prev_projects()
     tracer.start()
     system_prompt = build_system_prompt()
     messages = [{"role": "user", "content": "Run this week's review."}]

@@ -57,6 +57,26 @@ async function loadDigest() {
       `<div class="stat"><div class="n">${c[k] ?? 0}</div><div class="l">${label}</div></div>`
     ).join("");
 
+    // Per-project health with BLIND badges (blind-spot tracking)
+    const projects = d.projects || {};
+    const names = Object.keys(projects);
+    if (names.length) {
+      $("projects-card").style.display = "";
+      $("projects").innerHTML = names.map((name) => {
+        const p = projects[name];
+        const st = p.status === "ok" ? "ok" : (p.status === "error" ? "error" : "blind");
+        const badge = st === "ok" ? "OK" : (st === "error" ? "ERROR" : "BLIND");
+        const alert = (p.blind_cycles || 0) >= 2 ? " alert" : "";
+        const meta = st === "ok"
+          ? (p.last_ok ? "last read just now" : "")
+          : `${p.reason || "no data"}${p.last_ok ? " · last ok " + new Date(p.last_ok).toLocaleDateString() : " · never read"}`;
+        return `<div class="prow${alert}">
+          <div><div class="pname">${escapeHtml(name)}</div>
+            ${meta ? `<div class="pmeta">${escapeHtml(meta)}</div>` : ""}</div>
+          <span class="pbadge ${st}">${badge}</span></div>`;
+      }).join("");
+    }
+
     $("timeline").innerHTML = (d.timeline || []).map((t) => {
       const m = String(t.label || "").match(/^(.*?)\s*\(([^)]+)\)\s*$/);
       const name = m ? m[1] : (t.label || "");
