@@ -23,10 +23,23 @@ jobs:
       - name: Run overseer
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # Uncomment as you wire the corresponding stubs:
-          # GITHUB_TOKEN is provided automatically by Actions, but a PAT with
-          # cross-repo issue scope is needed to file into your project repos:
-          # OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
-          # TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          # TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Project repo slugs + data sources (set the ones you have):
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+          TRADING_DB_PATH: ${{ vars.TRADING_DB_PATH }}
+          VOLLEYBALL_RESULTS_PATH: ${{ vars.VOLLEYBALL_RESULTS_PATH }}
         run: python project_overseer.py
+
+      - name: Upload run report
+        if: always()   # keep the visual even when the run fails — that's when you need it
+        uses: actions/upload-artifact@v4
+        with:
+          name: overseer-report
+          path: |
+            overseer_report.html
+            overseer_run.jsonl
+          if-no-files-found: ignore
