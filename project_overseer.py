@@ -54,6 +54,12 @@ PROJECTS = {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
         "repo": os.getenv("UFC_REPO"),  # also the repo whose Actions runs we read
     },
+    "overseer": {
+        "label": "Project Overseer itself — this agent: the weekly-review runner, "
+                 "tools, tracer, and the GitHub Pages dashboard",
+        # Defaults to the repo the Action runs in (GITHUB_REPOSITORY); override with OVERSEER_REPO.
+        "repo": os.getenv("OVERSEER_REPO") or os.getenv("GITHUB_REPOSITORY"),
+    },
 }
 
 # SQL used by read_trading_bot_log. Adjust the table/column names to match your
@@ -109,6 +115,11 @@ tools = [
     {
         "name": "read_ufc_scraper_status",
         "description": "Read UFC dashboard scraper run history: success rate, last error, data freshness.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "read_overseer_status",
+        "description": "Read Project Overseer's OWN weekly-run health (this agent): success rate, last error, freshness. Use it to self-review and propose fixes/improvements for the overseer itself.",
         "input_schema": {"type": "object", "properties": {}},
     },
     {
@@ -199,20 +210,22 @@ def read_volleyball_results(days=7):
         data = json.load(f)
     return {"status": "ok", "days": days, "results": data}
 
-def read_ufc_scraper_status():
-    repo_slug = PROJECTS["ufc"]["repo"]
-    if not repo_slug:
-        return {"status": "not_configured", "detail": "Set UFC_REPO (owner/name) to read its GitHub Actions runs."}
+def _workflow_health(repo_slug, workflow_file=None, days=7):
+    """Success rate + last failure over the window, from a repo's Actions runs.
+    Pass workflow_file (e.g. 'weekly-review.yml') to scope to one workflow."""
     repo = _github().get_repo(repo_slug)
-    since = datetime.now(timezone.utc) - timedelta(days=7)
+    runs = repo.get_workflow(workflow_file).get_runs() if workflow_file else repo.get_workflow_runs()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
     total = success = 0
     last_error = None
-    for run in repo.get_workflow_runs()[:50]:
+    for run in runs[:50]:
         created = run.created_at
         if created.tzinfo is None:
             created = created.replace(tzinfo=timezone.utc)
         if created < since:
             break
+        if run.status != "completed":
+            continue  # skip in-progress runs (e.g. this very run)
         total += 1
         if run.conclusion == "success":
             success += 1
@@ -224,6 +237,19 @@ def read_ufc_scraper_status():
         "success_rate_7d": round(success / total, 3) if total else None,
         "last_error": last_error,
     }
+
+def read_ufc_scraper_status():
+    repo_slug = PROJECTS["ufc"]["repo"]
+    if not repo_slug:
+        return {"status": "not_configured", "detail": "Set UFC_REPO (owner/name) to read its GitHub Actions runs."}
+    return _workflow_health(repo_slug)
+
+def read_overseer_status():
+    """Overseer reviewing itself: health of its own weekly-review workflow."""
+    repo_slug = PROJECTS["overseer"]["repo"]
+    if not repo_slug:
+        return {"status": "not_configured", "detail": "Set OVERSEER_REPO (owner/name) to read the overseer's own run health."}
+    return _workflow_health(repo_slug, workflow_file="weekly-review.yml")
 
 def search_existing_issues(repo, query):
     results = _github().search_issues(f"{query} repo:{repo} in:title,body")
@@ -258,6 +284,7 @@ TOOL_FUNCTIONS = {
     "read_trading_bot_log": read_trading_bot_log,
     "read_volleyball_results": read_volleyball_results,
     "read_ufc_scraper_status": read_ufc_scraper_status,
+    "read_overseer_status": read_overseer_status,
     "search_existing_issues": search_existing_issues,
     "file_issue": file_issue,
     "propose_enhancement": propose_enhancement,
@@ -277,13 +304,20 @@ def build_system_prompt():
 
 Use the exact repo slugs above when calling file_issue or propose_enhancement.
 
-Each week, investigate all three. For each project:
+Each week, investigate every project above — including Project Overseer itself.
+For each:
 - Check its recent logs/results using the read tools
 - If something is genuinely broken, search existing issues first to avoid
   duplicates, then file_issue
 - ALWAYS propose at least one enhancement per project, even if nothing is
   broken — rank it by effort vs impact honestly, don't inflate impact
 - Prioritize enhancements that are low effort / high impact
+
+Review yourself too: call read_overseer_status for your own weekly-run health,
+and hold the overseer to the same bar as the others. Be genuinely self-critical
+— consider reliability (failed/blind runs), error handling, missing tests,
+notification gaps, and dashboard clarity — and file bugs/enhancements against
+the overseer repo just as you would any project. Don't rubber-stamp yourself.
 
 If a read tool returns status "not_configured" or "error", note it briefly in
 the digest and move on — don't let one project block the others, and don't file
@@ -292,7 +326,7 @@ issues for a project whose repo isn't configured.
 When investigation is complete, call publish_digest with a concise
 digest organized as:
   ISSUES FOUND (if any)
-  ENHANCEMENT IDEAS (always at least 3, one per project minimum)
+  ENHANCEMENT IDEAS (at least one per project, including Overseer itself)
 
 Be specific and technical. No vague suggestions like "improve accuracy" —
 say what to change and why."""

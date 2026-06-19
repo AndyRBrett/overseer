@@ -25,6 +25,7 @@ TOOL_CATEGORY = {
     "read_trading_bot_log": ("investigate", "#2563eb"),
     "read_volleyball_results": ("investigate", "#2563eb"),
     "read_ufc_scraper_status": ("investigate", "#2563eb"),
+    "read_overseer_status": ("investigate", "#2563eb"),
     "search_existing_issues": ("search", "#6b7280"),
     "file_issue": ("bug", "#dc2626"),
     "propose_enhancement": ("idea", "#d97706"),

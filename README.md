@@ -25,6 +25,12 @@ Two distinct tool types so the agent never conflates "this is broken" with
 `publish_digest()` writes the weekly summary, which the Action commits to
 `docs/digest.json` (updating the web app) and pushes as a notification.
 
+**Overseer reviews itself, too.** It treats the overseer repo as a fourth
+project: `read_overseer_status` checks its own weekly-run health, and it files
+bugs/enhancements against itself like any other project. The repo defaults to
+`GITHUB_REPOSITORY` (override with an `OVERSEER_REPO` variable). For self-filing
+to work, `OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
+
 ## What you need to provide (and how to get each)
 
 Only the Anthropic key is required. Anything unset just makes that tool report
