@@ -31,6 +31,10 @@ client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 # model is forced to produce a closing summary instead of more tool calls.
 MAX_ITERATIONS = 25
 
+# The dashboard (docs/, served by GitHub Pages) reads this file. The weekly
+# Action commits it after each run so the web app shows the latest digest.
+DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
+
 # ── PROJECT CONFIG ───────────────────────────────────────────────────────
 # Repo slug ("owner/name") + data-source location per project, from env.
 # The repo slugs are injected into the system prompt so the agent files issues
@@ -151,8 +155,8 @@ tools = [
         },
     },
     {
-        "name": "send_telegram_summary",
-        "description": "Send the final weekly digest. Call this LAST, after all investigation is done.",
+        "name": "publish_digest",
+        "description": "Publish the final weekly digest to the dashboard. Call this LAST, after all investigation is done.",
         "input_schema": {
             "type": "object",
             "properties": {"text": {"type": "string"}},
@@ -244,21 +248,11 @@ def propose_enhancement(repo, title, rationale, effort, impact):
     return {"status": "logged", "number": issue.number, "url": issue.html_url,
             "effort": effort, "impact": impact}
 
-def send_telegram_summary(text):
-    token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    if not (token and chat_id):
-        # Still surface the digest locally so a run is never silent.
-        print("\n── WEEKLY DIGEST (Telegram not configured) ──\n" + text)
-        return {"status": "not_configured", "detail": "Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID."}
-    import requests
-    resp = requests.post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": text},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return {"status": "sent"}
+def publish_digest(text):
+    # The text is captured by the tracer and written to docs/digest.json after
+    # the loop; the GitHub Action then commits it (updating the web app) and
+    # sends the push notification. Nothing to do here but acknowledge.
+    return {"status": "published"}
 
 TOOL_FUNCTIONS = {
     "read_trading_bot_log": read_trading_bot_log,
@@ -267,7 +261,7 @@ TOOL_FUNCTIONS = {
     "search_existing_issues": search_existing_issues,
     "file_issue": file_issue,
     "propose_enhancement": propose_enhancement,
-    "send_telegram_summary": send_telegram_summary,
+    "publish_digest": publish_digest,
 }
 
 # ── SYSTEM PROMPT ────────────────────────────────────────────────────────
@@ -295,7 +289,7 @@ If a read tool returns status "not_configured" or "error", note it briefly in
 the digest and move on — don't let one project block the others, and don't file
 issues for a project whose repo isn't configured.
 
-When investigation is complete, call send_telegram_summary with a concise
+When investigation is complete, call publish_digest with a concise
 digest organized as:
   ISSUES FOUND (if any)
   ENHANCEMENT IDEAS (always at least 3, one per project minimum)
@@ -356,6 +350,8 @@ def run_overseer():
                     result = func(**block.input)
                     content = json.dumps(result)
                     is_error = False
+                    if block.name == "publish_digest":
+                        tracer.set_digest(block.input.get("text", ""))
                 except Exception as exc:  # noqa: BLE001
                     content = f"Tool '{block.name}' failed: {exc}"
                     is_error = True
@@ -374,10 +370,12 @@ def run_overseer():
         status = f"crashed: {exc}"
         tracer.finish(status)
         tracer.write()
+        tracer.write_digest(DIGEST_PATH)
         raise
 
     tracer.finish(status)
     tracer.write()
+    tracer.write_digest(DIGEST_PATH)
 
 if __name__ == "__main__":
     run_overseer()

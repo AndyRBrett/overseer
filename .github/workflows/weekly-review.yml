@@ -6,6 +6,10 @@ on:
     - cron: "0 14 * * 1"
   workflow_dispatch: {}   # allow manual runs from the Actions tab
 
+# Needed so the run can commit the updated digest back into docs/ (GitHub Pages).
+permissions:
+  contents: write
+
 jobs:
   overseer:
     runs-on: ubuntu-latest
@@ -24,8 +28,6 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # Project repo slugs + data sources (set the ones you have):
           TRADING_REPO: ${{ vars.TRADING_REPO }}
           VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
@@ -33,6 +35,25 @@ jobs:
           TRADING_DB_PATH: ${{ vars.TRADING_DB_PATH }}
           VOLLEYBALL_RESULTS_PATH: ${{ vars.VOLLEYBALL_RESULTS_PATH }}
         run: python project_overseer.py
+
+      - name: Publish digest to the web app
+        run: |
+          if git diff --quiet -- docs/digest.json; then
+            echo "No digest change to publish."
+          else
+            git config user.name  "overseer-bot"
+            git config user.email "overseer-bot@users.noreply.github.com"
+            git add docs/digest.json
+            git commit -m "Weekly digest $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Send push notification
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+        run: python scripts/notify_push.py
 
       - name: Upload run report
         if: always()   # keep the visual even when the run fails — that's when you need it

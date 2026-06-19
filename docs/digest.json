@@ -1,0 +1,7 @@
+{
+  "generated": "1970-01-01T00:00:00Z",
+  "status": "no runs yet",
+  "summary": "The first weekly run hasn't happened yet. Trigger it from the Actions tab (workflow_dispatch) to populate this.",
+  "counts": { "tools": 0, "issues": 0, "enhancements": 0, "errors": 0 },
+  "timeline": []
+}

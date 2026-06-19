@@ -44,6 +44,8 @@ class RunTracer:
         self.html_path = html_path
         self._t0 = time.monotonic()
         self.counts = {"tools": 0, "errors": 0, "issues": 0, "enhancements": 0}
+        self.digest_text = None
+        self.status = "running"
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -79,7 +81,12 @@ class RunTracer:
         tag = "ERROR" if is_error else category.upper()
         print(f"[{_now()}] [{tag:9}] {name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
 
+    def set_digest(self, text: str) -> None:
+        """The final digest the agent publishes — surfaced on the dashboard."""
+        self.digest_text = text
+
     def finish(self, status: str) -> None:
+        self.status = status
         self._record("run_end", status=status, counts=dict(self.counts))
         print(
             f"[{_now()}] ── run {status} · "
@@ -96,6 +103,28 @@ class RunTracer:
         with open(self.html_path, "w", encoding="utf-8") as f:
             f.write(self._render_html())
         print(f"[{_now()}] wrote {self.html_path} and {self.jsonl_path}")
+
+    def write_digest(self, path: str) -> None:
+        """Emit docs/digest.json — what the installable web app reads."""
+        timeline = []
+        for ev in self.events:
+            if ev["kind"] == "tool_call":
+                label = "error" if ev["is_error"] else ev["category"]
+                timeline.append({"ts": ev["ts"], "label": f"{ev['name']} ({label})",
+                                 "text": _oneline(ev["result"], 200)})
+            elif ev["kind"] == "thinking":
+                timeline.append({"ts": ev["ts"], "label": "reasoning",
+                                 "text": _oneline(ev["text"], 240)})
+        payload = {
+            "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "status": self.status,
+            "summary": self.digest_text or "(no digest produced this run)",
+            "counts": dict(self.counts),
+            "timeline": timeline,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+        print(f"[{_now()}] wrote {path}")
 
     def _render_html(self) -> str:
         rows = []
