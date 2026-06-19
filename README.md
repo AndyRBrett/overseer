@@ -50,9 +50,12 @@ Add these in your repo settings (Settings → Secrets and variables → Actions)
 
 ### Data sources (for the `read_*` tools)
 
-- **Trading bot** — `TRADING_DB_PATH`: SQLite trade log. The query in
-  `project_overseer.py` (`TRADING_QUERY`) assumes a `trades(ts, pnl)` table;
-  edit it to match your schema.
+- **Trading bot** — two modes:
+  - *Cloud (recommended, daily bot):* the bot publishes `overseer-status.json`
+    to `TRADING_REPO`; the overseer reads it via the GitHub API (flagged stale
+    after 48h). Drop-in publisher: `examples/trading-bot-status/`.
+  - *Local:* set `TRADING_DB_PATH` to a SQLite trade log; `TRADING_QUERY`
+    assumes a `trades(ts, pnl)` table — edit to match your schema.
 - **Volleyball** — `VOLLEYBALL_RESULTS_PATH`: a JSON file your pipeline writes.
 - **UFC** — `UFC_REPO`: the scraper repo. Its GitHub Actions run history is read
   automatically via the token above — no extra setup.

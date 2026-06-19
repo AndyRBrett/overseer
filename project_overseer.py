@@ -37,9 +37,10 @@ DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 # and enhancements against the correct repositories.
 PROJECTS = {
     "trading_bot": {
-        "label": "Paper trading bot (crypto, Coinbase Advanced Trade via CCXT)",
+        "label": "Crypto trading bot (Coinbase Advanced Trade via CCXT, daily cloud runs)",
         "repo": os.getenv("TRADING_REPO"),
-        "db_path": os.getenv("TRADING_DB_PATH"),
+        "db_path": os.getenv("TRADING_DB_PATH"),              # local deployments
+        "status_path": os.getenv("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
     },
     "volleyball": {
         "label": "Volleyball CV pipeline (ball + player tracking, coaching feedback)",
@@ -183,27 +184,52 @@ tools = [
 
 # ── TOOL IMPLEMENTATIONS ─────────────────────────────────────────────────
 
-def read_trading_bot_log(days=7):
-    db_path = PROJECTS["trading_bot"]["db_path"]
-    if not db_path:
-        return {"status": "not_configured", "detail": "Set TRADING_DB_PATH to your SQLite trade log."}
-    if not os.path.exists(db_path):
-        return {"status": "error", "detail": f"TRADING_DB_PATH does not exist: {db_path}"}
-    import sqlite3
-    since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
-    con = sqlite3.connect(db_path)
-    con.row_factory = sqlite3.Row
+def _read_status_file(repo_slug, path):
+    """Read a JSON status file the project publishes to its own repo.
+    Cloud-native: the overseer runs anywhere and just reads the file via the API.
+    Flags staleness from the file's own 'generated_at' if present."""
+    repo = _github().get_repo(repo_slug)
     try:
-        row = con.execute(TRADING_QUERY, {"since": since}).fetchone()
-    finally:
-        con.close()
-    return {
-        "status": "ok",
-        "days": days,
-        "trades": row["trades"],
-        "pnl": round(row["pnl"], 2),
-        "win_rate": round(row["win_rate"], 3),
-    }
+        content = repo.get_contents(path)
+    except Exception as exc:  # noqa: BLE001 — UnknownObjectException (404) etc.
+        return {"status": "error",
+                "detail": f"No '{path}' in {repo_slug} yet (has the bot published it?): {exc}"}
+    data = json.loads(content.decoded_content.decode("utf-8"))
+    result = {"status": "ok", "source": f"{repo_slug}/{path}", "data": data}
+    generated = data.get("generated_at")
+    if generated:
+        try:
+            ts = datetime.fromisoformat(generated.replace("Z", "+00:00"))
+            age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
+            result["age_hours"] = round(age_h, 1)
+            if age_h > 48:  # daily bot → anything older than 2 days is stale
+                result["stale"] = True
+        except ValueError:
+            pass
+    return result
+
+def read_trading_bot_log(days=7):
+    cfg = PROJECTS["trading_bot"]
+    # Local deployment: read the SQLite trade log directly.
+    if cfg["db_path"]:
+        if not os.path.exists(cfg["db_path"]):
+            return {"status": "error", "detail": f"TRADING_DB_PATH does not exist: {cfg['db_path']}"}
+        import sqlite3
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        con = sqlite3.connect(cfg["db_path"])
+        con.row_factory = sqlite3.Row
+        try:
+            row = con.execute(TRADING_QUERY, {"since": since}).fetchone()
+        finally:
+            con.close()
+        return {"status": "ok", "days": days, "trades": row["trades"],
+                "pnl": round(row["pnl"], 2), "win_rate": round(row["win_rate"], 3)}
+    # Cloud deployment: read the status file the bot publishes to its repo.
+    if cfg["repo"]:
+        return _read_status_file(cfg["repo"], cfg["status_path"])
+    return {"status": "not_configured",
+            "detail": "Set TRADING_DB_PATH (local) or have the bot publish "
+                      f"{cfg['status_path']} to TRADING_REPO (cloud)."}
 
 def read_volleyball_results(days=7):
     path = PROJECTS["volleyball"]["results_path"]

@@ -55,7 +55,7 @@ def test_volleyball_reads_json(tmp_path):
 
 def test_system_prompt_lists_every_project():
     sp = o.build_system_prompt()
-    assert "Paper trading bot" in sp
+    assert "Crypto trading bot" in sp
     assert "Volleyball CV pipeline" in sp
     assert "UFC fight card dashboard" in sp
     assert "Project Overseer itself" in sp
