@@ -9,6 +9,19 @@ from datetime import datetime, timezone
 import project_overseer as o
 
 
+def test_env_strips_whitespace():
+    # A repo slug pasted into a GitHub Variable can carry a trailing CRLF
+    # (overseer #3) — _env must trim it so downstream API calls don't 404.
+    import os
+    os.environ["X_OVERSEER_SLUG"] = "AndyRBrett/volleyball\r\n"
+    try:
+        assert o._env("X_OVERSEER_SLUG") == "AndyRBrett/volleyball"
+    finally:
+        del os.environ["X_OVERSEER_SLUG"]
+    assert o._env("X_OVERSEER_SLUG") is None
+    assert o._env("X_OVERSEER_SLUG", "fallback") == "fallback"
+
+
 def test_read_tools_all_registered():
     # Every read tool used for health tracking must be a real, dispatchable tool.
     for name in o.READ_TOOLS:

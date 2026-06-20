@@ -35,29 +35,36 @@ DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 # Repo slug ("owner/name") + data-source location per project, from env.
 # The repo slugs are injected into the system prompt so the agent files issues
 # and enhancements against the correct repositories.
+def _env(name, default=None):
+    """Read an env var, trimming stray whitespace/newlines — e.g. a repo slug
+    pasted into a GitHub Variable with a trailing CRLF (see overseer #3)."""
+    v = os.getenv(name, default)
+    return v.strip() if isinstance(v, str) else v
+
+
 PROJECTS = {
     "trading_bot": {
         "label": "Crypto trading bot (Coinbase Advanced Trade via CCXT, daily cloud runs)",
-        "repo": os.getenv("TRADING_REPO"),
-        "db_path": os.getenv("TRADING_DB_PATH"),              # local deployments
-        "status_path": os.getenv("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
+        "repo": _env("TRADING_REPO"),
+        "db_path": _env("TRADING_DB_PATH"),              # local deployments
+        "status_path": _env("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
     },
     "volleyball": {
         "label": "Volleyball CV pipeline (ball + player tracking, coaching feedback)",
-        "repo": os.getenv("VOLLEYBALL_REPO"),
-        "results_path": os.getenv("VOLLEYBALL_RESULTS_PATH"),                       # local
-        "status_path": os.getenv("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
+        "repo": _env("VOLLEYBALL_REPO"),
+        "results_path": _env("VOLLEYBALL_RESULTS_PATH"),                       # local
+        "status_path": _env("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
     },
     "ufc": {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
-        "repo": os.getenv("UFC_REPO"),  # repo whose Actions runs + status file we read
-        "status_path": os.getenv("UFC_STATUS_PATH", "overseer-status.json"),
+        "repo": _env("UFC_REPO"),  # repo whose Actions runs + status file we read
+        "status_path": _env("UFC_STATUS_PATH", "overseer-status.json"),
     },
     "overseer": {
         "label": "Project Overseer itself — this agent: the weekly-review runner, "
                  "tools, tracer, and the GitHub Pages dashboard",
         # Defaults to the repo the Action runs in (GITHUB_REPOSITORY); override with OVERSEER_REPO.
-        "repo": os.getenv("OVERSEER_REPO") or os.getenv("GITHUB_REPOSITORY"),
+        "repo": _env("OVERSEER_REPO") or _env("GITHUB_REPOSITORY"),
     },
 }
 
@@ -302,11 +309,16 @@ def read_overseer_status():
     return _workflow_health(repo_slug, workflow_file="weekly-review.yml")
 
 def search_existing_issues(repo, query):
-    results = _github().search_issues(f"{query} repo:{repo} in:title,body")
-    matches = [
-        {"number": i.number, "title": i.title, "state": i.state, "url": i.html_url}
-        for i in results[:10]
-    ]
+    # GitHub's search API requires an `is:issue`/`is:pull-request` qualifier
+    # (omitting it 422s). Iterate-and-break instead of slicing the lazy
+    # PaginatedList, which can IndexError on empty results.
+    q = f"repo:{repo} is:issue in:title,body {query}"
+    matches = []
+    for issue in _github().search_issues(q):
+        matches.append({"number": issue.number, "title": issue.title,
+                        "state": issue.state, "url": issue.html_url})
+        if len(matches) >= 10:
+            break
     return {"status": "ok", "matches": matches}
 
 def file_issue(repo, title, body):
