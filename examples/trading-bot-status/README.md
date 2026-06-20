@@ -30,6 +30,13 @@ That's it. The overseer's `read_trading_bot_log` automatically reads
 (the cloud case), flags it **stale** if `generated_at` is older than 48h, and
 falls back to a clear error if the file isn't there yet.
 
+> ⚠️ **Don't regenerate `overseer-status.json` locally / in a dev shell where the
+> real data store isn't present.** Running `write_status.py` with no trade DB
+> writes an empty/error payload — committing that overwrites the real metrics and
+> the next overseer review reads it as a regression (Trading flips to IDLE/error).
+> Let the scheduled workflow regenerate it against the real stores; only commit a
+> hand-run file if it ran against live data.
+
 ## Overseer config (already set, for reference)
 
 - `TRADING_REPO` = `AndyRBrett/crypto-trading` (variable) — where to read from
