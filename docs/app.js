@@ -64,15 +64,25 @@ async function loadDigest() {
       $("projects-card").style.display = "";
       $("projects").innerHTML = names.map((name) => {
         const p = projects[name];
-        const st = p.status === "ok" ? "ok" : (p.status === "error" ? "error" : "blind");
-        const badge = st === "ok" ? "OK" : (st === "error" ? "ERROR" : "BLIND");
-        const alert = (p.blind_cycles || 0) >= 2 ? " alert" : "";
-        const meta = st === "ok"
-          ? (p.last_ok ? "last read just now" : "")
-          : `${p.reason || "no data"}${p.last_ok ? " · last ok " + new Date(p.last_ok).toLocaleDateString() : " · never read"}`;
+        const st = ["ok", "idle", "error", "blind"].includes(p.status) ? p.status : "blind";
+        const badge = { ok: "OK", idle: "IDLE", error: "ERROR", blind: "BLIND" }[st];
+        const lastOk = p.last_ok ? " · last ok " + new Date(p.last_ok).toLocaleDateString() : " · never read";
+        let meta, alert = "";
+        if (st === "ok") {
+          meta = "healthy";
+        } else if (st === "idle") {
+          meta = "no recent activity" + ((p.idle_cycles || 0) >= 2 ? ` · idle ${p.idle_cycles} cycles` : "");
+          if ((p.idle_cycles || 0) >= 2) alert = " alert";
+        } else if (st === "error") {
+          meta = p.reason || "read failed";
+          alert = " alert";
+        } else {
+          meta = (p.reason || "no data") + ((p.blind_cycles || 0) >= 2 ? ` · blind ${p.blind_cycles} cycles` : "") + lastOk;
+          if ((p.blind_cycles || 0) >= 2) alert = " alert";
+        }
         return `<div class="prow${alert}">
           <div><div class="pname">${escapeHtml(name)}</div>
-            ${meta ? `<div class="pmeta">${escapeHtml(meta)}</div>` : ""}</div>
+            <div class="pmeta">${escapeHtml(meta)}</div></div>
           <span class="pbadge ${st}">${badge}</span></div>`;
       }).join("");
     }

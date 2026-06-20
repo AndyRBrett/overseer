@@ -125,16 +125,23 @@ class RunTracer:
                 status, reason = "error", _oneline(ev["result"], 120)
             else:
                 try:
-                    rs = json.loads(ev["result"]).get("status", "ok")
+                    obj = json.loads(ev["result"])
                 except (ValueError, TypeError):
-                    rs = "ok"
-                if rs == "ok":
-                    status, reason = "ok", None
-                else:
+                    obj = {}
+                rs = obj.get("status", "ok")
+                if rs != "ok":
                     status, reason = "blind", ("not configured" if rs == "not_configured" else rs)
+                elif _is_idle(obj):
+                    status, reason = "idle", "read OK but no recent activity / stale data"
+                else:
+                    status, reason = "ok", None
             prev = self.prev_projects.get(label, {})
             if status == "ok":
                 projects[label] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+            elif status == "idle":
+                # Idle read fine, so last_ok updates; track how long it's been quiet.
+                projects[label] = {"status": "idle", "reason": reason, "last_ok": now_iso,
+                                   "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
             else:
                 projects[label] = {"status": status, "reason": reason,
                                    "last_ok": prev.get("last_ok"),
@@ -176,6 +183,27 @@ class RunTracer:
             enhancements=c["enhancements"], errors=c["errors"],
             timeline="\n".join(rows),
         )
+
+
+_ACTIVITY_KEYS = ("trades", "footage_processed", "frames_processed",
+                  "clips_processed", "events_tracked", "runs_7d")
+
+
+def _is_idle(obj: dict) -> bool:
+    """A read succeeded but the project shows no recent activity (overseer #4):
+    explicit stale/idle flags, or every known activity counter at zero. Lets us
+    distinguish 'quiet' from 'dead' instead of rendering zero-activity as green.
+    """
+    if obj.get("stale") or obj.get("data_stale"):
+        return True
+    data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
+    if isinstance(data, dict):
+        if data.get("idle") is True:
+            return True
+        present = [data[k] for k in _ACTIVITY_KEYS if k in data]
+        if present and all(v in (0, None) for v in present):
+            return True
+    return False
 
 
 def _tool_summary(ev: dict) -> str:

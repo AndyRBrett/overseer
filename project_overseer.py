@@ -374,6 +374,8 @@ For each:
 - ALWAYS propose at least one enhancement per project, even if nothing is
   broken — rank it by effort vs impact honestly, don't inflate impact
 - Prioritize enhancements that are low effort / high impact
+- A project that reads OK but shows zero activity or stale data is IDLE, not
+  healthy — say so explicitly and treat it as a monitoring gap, not a pass
 
 Review yourself too: call read_overseer_status for your own weekly-run health,
 and hold the overseer to the same bar as the others. Be genuinely self-critical

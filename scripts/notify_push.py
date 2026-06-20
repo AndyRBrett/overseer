@@ -41,12 +41,18 @@ def main() -> int:
         f"{', ' + str(counts['errors']) + ' error(s)' if counts.get('errors') else ''}."
         " Tap to read the digest."
     )
-    # Blind-spot alert: projects dark for >1 cycle (overseer self-review #1).
-    blind = [name for name, p in (digest.get("projects") or {}).items()
-             if p.get("blind_cycles", 0) >= 2]
+    # Blind-spot / idle alerts (overseer self-review #1 + #4).
+    projects = digest.get("projects") or {}
+    blind = [n for n, p in projects.items() if p.get("blind_cycles", 0) >= 2]
+    idle = [n for n, p in projects.items()
+            if p.get("status") == "idle" and p.get("idle_cycles", 0) >= 2]
+    prefix = ""
     if blind:
-        body = f"⚠️ Blind on {', '.join(blind)} (>1 cycle). " + body
-    title = "⚠️ Weekly review — blind spots" if blind else "Weekly review ready"
+        prefix += f"⚠️ Blind on {', '.join(blind)} (>1 cycle). "
+    if idle:
+        prefix += f"💤 Idle (no activity) on {', '.join(idle)}. "
+    body = prefix + body
+    title = "⚠️ Weekly review — needs attention" if (blind or idle) else "Weekly review ready"
     payload = json.dumps({"title": title, "body": body, "url": DASHBOARD_URL})
 
     subs = json.loads(raw_sub)

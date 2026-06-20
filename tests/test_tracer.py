@@ -34,6 +34,21 @@ def test_project_health_ok_resets_and_blind_increments(tmp_path):
     assert ph["Trading bot"]["status"] == "blind" and ph["Trading bot"]["blind_cycles"] == 2
 
 
+def test_project_health_idle_on_zero_activity(tmp_path):
+    t = _tracer(tmp_path)
+    t.prev_projects = {"Trading bot": {"status": "idle", "last_ok": "x", "idle_cycles": 1}}
+    # read OK but zero trades + stale published data → IDLE, not OK
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0, "pnl": 0}}', False)
+    # UFC: read OK with real activity → OK
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 49}', False)
+    ph = t.project_health()
+    assert ph["Trading bot"]["status"] == "idle"
+    assert ph["Trading bot"]["idle_cycles"] == 2     # carried forward + 1
+    assert ph["Trading bot"]["last_ok"]              # idle still read fine
+    assert ph["UFC dashboard"]["status"] == "ok"
+
+
 def test_project_health_error_counts_as_blind(tmp_path):
     t = _tracer(tmp_path)
     t.tool_call(0, "read_trading_bot_log", {}, "Tool 'read_trading_bot_log' failed: boom", True)
