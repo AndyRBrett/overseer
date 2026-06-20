@@ -185,8 +185,20 @@ class RunTracer:
         )
 
 
-_ACTIVITY_KEYS = ("trades", "footage_processed", "frames_processed",
+_ACTIVITY_KEYS = ("trades", "signals_evaluated", "footage_processed", "frames_processed",
                   "clips_processed", "events_tracked", "runs_7d")
+
+
+def activity_idle(data) -> bool:
+    """No-activity heuristic on a project's published data: an explicit idle flag,
+    or every known activity counter present and at zero/null. Read tools call this
+    so the agent gets an explicit signal instead of inferring (overseer #5)."""
+    if not isinstance(data, dict):
+        return False
+    if data.get("idle") is True:
+        return True
+    present = [data[k] for k in _ACTIVITY_KEYS if k in data]
+    return bool(present) and all(v in (0, None) for v in present)
 
 
 def _is_idle(obj: dict) -> bool:
@@ -194,16 +206,10 @@ def _is_idle(obj: dict) -> bool:
     explicit stale/idle flags, or every known activity counter at zero. Lets us
     distinguish 'quiet' from 'dead' instead of rendering zero-activity as green.
     """
-    if obj.get("stale") or obj.get("data_stale"):
+    if obj.get("stale") or obj.get("data_stale") or obj.get("idle") is True:
         return True
     data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
-    if isinstance(data, dict):
-        if data.get("idle") is True:
-            return True
-        present = [data[k] for k in _ACTIVITY_KEYS if k in data]
-        if present and all(v in (0, None) for v in present):
-            return True
-    return False
+    return activity_idle(data)
 
 
 def _tool_summary(ev: dict) -> str:

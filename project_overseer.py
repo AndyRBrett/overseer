@@ -20,12 +20,20 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from tracer import RunTracer
+from tracer import RunTracer, activity_idle
 
 # Safety bound on the agentic loop. Without this, a model that keeps calling
 # tools would never terminate. On the final iteration we drop the tools so the
 # model is forced to produce a closing summary instead of more tool calls.
 MAX_ITERATIONS = 25
+
+# The overseer runs weekly; if its own last completed run is older than this, the
+# schedule likely lapsed — a skipped run must not read as healthy (overseer #5).
+SCHEDULE_STALE_HOURS = 192  # 8 days
+
+
+def _schedule_stale(age_hours):
+    return age_hours is not None and age_hours > SCHEDULE_STALE_HOURS
 
 # The dashboard (docs/, served by GitHub Pages) reads this file. The weekly
 # Action commits it after each run so the web app shows the latest digest.
@@ -204,7 +212,9 @@ def _read_status_file(repo_slug, path):
         return {"status": "error",
                 "detail": f"No '{path}' in {repo_slug} yet (has the bot published it?): {exc}"}
     data = json.loads(content.decoded_content.decode("utf-8"))
-    result = {"status": "ok", "source": f"{repo_slug}/{path}", "data": data}
+    result = {"status": "ok", "source": f"{repo_slug}/{path}", "data": data,
+              # Explicit idle signal so the agent doesn't have to infer it (overseer #5).
+              "idle": activity_idle(data)}
     generated = data.get("generated_at")
     if generated:
         try:
@@ -260,28 +270,36 @@ def _workflow_health(repo_slug, workflow_file=None, days=7):
     Pass workflow_file (e.g. 'weekly-review.yml') to scope to one workflow."""
     repo = _github().get_repo(repo_slug)
     runs = repo.get_workflow(workflow_file).get_runs() if workflow_file else repo.get_workflow_runs()
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=days)
     total = success = 0
     last_error = None
+    last_run_at = None  # most recent COMPLETED run, regardless of window
     for run in runs[:50]:
+        if run.status != "completed":
+            continue  # skip in-progress runs (e.g. this very run)
         created = run.created_at
         if created.tzinfo is None:
             created = created.replace(tzinfo=timezone.utc)
+        if last_run_at is None:
+            last_run_at = created
         if created < since:
             break
-        if run.status != "completed":
-            continue  # skip in-progress runs (e.g. this very run)
         total += 1
         if run.conclusion == "success":
             success += 1
         elif last_error is None and run.conclusion in ("failure", "timed_out"):
             last_error = {"workflow": run.name, "url": run.html_url, "at": created.isoformat()}
-    return {
+    result = {
         "status": "ok",
         "runs_7d": total,
         "success_rate_7d": round(success / total, 3) if total else None,
         "last_error": last_error,
     }
+    if last_run_at is not None:
+        result["last_run_at"] = last_run_at.isoformat()
+        result["last_run_age_hours"] = round((now - last_run_at).total_seconds() / 3600, 1)
+    return result
 
 def read_ufc_scraper_status():
     cfg = PROJECTS["ufc"]
@@ -306,7 +324,13 @@ def read_overseer_status():
     repo_slug = PROJECTS["overseer"]["repo"]
     if not repo_slug:
         return {"status": "not_configured", "detail": "Set OVERSEER_REPO (owner/name) to read the overseer's own run health."}
-    return _workflow_health(repo_slug, workflow_file="weekly-review.yml")
+    health = _workflow_health(repo_slug, workflow_file="weekly-review.yml")
+    # A skipped weekly run must not read as healthy: if the last completed run is
+    # too old, the schedule lapsed — flag it (surfaces as IDLE/yellow). (overseer #5)
+    if _schedule_stale(health.get("last_run_age_hours")):
+        health["schedule_stale"] = True
+        health["stale"] = True
+    return health
 
 def search_existing_issues(repo, query):
     # GitHub's search API requires an `is:issue`/`is:pull-request` qualifier

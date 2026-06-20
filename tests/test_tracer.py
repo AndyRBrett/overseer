@@ -2,7 +2,7 @@
 
 import json
 
-from tracer import RunTracer
+from tracer import RunTracer, _is_idle, activity_idle
 
 
 def _tracer(tmp_path):
@@ -47,6 +47,27 @@ def test_project_health_idle_on_zero_activity(tmp_path):
     assert ph["Trading bot"]["idle_cycles"] == 2     # carried forward + 1
     assert ph["Trading bot"]["last_ok"]              # idle still read fine
     assert ph["UFC dashboard"]["status"] == "ok"
+
+
+def test_activity_idle_edge_cases():
+    assert activity_idle({}) is False                          # no counters → unknown, not idle
+    assert activity_idle({"trades": 0, "signals_evaluated": 0}) is True
+    assert activity_idle({"trades": 2}) is False
+    assert activity_idle({"idle": True}) is True
+    assert activity_idle({"unknown_field": 1}) is False        # no known counters
+    assert activity_idle("not a dict") is False                # malformed → no crash
+    assert activity_idle(None) is False
+
+
+def test_is_idle_handles_malformed_status_json():
+    assert _is_idle({"stale": True}) is True
+    assert _is_idle({"idle": True}) is True
+    assert _is_idle({"status": "ok", "data": {"footage_processed": 0, "frames_processed": 0}}) is True
+    assert _is_idle({"status": "ok", "data": {"trades": 2}}) is False
+    assert _is_idle({"status": "ok"}) is False                 # no data, no flags
+    assert _is_idle({"status": "ok", "data": None}) is False   # null data → no crash
+    # empty-fingerprint event with zero activity (the UFC #14 shape) → idle, no crash
+    assert _is_idle({"status": "ok", "data": {"odds_fingerprint": "", "events_tracked": 0}}) is True
 
 
 def test_project_health_error_counts_as_blind(tmp_path):

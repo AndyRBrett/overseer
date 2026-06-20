@@ -22,6 +22,14 @@ def test_env_strips_whitespace():
     assert o._env("X_OVERSEER_SLUG", "fallback") == "fallback"
 
 
+def test_schedule_stale_threshold():
+    # A weekly run older than ~8 days means the schedule lapsed (overseer #5).
+    assert o._schedule_stale(200) is True
+    assert o._schedule_stale(50) is False
+    assert o._schedule_stale(None) is False
+    assert o._schedule_stale(o.SCHEDULE_STALE_HOURS) is False  # exactly at threshold isn't stale
+
+
 def test_read_tools_all_registered():
     # Every read tool used for health tracking must be a real, dispatchable tool.
     for name in o.READ_TOOLS:
