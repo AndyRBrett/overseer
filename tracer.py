@@ -49,24 +49,37 @@ class RunTracer:
         self.status = "running"
         self.read_tools = {}          # {tool_name: project_label} — set by caller
         self.prev_projects = {}       # last run's per-project health, for continuity
+        self.agent = None             # current pipeline agent, for labelling output
 
     # ── recording ────────────────────────────────────────────────────────
 
     def _record(self, kind: str, **data) -> None:
         ev = {"ts": _now(), "elapsed_s": round(time.monotonic() - self._t0, 2), "kind": kind, **data}
+        if self.agent:
+            ev["agent"] = self.agent
         self.events.append(ev)
+
+    def _prefix(self) -> str:
+        return f"({self.agent}) " if self.agent else ""
 
     def start(self) -> None:
         self._record("run_start")
         print(f"\n[{_now()}] ── overseer run started ──")
 
+    def set_agent(self, name: str) -> None:
+        """Switch the active pipeline agent. Prints a banner so the terminal
+        output (and CI log) clearly shows which agent is reasoning/acting."""
+        self.agent = name
+        self._record("agent_start", agent=name)
+        print(f"\n[{_now()}] ━━━━━━ AGENT: {name} ━━━━━━")
+
     def thinking(self, iteration: int, text: str) -> None:
         self._record("thinking", iteration=iteration, text=text)
-        print(f"[{_now()}] [THINK · turn {iteration}] {_oneline(text)}")
+        print(f"[{_now()}] [THINK · turn {iteration}] {self._prefix()}{_oneline(text)}")
 
     def assistant_text(self, iteration: int, text: str) -> None:
         self._record("assistant_text", iteration=iteration, text=text)
-        print(f"[{_now()}] [SAY   · turn {iteration}] {_oneline(text)}")
+        print(f"[{_now()}] [SAY   · turn {iteration}] {self._prefix()}{_oneline(text)}")
 
     def tool_call(self, iteration: int, name: str, tool_input: dict, result: str, is_error: bool) -> None:
         category, _ = TOOL_CATEGORY.get(name, DEFAULT_CATEGORY)
@@ -82,7 +95,7 @@ class RunTracer:
             input=tool_input, result=result, is_error=is_error,
         )
         tag = "ERROR" if is_error else category.upper()
-        print(f"[{_now()}] [{tag:9}] {name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
+        print(f"[{_now()}] [{tag:9}] {self._prefix()}{name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
 
     def set_digest(self, text: str) -> None:
         """The final digest the agent publishes — surfaced on the dashboard."""
@@ -233,8 +246,9 @@ def _tool_summary(ev: dict) -> str:
         status = result.get("status", "ok")
         extra = result.get("detail") or result.get("last_error") or ""
         return _oneline(f"{status}" + (f" — {extra}" if extra else ""), 160)
-    if name == "publish_digest":
-        return "digest published"
+    if name in ("send_telegram_summary", "publish_digest"):
+        status = result.get("status", "sent")
+        return f"digest {status}"
     return _oneline(ev["result"], 160)
 
 
@@ -268,6 +282,8 @@ def _render_event(ev: dict) -> str:
             f"<div class='kv'>result</div>{_pre(ev['result'])}"
         )
         return _card(colour, ev["category"], ts, title, body)
+    if kind == "agent_start":
+        return _card("#0ea5e9", "agent", ts, f"Agent: {html.escape(ev['agent'])}", "")
     if kind == "run_start":
         return _card("#059669", "start", ts, "Run started", "")
     if kind == "run_end":

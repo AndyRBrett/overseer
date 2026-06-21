@@ -24,7 +24,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Run overseer
+      - name: Run overseer pipeline
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
@@ -34,7 +34,11 @@ jobs:
           UFC_REPO: ${{ vars.UFC_REPO }}
           TRADING_DB_PATH: ${{ vars.TRADING_DB_PATH }}
           VOLLEYBALL_RESULTS_PATH: ${{ vars.VOLLEYBALL_RESULTS_PATH }}
-        run: python project_overseer.py
+          # Agent 3 (Reviewer) delivers the digest to Telegram (optional — the
+          # tool reports "not_configured" and the run still succeeds if unset).
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python orchestrator.py
 
       - name: Publish digest to the web app
         run: |

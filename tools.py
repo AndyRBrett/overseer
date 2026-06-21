@@ -1,30 +1,41 @@
 """
-Project Overseer — agentic weekly review of personal automation projects.
+Shared tools, config, and agent runtime for the Project Overseer pipeline.
 
-Claude is given tools and decides on its own:
-  - what to investigate
-  - whether something is a bug worth filing
-  - what enhancements to propose, ranked by effort vs impact
-  - what to summarize back to you via Telegram
+The overseer is split into three sequential agents (see orchestrator.py):
 
-Run this on a weekly cron (GitHub Actions or local crontab). Every run also
-writes a visual report (overseer_report.html) of the agent's decisions — see
-tracer.py.
+  1. Bug-Hunter  — investigates and files confirmed bugs only
+  2. Idea Agent  — brainstorms ranked enhancement ideas only
+  3. Reviewer    — dedupes both outputs and sends one Telegram digest
+
+Every agent script imports its tool implementations from this module so the
+tool logic lives in exactly one place. This file also hosts:
+
+  - the tool JSON schemas (per-agent subsets via `tool_specs`)
+  - the `TOOL_FUNCTIONS` dispatch table reused by each agent loop
+  - `run_agent`, the shared client.messages.create tool-use loop
+  - the `--dry-run` switch (`set_dry_run`) that intercepts the mutating tools
+    (file_issue, propose_enhancement, send_telegram_summary) so a run can be
+    tested without anything hitting GitHub or Telegram
 
 Configuration is via environment variables (see README.md). Anything not
 configured degrades gracefully: the matching tool returns a "not_configured"
-status the agent notes and works around, so the script always runs end to end.
+status the agent notes and works around, so the pipeline always runs end to end.
 """
 
 import json
 import os
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from tracer import RunTracer, activity_idle
 
-# Safety bound on the agentic loop. Without this, a model that keeps calling
-# tools would never terminate. On the final iteration we drop the tools so the
-# model is forced to produce a closing summary instead of more tool calls.
+# All three agents run on the same model unless overridden.
+MODEL = os.getenv("OVERSEER_MODEL", "claude-opus-4-8")
+
+# Safety bound on each agent's tool-use loop. Without this, a model that keeps
+# calling tools would never terminate. On the final iteration we drop the tools
+# so the model is forced to produce a closing summary instead of more tool calls.
 MAX_ITERATIONS = 25
 
 # The overseer runs weekly; if its own last completed run is older than this, the
@@ -35,13 +46,26 @@ SCHEDULE_STALE_HOURS = 192  # 8 days
 def _schedule_stale(age_hours):
     return age_hours is not None and age_hours > SCHEDULE_STALE_HOURS
 
+
 # The dashboard (docs/, served by GitHub Pages) reads this file. The weekly
 # Action commits it after each run so the web app shows the latest digest.
 DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 
+# ── DRY-RUN SWITCH ───────────────────────────────────────────────────────
+# When enabled, the mutating tools print what they WOULD do and return a
+# "dry_run" status instead of touching GitHub or Telegram. Toggled by the
+# orchestrator's --dry-run flag via set_dry_run().
+DRY_RUN = False
+
+
+def set_dry_run(value: bool) -> None:
+    global DRY_RUN
+    DRY_RUN = bool(value)
+
+
 # ── PROJECT CONFIG ───────────────────────────────────────────────────────
 # Repo slug ("owner/name") + data-source location per project, from env.
-# The repo slugs are injected into the system prompt so the agent files issues
+# The repo slugs are injected into the system prompts so the agents file issues
 # and enhancements against the correct repositories.
 def _env(name, default=None):
     """Read an env var, trimming stray whitespace/newlines — e.g. a repo slug
@@ -76,6 +100,11 @@ PROJECTS = {
     },
 }
 
+# The three projects the pipeline reviews. The overseer self-review project is
+# kept in PROJECTS (for health tracking + the read_overseer_status tool) but the
+# Bug-Hunter and Idea agents scope to these three per the pipeline spec.
+CORE_PROJECTS = ("trading_bot", "volleyball", "ufc")
+
 # Maps each read tool to the project it reports on — used to track per-project
 # read health (blind-spot detection) across runs. (overseer self-review #1)
 READ_TOOLS = {
@@ -97,9 +126,10 @@ TRADING_QUERY = """
     WHERE ts >= :since
 """
 
-# ── GITHUB / TELEGRAM CLIENTS ────────────────────────────────────────────
+# ── GITHUB CLIENT ────────────────────────────────────────────────────────
 
 _gh = None
+
 
 def _github():
     """Lazy GitHub client. Raises a clear error if no token is configured."""
@@ -115,10 +145,14 @@ def _github():
         _gh = Github(auth=Auth.Token(token))
     return _gh
 
-# ── TOOL DEFINITIONS ─────────────────────────────────────────────────────
+# ── TOOL SCHEMAS ─────────────────────────────────────────────────────────
+# Keyed by name so each agent can request just the subset it's allowed to use
+# via tool_specs([...]). This enforces separation of concerns at the API level:
+# the Bug-Hunter never sees propose_enhancement, the Idea agent never sees
+# file_issue, and the Reviewer only ever sees send_telegram_summary.
 
-tools = [
-    {
+TOOL_SCHEMAS = {
+    "read_trading_bot_log": {
         "name": "read_trading_bot_log",
         "description": "Read paper trading bot performance for the last N days: P&L, win rate, signal accuracy, errors.",
         "input_schema": {
@@ -127,7 +161,7 @@ tools = [
             "properties": {"days": {"type": "integer", "default": 7}},
         },
     },
-    {
+    "read_volleyball_results": {
         "name": "read_volleyball_results",
         "description": "Read volleyball CV pipeline results: ball detection accuracy, failed frames, footage processed this period.",
         "input_schema": {
@@ -135,17 +169,17 @@ tools = [
             "properties": {"days": {"type": "integer", "default": 7}},
         },
     },
-    {
+    "read_ufc_scraper_status": {
         "name": "read_ufc_scraper_status",
         "description": "Read UFC dashboard scraper run history: success rate, last error, data freshness.",
         "input_schema": {"type": "object", "properties": {}},
     },
-    {
+    "read_overseer_status": {
         "name": "read_overseer_status",
         "description": "Read Project Overseer's OWN weekly-run health (this agent): success rate, last error, freshness. Use it to self-review and propose fixes/improvements for the overseer itself.",
         "input_schema": {"type": "object", "properties": {}},
     },
-    {
+    "search_existing_issues": {
         "name": "search_existing_issues",
         "description": "Search GitHub issues in a repo to avoid filing duplicates.",
         "input_schema": {
@@ -157,7 +191,7 @@ tools = [
             "required": ["repo", "query"],
         },
     },
-    {
+    "file_issue": {
         "name": "file_issue",
         "description": "File a GitHub issue for a genuine bug or failure. Only use for confirmed problems, not ideas.",
         "input_schema": {
@@ -170,7 +204,7 @@ tools = [
             "required": ["repo", "title", "body"],
         },
     },
-    {
+    "propose_enhancement": {
         "name": "propose_enhancement",
         "description": (
             "Log an improvement idea for a project, even if nothing is broken. "
@@ -188,18 +222,29 @@ tools = [
             "required": ["repo", "title", "rationale", "effort", "impact"],
         },
     },
-    {
-        "name": "publish_digest",
-        "description": "Publish the final weekly digest to the dashboard. Call this LAST, after all investigation is done.",
+    "send_telegram_summary": {
+        "name": "send_telegram_summary",
+        "description": (
+            "Send the final weekly digest to Telegram. Call this exactly once, LAST, "
+            "after reviewing the Bug-Hunter and Idea agent outputs. The text should be "
+            "the complete digest split into 'Issues Found' and 'Top Enhancement Ideas (ranked)'."
+        ),
         "input_schema": {
             "type": "object",
             "properties": {"text": {"type": "string"}},
             "required": ["text"],
         },
     },
-]
+}
+
+
+def tool_specs(names):
+    """The schema list for a given set of tool names — what an agent is allowed
+    to call. Raises on an unknown name so a typo fails loudly at startup."""
+    return [TOOL_SCHEMAS[name] for name in names]
 
 # ── TOOL IMPLEMENTATIONS ─────────────────────────────────────────────────
+
 
 def _read_status_file(repo_slug, path):
     """Read a JSON status file the project publishes to its own repo.
@@ -227,6 +272,7 @@ def _read_status_file(repo_slug, path):
             pass
     return result
 
+
 def read_trading_bot_log(days=7):
     cfg = PROJECTS["trading_bot"]
     # Local deployment: read the SQLite trade log directly.
@@ -250,6 +296,7 @@ def read_trading_bot_log(days=7):
             "detail": "Set TRADING_DB_PATH (local) or have the bot publish "
                       f"{cfg['status_path']} to TRADING_REPO (cloud)."}
 
+
 def read_volleyball_results(days=7):
     cfg = PROJECTS["volleyball"]
     # Local: read the pipeline's output JSON directly.
@@ -264,6 +311,7 @@ def read_volleyball_results(days=7):
     return {"status": "not_configured",
             "detail": "Set VOLLEYBALL_RESULTS_PATH (local) or have the pipeline publish "
                       f"{cfg['status_path']} to VOLLEYBALL_REPO (cloud)."}
+
 
 def _workflow_health(repo_slug, workflow_file=None, days=7):
     """Success rate + last failure over the window, from a repo's Actions runs.
@@ -301,6 +349,7 @@ def _workflow_health(repo_slug, workflow_file=None, days=7):
         result["last_run_age_hours"] = round((now - last_run_at).total_seconds() / 3600, 1)
     return result
 
+
 def read_ufc_scraper_status():
     cfg = PROJECTS["ufc"]
     repo_slug = cfg["repo"]
@@ -319,6 +368,7 @@ def read_ufc_scraper_status():
             health["data_stale"] = True
     return health
 
+
 def read_overseer_status():
     """Overseer reviewing itself: health of its own weekly-review workflow."""
     repo_slug = PROJECTS["overseer"]["repo"]
@@ -331,6 +381,7 @@ def read_overseer_status():
         health["schedule_stale"] = True
         health["stale"] = True
     return health
+
 
 def search_existing_issues(repo, query):
     # GitHub's search API requires an `is:issue`/`is:pull-request` qualifier
@@ -345,11 +396,27 @@ def search_existing_issues(repo, query):
             break
     return {"status": "ok", "matches": matches}
 
+
 def file_issue(repo, title, body):
+    if DRY_RUN:
+        print("\n[DRY-RUN] file_issue would file a GitHub issue:")
+        print(f"          repo : {repo}")
+        print(f"          title: {title}")
+        print(f"          body : {_oneline(body, 200)}\n")
+        return {"status": "dry_run", "repo": repo, "title": title}
     issue = _github().get_repo(repo).create_issue(title=title, body=body)
     return {"status": "filed", "number": issue.number, "url": issue.html_url}
 
+
 def propose_enhancement(repo, title, rationale, effort, impact):
+    if DRY_RUN:
+        print("\n[DRY-RUN] propose_enhancement would file a labelled GitHub issue:")
+        print(f"          repo  : {repo}")
+        print(f"          title : [enhancement] {title}")
+        print(f"          effort: {effort}   impact: {impact}")
+        print(f"          why   : {_oneline(rationale, 200)}\n")
+        return {"status": "dry_run", "repo": repo, "title": title,
+                "effort": effort, "impact": impact}
     body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n_Filed by Project Overseer._"
     issue = _github().get_repo(repo).create_issue(title=f"[enhancement] {title}", body=body)
     # Labels may not exist in the repo; best-effort, don't fail the call over it.
@@ -360,11 +427,43 @@ def propose_enhancement(repo, title, rationale, effort, impact):
     return {"status": "logged", "number": issue.number, "url": issue.html_url,
             "effort": effort, "impact": impact}
 
-def publish_digest(text):
-    # The text is captured by the tracer and written to docs/digest.json after
-    # the loop; the GitHub Action then commits it (updating the web app) and
-    # sends the push notification. Nothing to do here but acknowledge.
-    return {"status": "published"}
+
+# Telegram caps a single message at 4096 characters.
+_TELEGRAM_LIMIT = 4096
+
+
+def send_telegram_summary(text):
+    """Send the Reviewer's weekly digest to Telegram (Bot API). Degrades to a
+    "not_configured" status when the bot token / chat id aren't set, so a run
+    never fails just because Telegram isn't wired up yet."""
+    if len(text) > _TELEGRAM_LIMIT:
+        text = text[: _TELEGRAM_LIMIT - 1] + "…"
+    if DRY_RUN:
+        print("\n[DRY-RUN] send_telegram_summary would send this digest:")
+        print("─" * 64)
+        print(text)
+        print("─" * 64 + "\n")
+        return {"status": "dry_run", "chars": len(text)}
+    token = _env("TELEGRAM_BOT_TOKEN")
+    chat_id = _env("TELEGRAM_CHAT_ID")
+    if not (token and chat_id):
+        return {"status": "not_configured",
+                "detail": "Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to deliver the digest to Telegram."}
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = json.dumps({"chat_id": chat_id, "text": text,
+                          "disable_web_page_preview": True}).encode("utf-8")
+    req = urllib.request.Request(url, data=payload,
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            body = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        return {"status": "error", "detail": f"Telegram API {exc.code}: {_oneline(detail, 200)}"}
+    except Exception as exc:  # noqa: BLE001 — network/JSON issues
+        return {"status": "error", "detail": f"Telegram send failed: {exc}"}
+    return {"status": "sent", "message_id": body.get("result", {}).get("message_id")}
+
 
 TOOL_FUNCTIONS = {
     "read_trading_bot_log": read_trading_bot_log,
@@ -374,143 +473,117 @@ TOOL_FUNCTIONS = {
     "search_existing_issues": search_existing_issues,
     "file_issue": file_issue,
     "propose_enhancement": propose_enhancement,
-    "publish_digest": publish_digest,
+    "send_telegram_summary": send_telegram_summary,
 }
 
-# ── SYSTEM PROMPT ────────────────────────────────────────────────────────
+# ── SHARED PROMPT HELPERS ────────────────────────────────────────────────
 
-def build_system_prompt():
+
+def project_block(keys=CORE_PROJECTS):
+    """Bulleted 'label — repo' lines for the given projects, injected into each
+    agent's system prompt so it uses the correct repo slugs."""
     lines = []
-    for key, cfg in PROJECTS.items():
+    for key in keys:
+        cfg = PROJECTS[key]
         repo = cfg["repo"] or "(repo not configured — do not file issues for this project)"
         lines.append(f"- {cfg['label']} — repo: {repo}")
-    project_block = "\n".join(lines)
-    return f"""You oversee three personal automation projects:
-{project_block}
+    return "\n".join(lines)
 
-Use the exact repo slugs above when calling file_issue or propose_enhancement.
 
-Each week, investigate every project above — including Project Overseer itself.
-For each:
-- Check its recent logs/results using the read tools
-- If something is genuinely broken, search existing issues first to avoid
-  duplicates, then file_issue
-- ALWAYS propose at least one enhancement per project, even if nothing is
-  broken — rank it by effort vs impact honestly, don't inflate impact
-- Prioritize enhancements that are low effort / high impact
-- A project that reads OK but shows zero activity or stale data is IDLE, not
-  healthy — say so explicitly and treat it as a monitoring gap, not a pass
+# ── SHARED AGENT RUNTIME ─────────────────────────────────────────────────
 
-Review yourself too: call read_overseer_status for your own weekly-run health,
-and hold the overseer to the same bar as the others. Be genuinely self-critical
-— consider reliability (failed/blind runs), error handling, missing tests,
-notification gaps, and dashboard clarity — and file bugs/enhancements against
-the overseer repo just as you would any project. Don't rubber-stamp yourself.
 
-If a read tool returns status "not_configured" or "error", note it briefly in
-the digest and move on — don't let one project block the others, and don't file
-issues for a project whose repo isn't configured.
+def _oneline(text, limit=160):
+    flat = " ".join(str(text).split())
+    return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
-When investigation is complete, call publish_digest with a concise
-digest organized as:
-  ISSUES FOUND (if any)
-  ENHANCEMENT IDEAS (at least one per project, including Overseer itself)
 
-Be specific and technical. No vague suggestions like "improve accuracy" —
-say what to change and why."""
+def run_agent(client, *, agent, system, tool_names, user_message, tracer):
+    """Run one agent's client.messages.create tool-use loop to completion.
 
-# ── AGENTIC LOOP ─────────────────────────────────────────────────────────
+    Reuses the TOOL_FUNCTIONS dispatch pattern: the model may only call the
+    tools whose schemas we pass (tool_specs(tool_names)), and each call is
+    dispatched through the shared TOOL_FUNCTIONS table. Every thought, message,
+    and tool call is streamed to the terminal + recorded by the tracer, tagged
+    with this agent's name.
 
-def _load_prev_projects():
+    Returns the agent's final text output (its structured summary) so the
+    orchestrator can pass it on to the next agent.
+    """
+    tracer.set_agent(agent)
+    specs = tool_specs(tool_names)
+    messages = [{"role": "user", "content": user_message}]
+    final_text = ""
+
+    for iteration in range(MAX_ITERATIONS):
+        last_iteration = iteration == MAX_ITERATIONS - 1
+
+        response = client.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            # Adaptive thinking with summarized display: judgment-heavy work
+            # (bug vs. enhancement, effort/impact ranking, dedupe), and the
+            # summaries are what the visual trace shows.
+            thinking={"type": "adaptive", "display": "summarized"},
+            # Cache the static prefix (tools + system + earlier turns).
+            cache_control={"type": "ephemeral"},
+            system=system,
+            tools=[] if last_iteration else specs,
+            messages=messages,
+        )
+
+        texts = []
+        for block in response.content:
+            if block.type == "thinking" and block.thinking:
+                tracer.thinking(iteration, block.thinking)
+            elif block.type == "text" and block.text.strip():
+                tracer.assistant_text(iteration, block.text)
+                texts.append(block.text)
+        if texts:
+            final_text = "\n".join(texts)
+
+        # Preserve full content (incl. thinking + tool_use) for the next turn.
+        messages.append({"role": "assistant", "content": response.content})
+
+        if response.stop_reason != "tool_use":
+            break
+
+        tool_results = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            # Isolate tool failures: a raising tool becomes an error result the
+            # agent can route around, not a crash that aborts the whole run.
+            try:
+                func = TOOL_FUNCTIONS[block.name]
+                result = func(**block.input)
+                content = json.dumps(result)
+                is_error = False
+                if block.name == "send_telegram_summary":
+                    # Capture the digest text for the dashboard / push notification.
+                    tracer.set_digest(block.input.get("text", ""))
+            except Exception as exc:  # noqa: BLE001
+                content = f"Tool '{block.name}' failed: {exc}"
+                is_error = True
+            tracer.tool_call(iteration, block.name, block.input, content, is_error)
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": block.id,
+                "content": content,
+                "is_error": is_error,
+            })
+
+        messages.append({"role": "user", "content": tool_results})
+    else:
+        tracer.assistant_text(MAX_ITERATIONS, f"(agent '{agent}' stopped: max iterations)")
+
+    return final_text
+
+
+def load_prev_projects():
     """Per-project health from the last run, for blind-spot continuity."""
     try:
         with open(DIGEST_PATH, encoding="utf-8") as f:
             return json.load(f).get("projects", {})
     except (FileNotFoundError, ValueError):
         return {}
-
-def run_overseer():
-    import anthropic
-    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
-    tracer = RunTracer()
-    tracer.read_tools = READ_TOOLS
-    tracer.prev_projects = _load_prev_projects()
-    tracer.start()
-    system_prompt = build_system_prompt()
-    messages = [{"role": "user", "content": "Run this week's review."}]
-    status = "completed"
-
-    try:
-        for iteration in range(MAX_ITERATIONS):
-            last_iteration = iteration == MAX_ITERATIONS - 1
-
-            response = client.messages.create(
-                model="claude-opus-4-8",
-                max_tokens=4096,
-                # Adaptive thinking with summarized display: judgment-heavy task
-                # (bug vs. enhancement, effort/impact ranking), and the summaries
-                # are what the visual trace shows.
-                thinking={"type": "adaptive", "display": "summarized"},
-                # Cache the static prefix (tools + system + earlier turns). Pays
-                # off once the cumulative prefix passes Opus 4.8's 4096-token
-                # minimum, which happens after a couple of tool calls.
-                cache_control={"type": "ephemeral"},
-                system=system_prompt,
-                tools=[] if last_iteration else tools,
-                messages=messages,
-            )
-
-            # Record the agent's reasoning + any interim text for the trace.
-            for block in response.content:
-                if block.type == "thinking" and block.thinking:
-                    tracer.thinking(iteration, block.thinking)
-                elif block.type == "text" and block.text.strip():
-                    tracer.assistant_text(iteration, block.text)
-
-            # Preserve full content (incl. thinking + tool_use) for the next turn.
-            messages.append({"role": "assistant", "content": response.content})
-
-            if response.stop_reason != "tool_use":
-                break
-
-            tool_results = []
-            for block in response.content:
-                if block.type != "tool_use":
-                    continue
-                func = TOOL_FUNCTIONS[block.name]
-                # Isolate tool failures: a raising tool becomes an error result
-                # the agent can route around, not a crash that aborts the run.
-                try:
-                    result = func(**block.input)
-                    content = json.dumps(result)
-                    is_error = False
-                    if block.name == "publish_digest":
-                        tracer.set_digest(block.input.get("text", ""))
-                except Exception as exc:  # noqa: BLE001
-                    content = f"Tool '{block.name}' failed: {exc}"
-                    is_error = True
-                tracer.tool_call(iteration, block.name, block.input, content, is_error)
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": content,
-                    "is_error": is_error,
-                })
-
-            messages.append({"role": "user", "content": tool_results})
-        else:
-            status = "stopped (max iterations)"
-    except Exception as exc:  # noqa: BLE001 — record, render, then re-raise
-        status = f"crashed: {exc}"
-        tracer.finish(status)
-        tracer.write()
-        tracer.write_digest(DIGEST_PATH)
-        raise
-
-    tracer.finish(status)
-    tracer.write()
-    tracer.write_digest(DIGEST_PATH)
-
-if __name__ == "__main__":
-    run_overseer()

@@ -1,35 +1,52 @@
 # Project Overseer
 
-Agentic weekly review of personal automation projects. Claude (Opus 4.8) is
-given a set of tools and decides on its own what to investigate, whether
-something is a real bug, and what enhancements to propose — then files issues on
-GitHub and publishes a digest to an **installable web app** (PWA) you can add to
-your phone's home screen and get a weekly push notification from.
+Agentic weekly review of personal automation projects, run as a **three-agent
+pipeline** on Claude (Opus 4.8). The agents investigate three projects, file
+issues on GitHub, send a digest to **Telegram**, and publish that digest to an
+**installable web app** (PWA) you can add to your phone's home screen and get a
+weekly push notification from.
 
-Everything is hosted by GitHub: the agent runs on **GitHub Actions** (weekly
+Everything is hosted by GitHub: the pipeline runs on **GitHub Actions** (weekly
 cron), the dashboard is served by **GitHub Pages** from `docs/`, and the push
 notification is sent by the same Action. No third-party servers.
 
 Every run also produces a visual report (`overseer_report.html`, uploaded as an
-Actions artifact) showing the agent's reasoning and every tool call.
+Actions artifact) showing each agent's reasoning and every tool call.
 
-## Design
+## Design — three agents, separated concerns
 
-Two distinct tool types so the agent never conflates "this is broken" with
-"this could be better":
+The work is split across three sequential agents (orchestrated by
+`orchestrator.py`) so no single agent ever conflates "this is broken" with
+"this could be better". Each agent is its own `client.messages.create` tool-use
+loop and is only given the tools it's allowed to use:
 
-- `file_issue()` — confirmed bugs / failures only
-- `propose_enhancement()` — ideas, always ranked by effort vs impact, even when
-  nothing is broken (filed as a labelled GitHub issue)
+1. **Bug-Hunter** (`agent_bug_hunter.py`) — investigates and calls `file_issue()`
+   for **confirmed bugs only**. It never proposes enhancements (it isn't even
+   shown that tool). Outputs a structured summary of what it found and filed.
+2. **Idea Agent** (`agent_idea.py`) — ignores what's broken and brainstorms at
+   least three `propose_enhancement()` ideas across the projects, each ranked by
+   effort vs impact. Outputs a structured idea list.
+3. **Reviewer** (`agent_reviewer.py`) — receives the two agents' **text outputs**
+   (not the raw logs), dedupes overlap, decides what's worth surfacing this week,
+   and calls `send_telegram_summary()` exactly once with a digest split into
+   "Issues Found" and "Top Enhancement Ideas (ranked)".
 
-`publish_digest()` writes the weekly summary, which the Action commits to
-`docs/digest.json` (updating the web app) and pushes as a notification.
+All tool implementations live in `tools.py`, which every agent imports from, so
+tool logic is never duplicated. The Reviewer's digest is also captured into
+`docs/digest.json` (updating the web app) and pushed as a notification.
+
+### Dry run (test safely)
+
+`python orchestrator.py --dry-run` runs the entire pipeline but intercepts the
+three mutating tools — `file_issue`, `propose_enhancement`, and
+`send_telegram_summary` — so they **print what they WOULD do** instead of
+touching GitHub or Telegram. Use it to preview changes before anything goes live.
 
 **Overseer reviews itself, too.** It treats the overseer repo as a fourth
-project: `read_overseer_status` checks its own weekly-run health, and it files
-bugs/enhancements against itself like any other project. The repo defaults to
-`GITHUB_REPOSITORY` (override with an `OVERSEER_REPO` variable). For self-filing
-to work, `OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
+project: `read_overseer_status` checks its own weekly-run health. The repo
+defaults to `GITHUB_REPOSITORY` (override with an `OVERSEER_REPO` variable). For
+self-filing to work, `OVERSEER_GITHUB_TOKEN` must include **this** repo with
+Issues: write.
 
 ## What you need to provide (and how to get each)
 
@@ -44,9 +61,16 @@ Only the Anthropic key is required. Anything unset just makes that tool report
 | 4 | **Data source paths** | Where each project's data lives (see below). Skip any you don't have. |
 
 Add these in your repo settings (Settings → Secrets and variables → Actions):
-- **Secrets:** `ANTHROPIC_API_KEY`, `OVERSEER_GITHUB_TOKEN`
+- **Secrets:** `ANTHROPIC_API_KEY`, `OVERSEER_GITHUB_TOKEN`, and (optional, for
+  the Telegram digest) `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 - **Variables:** `TRADING_REPO`, `VOLLEYBALL_REPO`, `UFC_REPO`,
   `TRADING_DB_PATH`, `VOLLEYBALL_RESULTS_PATH`
+
+To get the Telegram values: message [@BotFather](https://t.me/BotFather) →
+`/newbot` for the `TELEGRAM_BOT_TOKEN`, then send your new bot a message and read
+your chat id from `https://api.telegram.org/bot<token>/getUpdates` for
+`TELEGRAM_CHAT_ID`. If you skip these, the Reviewer reports "not configured" and
+the run still succeeds — the digest just isn't sent to Telegram.
 
 ### Data sources (for the `read_*` tools)
 
@@ -106,7 +130,8 @@ export OVERSEER_GITHUB_TOKEN=github_pat_...
 export TRADING_REPO=owner/trading-bot   ; export TRADING_DB_PATH=/path/to/trades.db
 export VOLLEYBALL_REPO=owner/volleyball ; export VOLLEYBALL_RESULTS_PATH=/path/to/results.json
 export UFC_REPO=owner/ufc-dashboard
-python project_overseer.py
+python orchestrator.py            # for real
+python orchestrator.py --dry-run  # intercept all mutations, print instead
 ```
 
 This writes `docs/digest.json` and `overseer_report.html` locally so you can
@@ -114,7 +139,9 @@ preview both.
 
 ## Files
 
-- `project_overseer.py` — config, tools, agentic loop
+- `orchestrator.py` — runs the three agents sequentially; `--dry-run` flag
+- `agent_bug_hunter.py` / `agent_idea.py` / `agent_reviewer.py` — the three agents
+- `tools.py` — shared tool implementations, schemas, config, and the agent runtime
 - `tracer.py` — live console trace, HTML report, and `docs/digest.json` writer
 - `docs/` — the installable web app (GitHub Pages): `index.html`, `app.js`,
   `sw.js` (service worker / push handler), `manifest.webmanifest`, icons

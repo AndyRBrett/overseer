@@ -1,12 +1,14 @@
-"""Tests for the read tools' parsing and the system-prompt assembly.
+"""Tests for the read tools, the shared prompt block, and the dry-run safety
+switch.
 
-These guard against a schema change silently skipping a project (self-review #2).
+These guard against a schema change silently skipping a project (self-review #2)
+and against the dry-run flag failing to intercept a mutating tool.
 """
 
 import sqlite3
 from datetime import datetime, timezone
 
-import project_overseer as o
+import tools as o
 
 
 def test_env_strips_whitespace():
@@ -34,6 +36,15 @@ def test_read_tools_all_registered():
     # Every read tool used for health tracking must be a real, dispatchable tool.
     for name in o.READ_TOOLS:
         assert name in o.TOOL_FUNCTIONS
+
+
+def test_tool_specs_subset_is_isolated():
+    # Each agent only ever sees its own tools — separation of concerns enforced
+    # at the schema level. The Bug-Hunter must not see propose_enhancement, and
+    # the Idea agent must not see file_issue.
+    bug = {t["name"] for t in o.tool_specs(
+        ["read_trading_bot_log", "search_existing_issues", "file_issue"])}
+    assert "propose_enhancement" not in bug and "file_issue" in bug
 
 
 def test_trading_not_configured():
@@ -74,9 +85,29 @@ def test_volleyball_reads_json(tmp_path):
     assert r["status"] == "ok" and r["results"]["detection_rate"] == 0.9
 
 
-def test_system_prompt_lists_every_project():
-    sp = o.build_system_prompt()
-    assert "Crypto trading bot" in sp
-    assert "Volleyball CV pipeline" in sp
-    assert "UFC fight card dashboard" in sp
-    assert "Project Overseer itself" in sp
+def test_project_block_lists_core_projects():
+    block = o.project_block()
+    assert "Crypto trading bot" in block
+    assert "Volleyball CV pipeline" in block
+    assert "UFC fight card dashboard" in block
+
+
+def test_send_telegram_not_configured(monkeypatch):
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    o.set_dry_run(False)
+    assert o.send_telegram_summary("hello")["status"] == "not_configured"
+
+
+def test_dry_run_intercepts_all_mutations(capsys):
+    # The --dry-run safety switch must intercept every mutating tool so nothing
+    # reaches GitHub or Telegram while testing changes.
+    o.set_dry_run(True)
+    try:
+        assert o.file_issue("a/b", "bug", "body")["status"] == "dry_run"
+        assert o.propose_enhancement("a/b", "idea", "why", "low", "high")["status"] == "dry_run"
+        assert o.send_telegram_summary("digest")["status"] == "dry_run"
+    finally:
+        o.set_dry_run(False)
+    out = capsys.readouterr().out
+    assert out.count("[DRY-RUN]") == 3
