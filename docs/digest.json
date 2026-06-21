@@ -1,151 +1,175 @@
 {
-  "generated": "2026-06-21T14:03:00Z",
+  "generated": "2026-06-21T23:44:36Z",
   "status": "completed",
-  "summary": "Issues Found\n- UFC dashboard (ufc-dashboard#14): the scraper marks empty-payload events as fresh — two events carry the SHA-256 of an empty string yet are counted in the 100% success rate, so the dashboard shows them green while they hold no data. Filed.\n- Volleyball: read OK but all-zero activity (0 frames, 0 footage, last_footage_at=null, no errors). This is IDLE, not healthy — we can't tell if the pipeline ran with no footage or didn't run at all. Flagged as a monitoring gap.\n\nTop Enhancement Ideas (ranked)\n1. Volleyball — Emit last_run_at separate from last_footage_at (effort: low, impact: high): makes idleness detectable instead of silently passing.\n2. Overseer — Shared IDLE classification + run-freshness in the read tools, with regression tests (effort: low, impact: high): stops a skipped weekly run from reading as healthy.\n3. Crypto bot — Report a 30d/90d window beside 7d and grey out low-sample win rates (effort: low, impact: medium): stops 1–2 trade weeks reading as flawless.\n4. UFC dashboard — Persist odds snapshots and compute line-movement deltas (effort: medium, impact: medium): turns the scraper into an actual odds tracker, its stated purpose.",
+  "summary": "\ud83d\udccb Weekly Review \u2014 2026-06-21\n\nISSUES FOUND\n- ufc-dashboard: Empty-payload event (medic-vs-rodriguez) marked \"fresh\" despite no bouts parsed \u2014 silent extraction failure. Already tracked in open issue #14; no new file. (crypto, volleyball, overseer all healthy/idle \u2014 no bugs.)\n\nTOP ENHANCEMENT IDEAS (ranked)\n1. crypto-trading \u2014 Buy-and-hold benchmark + equity curve in overseer-status (effort: low, impact: high): turns +$14/100% win over 2 trades into real alpha-vs-holding.\n2. ufc-dashboard \u2014 Line-movement alerts past a threshold (effort: low, impact: high): surfaces steam moves already computed but buried in JSON.\n3. volleyball \u2014 Idle-footage nudge + drop-folder auto-detect (effort: low, impact: high): pipeline is fully idle (0 frames); closes the \"works but unused\" gap.\n4. overseer \u2014 Push weekly digest to Slack/email (effort: low, impact: high): gets findings to your phone instead of sitting on the dashboard.\n5. overseer \u2014 Persist status history + trend sparklines (effort: medium, impact: high): week-over-week memory so regressions become visible.\n6. ufc-dashboard \u2014 Secondary odds source w/ fallback for empty payloads (effort: medium, impact: medium): directly mitigates the #14 failure + adds cross-book coverage.\n7. crypto-trading \u2014 Log per-signal rejection reasons + slippage (effort: medium, impact: medium): explains why 4 of 6 signals didn't trade.\n8. volleyball \u2014 Auto highlight clips w/ coaching tags (effort: high, impact: medium): ambitious; converts tracking data into rewatchable tagged clips.",
   "counts": {
-    "tools": 15,
+    "tools": 18,
     "errors": 0,
-    "issues": 1,
-    "enhancements": 4
+    "issues": 0,
+    "enhancements": 8
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-06-21T14:03:00Z",
+      "last_ok": "2026-06-21T23:44:36Z",
       "blind_cycles": 0
     },
     "Volleyball": {
       "status": "idle",
       "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-06-21T14:03:00Z",
+      "last_ok": "2026-06-21T23:44:36Z",
       "blind_cycles": 0,
-      "idle_cycles": 1
+      "idle_cycles": 2
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-06-21T14:03:00Z",
+      "last_ok": "2026-06-21T23:44:36Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-06-21T14:03:00Z",
+      "last_ok": "2026-06-21T23:44:36Z",
       "blind_cycles": 0
     }
   },
   "timeline": [
     {
-      "ts": "14:01:10",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "Investigating all four projects (including the overseer itself) for confirmed bugs only — no enhancements."
-    },
-    {
-      "ts": "14:01:11",
+      "ts": "23:42:15",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:01:11",
+      "ts": "23:42:16",
       "agent": "Bug-Hunter",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:01:13",
+      "ts": "23:42:20",
       "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'Update UFC Fight Cards', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/27909778588', 'at': '2026-06-21T16:01:03+00:00'}"
     },
     {
-      "ts": "14:01:14",
+      "ts": "23:42:21",
       "agent": "Bug-Hunter",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:01:35",
+      "ts": "23:42:32",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "UFC: two events carry the SHA-256 of an empty string but count toward a 100% success rate — a real silent extraction failure. Checking for an existing issue before filing."
+      "text": "The trading bot looks healthy with active trades generating solid returns and no errors, while the volleyball system is simply idle rather than broken\u2014both are operating as expected. The UFC scraper has a confirmed bug: it failed to parse \u2026"
     },
     {
-      "ts": "14:01:36",
+      "ts": "23:42:33",
       "agent": "Bug-Hunter",
       "label": "search_existing_issues (search)",
-      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
+      "text": "searched AndyRBrett/ufc-dashboard: 1 match(es)"
     },
     {
-      "ts": "14:01:38",
+      "ts": "23:42:47",
       "agent": "Bug-Hunter",
-      "label": "file_issue (bug)",
-      "text": "AndyRBrett/ufc-dashboard — Scraper marks empty-payload events as \"fresh\" — silent extraction failure (SHA-256 of empty string) (#14)"
+      "label": "reasoning",
+      "text": "I found that issue #14 already covers this exact problem \u2014 the scraper marking empty-payload events as fresh when they should be flagged as stale. Since this is a duplicate, there's no need to file a new issue. I'm ready to write up the su\u2026"
     },
     {
-      "ts": "14:01:52",
+      "ts": "23:42:51",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "Now brainstorming enhancements across all four projects — ignoring what's broken, spreading ideas so no single project hogs them."
+      "text": "I'll start by reviewing the project statuses to get a clear picture of where everything stands."
     },
     {
-      "ts": "14:01:53",
+      "ts": "23:42:51",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:01:53",
+      "ts": "23:42:52",
       "agent": "Idea-Agent",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:01:55",
+      "ts": "23:42:56",
       "agent": "Idea-Agent",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'Update UFC Fight Cards', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/27909778588', 'at': '2026-06-21T16:01:03+00:00'}"
     },
     {
-      "ts": "14:01:56",
+      "ts": "23:42:57",
       "agent": "Idea-Agent",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:02:10",
+      "ts": "23:43:45",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/volleyball — Emit last_run_at separate from last_footage_at to distinguish \"idle\" from \"pipeline not running\" (effort low, impact high)"
+      "label": "reasoning",
+      "text": "Looking at the crypto bot performance, I'm seeing 2 trades with a $14.01 gain and perfect win rate, though the signal evaluation shows only 2 fills out of 6 signals which suggests room for improvement. I should track why signals are being \u2026"
     },
     {
-      "ts": "14:02:13",
+      "ts": "23:43:48",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer — Shared IDLE classification + run-freshness in read tools, with regression tests (effort low, impact high)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add buy-and-hold benchmark + equity curve to overseer-status.json (effort low, impact high)"
     },
     {
-      "ts": "14:02:16",
+      "ts": "23:43:51",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading — Report a 30d/90d window alongside 7d and grey out low-sample win rates (effort low, impact medium)"
+      "text": "AndyRBrett/crypto-trading \u2014 Log per-signal rejection reasons and fill slippage (effort medium, impact medium)"
     },
     {
-      "ts": "14:02:19",
+      "ts": "23:43:54",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard — Persist odds snapshots and compute line-movement deltas over time (effort medium, impact medium)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Add line-movement alerts for swings beyond a configurable threshold (effort low, impact high)"
     },
     {
-      "ts": "14:02:40",
+      "ts": "23:43:57",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 Add secondary odds source with fallback for empty-payload events (effort medium, impact medium)"
+    },
+    {
+      "ts": "23:44:00",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/volleyball \u2014 Add an idle-footage ingestion nudge + drop-folder auto-detect (effort low, impact high)"
+    },
+    {
+      "ts": "23:44:03",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/volleyball \u2014 Auto-generate per-rally highlight clips with coaching tags (effort high, impact medium)"
+    },
+    {
+      "ts": "23:44:07",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Persist weekly status history and render trend sparklines on the dashboard (effort medium, impact high)"
+    },
+    {
+      "ts": "23:44:10",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Push a weekly digest notification (Slack/email) summarizing all projects + new ideas (effort low, impact high)"
+    },
+    {
+      "ts": "23:44:30",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "Merging the Bug-Hunter and Idea reports from their text only — deduping overlap, ranking ideas low-effort/high-impact first, and writing the two-section digest."
+      "text": "I'm reviewing the findings and noting that the UFC empty payload issue is a real bug worth surfacing even though it's already tracked in #14. Looking at the issues, there's the UFC silent-extraction failure, while the crypto, volleyball, a\u2026"
     },
     {
-      "ts": "14:02:58",
+      "ts": "23:44:30",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
-      "text": "digest sent"
+      "text": "digest not_configured"
     }
   ]
 }
