@@ -85,11 +85,14 @@ def test_volleyball_reads_json(tmp_path):
     assert r["status"] == "ok" and r["results"]["detection_rate"] == 0.9
 
 
-def test_project_block_lists_core_projects():
+def test_project_block_lists_every_reviewed_project():
+    # The Bug-Hunter and Idea agents review the three external projects PLUS
+    # Project Overseer itself — all four must appear in the shared prompt block.
     block = o.project_block()
     assert "Crypto trading bot" in block
     assert "Volleyball CV pipeline" in block
     assert "UFC fight card dashboard" in block
+    assert "Project Overseer itself" in block
 
 
 def test_send_telegram_not_configured(monkeypatch):

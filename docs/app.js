@@ -7,6 +7,15 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
+// The three pipeline agents, used to colour-code and group the timeline.
+const AGENTS = {
+  "Bug-Hunter": { slug: "bug-hunter", label: "🐛 Bug-Hunter" },
+  "Idea-Agent": { slug: "idea-agent", label: "💡 Idea Agent" },
+  "Reviewer":   { slug: "reviewer",   label: "📋 Reviewer" },
+};
+const agentSlug = (name) => (AGENTS[name] && AGENTS[name].slug) || "";
+const agentLabel = (name) => (AGENTS[name] && AGENTS[name].label) || name;
+
 // Turn the plain-text digest into headings + bullet lists so it's scannable.
 function formatDigest(text) {
   const lines = String(text).split("\n");
@@ -18,7 +27,8 @@ function formatDigest(text) {
     const line = raw.trim();
     if (!line) { closeList(); continue; }
 
-    const bullet = line.match(/^[-*•]\s+(.*)$/);
+    // Bullets ("- ", "• ") and ranked items ("1. ", "2) ") both become list rows.
+    const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
     if (bullet) {
       if (!inList) { html += "<ul>"; inList = true; }
       html += `<li>${escapeHtml(bullet[1])}</li>`;
@@ -26,8 +36,11 @@ function formatDigest(text) {
     }
 
     closeList();
-    // All-caps line (e.g. "ISSUES FOUND") → section heading; otherwise a lead line.
-    if (/^[A-Z][A-Z0-9 /&,'()-]*$/.test(line)) {
+    // Section heading: an all-caps line ("ISSUES FOUND") or one of the Reviewer's
+    // title-case section headers ("Issues Found", "Top Enhancement Ideas (ranked)").
+    const isHeading = /^[A-Z][A-Z0-9 /&,'()-]*$/.test(line) ||
+      /^(issues found|top enhancement ideas)\b/i.test(line);
+    if (isHeading) {
       html += `<h3>${escapeHtml(line)}</h3>`;
     } else {
       html += `<p>${escapeHtml(line)}</p>`;
@@ -87,12 +100,22 @@ async function loadDigest() {
       }).join("");
     }
 
+    // Timeline grouped by agent — the pipeline runs Bug-Hunter → Idea → Reviewer
+    // in order, so a header is emitted each time the agent changes.
+    let lastAgent = null;
     $("timeline").innerHTML = (d.timeline || []).map((t) => {
       const m = String(t.label || "").match(/^(.*?)\s*\(([^)]+)\)\s*$/);
       const name = m ? m[1] : (t.label || "");
       const cat = m ? m[2] : "";
-      const known = ["idea", "bug", "investigate", "error", "search"].includes(cat) ? cat : "";
-      return `<div class="item">
+      const known = ["idea", "bug", "investigate", "error", "search", "digest"].includes(cat) ? cat : "";
+      const agent = t.agent || "";
+      const slug = agentSlug(agent);
+      let header = "";
+      if (agent && agent !== lastAgent) {
+        lastAgent = agent;
+        header = `<div class="agent-head ${slug}">${escapeHtml(agentLabel(agent))}</div>`;
+      }
+      return `${header}<div class="item ${slug}">
         <div class="meta">${cat ? `<span class="chip ${known}">${escapeHtml(cat)}</span>` : ""}
           <span>${escapeHtml(t.ts)} · ${escapeHtml(name)}</span></div>
         <div class="body">${escapeHtml(t.text)}</div></div>`;

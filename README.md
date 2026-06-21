@@ -18,7 +18,9 @@ Actions artifact) showing each agent's reasoning and every tool call.
 The work is split across three sequential agents (orchestrated by
 `orchestrator.py`) so no single agent ever conflates "this is broken" with
 "this could be better". Each agent is its own `client.messages.create` tool-use
-loop and is only given the tools it's allowed to use:
+loop and is only given the tools it's allowed to use. The Bug-Hunter and Idea
+agents review the three external projects **and Project Overseer itself**, held
+to the same bar as any other project (`read_overseer_status`):
 
 1. **Bug-Hunter** (`agent_bug_hunter.py`) — investigates and calls `file_issue()`
    for **confirmed bugs only**. It never proposes enhancements (it isn't even
@@ -42,11 +44,12 @@ three mutating tools — `file_issue`, `propose_enhancement`, and
 `send_telegram_summary` — so they **print what they WOULD do** instead of
 touching GitHub or Telegram. Use it to preview changes before anything goes live.
 
-**Overseer reviews itself, too.** It treats the overseer repo as a fourth
-project: `read_overseer_status` checks its own weekly-run health. The repo
-defaults to `GITHUB_REPOSITORY` (override with an `OVERSEER_REPO` variable). For
-self-filing to work, `OVERSEER_GITHUB_TOKEN` must include **this** repo with
-Issues: write.
+**Overseer reviews itself, too.** Both the Bug-Hunter and the Idea agent treat
+the overseer repo as a fourth project: `read_overseer_status` checks its own
+weekly-run health, and they file bugs / propose enhancements against the overseer
+just like any other project. The repo defaults to `GITHUB_REPOSITORY` (override
+with an `OVERSEER_REPO` variable). For self-filing to work,
+`OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
 
 ## What you need to provide (and how to get each)
 

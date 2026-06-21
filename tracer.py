@@ -165,12 +165,16 @@ class RunTracer:
         """Emit docs/digest.json — what the installable web app reads."""
         timeline = []
         for ev in self.events:
+            # Tag each row with the agent that produced it so the dashboard can
+            # group the timeline by agent (Bug-Hunter / Idea / Reviewer).
             if ev["kind"] == "tool_call":
                 label = "error" if ev["is_error"] else ev["category"]
-                timeline.append({"ts": ev["ts"], "label": f"{ev['name']} ({label})",
+                timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
+                                 "label": f"{ev['name']} ({label})",
                                  "text": _tool_summary(ev)})
             elif ev["kind"] == "thinking":
-                timeline.append({"ts": ev["ts"], "label": "reasoning",
+                timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
+                                 "label": "reasoning",
                                  "text": _oneline(ev["text"], 240)})
         payload = {
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

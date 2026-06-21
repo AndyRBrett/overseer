@@ -100,10 +100,14 @@ PROJECTS = {
     },
 }
 
-# The three projects the pipeline reviews. The overseer self-review project is
-# kept in PROJECTS (for health tracking + the read_overseer_status tool) but the
-# Bug-Hunter and Idea agents scope to these three per the pipeline spec.
+# The three external projects the pipeline reviews.
 CORE_PROJECTS = ("trading_bot", "volleyball", "ufc")
+
+# What the Bug-Hunter and Idea agents actually review: the three external
+# projects PLUS Project Overseer itself. The overseer is held to the same bar as
+# any other project — it gets its own read tool (read_overseer_status) and the
+# agents file bugs / propose enhancements against the overseer repo too.
+REVIEW_PROJECTS = CORE_PROJECTS + ("overseer",)
 
 # Maps each read tool to the project it reports on — used to track per-project
 # read health (blind-spot detection) across runs. (overseer self-review #1)
@@ -479,7 +483,7 @@ TOOL_FUNCTIONS = {
 # ── SHARED PROMPT HELPERS ────────────────────────────────────────────────
 
 
-def project_block(keys=CORE_PROJECTS):
+def project_block(keys=REVIEW_PROJECTS):
     """Bulleted 'label — repo' lines for the given projects, injected into each
     agent's system prompt so it uses the correct repo slugs."""
     lines = []

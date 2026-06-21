@@ -1,9 +1,9 @@
 {
-  "generated": "2026-06-20T12:57:44Z",
+  "generated": "2026-06-21T14:03:00Z",
   "status": "completed",
-  "summary": "WEEKLY REVIEW \u2014 2026-06-20\n\nISSUES FOUND\n- UFC dashboard (ufc-dashboard#14): Silent extraction failure. Events `ufc-fight-night-281` and `medic-vs-rodriguez` carry fingerprint e3b0c442...b7852b855 \u2014 the SHA-256 of an EMPTY string. The scraper fetched nothing yet marks them is_stale=false and counts them in the 100% success rate. Dashboard shows them green while they hold no data. Fix: detect empty/below-minimum payloads, flag them, and exclude from success_rate. (No duplicate existed.)\n\nIDLE / MONITORING GAPS\n- Volleyball CV: read OK but ALL ZEROS (0 frames, 0 footage, last_footage_at=null, no errors). This is IDLE, not healthy \u2014 we can't tell if the pipeline ran with no new footage or didn't run at all. Treating as a monitoring gap (see enhancement volleyball#6).\n\nSTATUS SUMMARY\n- Crypto bot: ACTIVE/healthy. 7d: 2 trades, +$14.01, 6 signals, last fill 06-17, no errors. (win_rate 1.0 is only 2 trades \u2014 noise.)\n- UFC scraper: 50 runs/7d, 100% success, 0 stale by time-threshold \u2014 but see #14, the success metric is masking 2 empty events.\n- Volleyball: IDLE (above).\n- Overseer (self): 3 runs/7d, 100% success, no errors \u2014 but self-review flagged real gaps: it passed an idle project as \"ok\" and exposes no run-freshness, so a skipped weekly run would look identical to a healthy one.\n\nENHANCEMENT IDEAS (1+ per project)\n- crypto-trading#20 [low/med]: Report a 30d/90d window beside 7d and grey-out win_rate when trades<10; emit signals_acted vs signals_evaluated. Stops 1-2 trade weeks reading as \"flawless.\"\n- volleyball#6 [low/high]: Emit last_run_at (heartbeat) separate from last_footage_at + days_since_last_footage so idleness is detectable instead of silently passing.\n- ufc-dashboard#15 [med/med]: Persist parsed odds snapshots and compute line-movement deltas (open vs current, run-over-run) \u2014 turns the scraper into an actual odds tracker, its stated purpose.\n- overseer#5 [low/high]: Add shared IDLE classification (zero counters + null last-activity = IDLE, surfaced explicitly), add run-freshness/age to self-status to catch blind/skipped runs, and add regression tests for status-JSON edge cases (empty fingerprint, null timestamps, missing fields).",
+  "summary": "Issues Found\n- UFC dashboard (ufc-dashboard#14): the scraper marks empty-payload events as fresh — two events carry the SHA-256 of an empty string yet are counted in the 100% success rate, so the dashboard shows them green while they hold no data. Filed.\n- Volleyball: read OK but all-zero activity (0 frames, 0 footage, last_footage_at=null, no errors). This is IDLE, not healthy — we can't tell if the pipeline ran with no footage or didn't run at all. Flagged as a monitoring gap.\n\nTop Enhancement Ideas (ranked)\n1. Volleyball — Emit last_run_at separate from last_footage_at (effort: low, impact: high): makes idleness detectable instead of silently passing.\n2. Overseer — Shared IDLE classification + run-freshness in the read tools, with regression tests (effort: low, impact: high): stops a skipped weekly run from reading as healthy.\n3. Crypto bot — Report a 30d/90d window beside 7d and grey out low-sample win rates (effort: low, impact: medium): stops 1–2 trade weeks reading as flawless.\n4. UFC dashboard — Persist odds snapshots and compute line-movement deltas (effort: medium, impact: medium): turns the scraper into an actual odds tracker, its stated purpose.",
   "counts": {
-    "tools": 11,
+    "tools": 15,
     "errors": 0,
     "issues": 1,
     "enhancements": 4
@@ -11,97 +11,141 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-06-20T12:57:44Z",
+      "last_ok": "2026-06-21T14:03:00Z",
       "blind_cycles": 0
     },
     "Volleyball": {
       "status": "idle",
       "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-06-20T12:57:44Z",
+      "last_ok": "2026-06-21T14:03:00Z",
       "blind_cycles": 0,
       "idle_cycles": 1
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-06-20T12:57:44Z",
+      "last_ok": "2026-06-21T14:03:00Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-06-20T12:57:44Z",
+      "last_ok": "2026-06-21T14:03:00Z",
       "blind_cycles": 0
     }
   },
   "timeline": [
     {
-      "ts": "12:55:58",
+      "ts": "14:01:10",
+      "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I'll start by loading all the project logs simultaneously to get a complete picture."
+      "text": "Investigating all four projects (including the overseer itself) for confirmed bugs only — no enhancements."
     },
     {
-      "ts": "12:55:59",
+      "ts": "14:01:11",
+      "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "12:55:59",
+      "ts": "14:01:11",
+      "agent": "Bug-Hunter",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "12:56:02",
+      "ts": "14:01:13",
+      "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "12:56:04",
+      "ts": "14:01:14",
+      "agent": "Bug-Hunter",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "12:56:23",
+      "ts": "14:01:35",
+      "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "Looking at the performance of these two systems: the crypto trading bot is running well with 2 trades showing a perfect win rate and positive P&L, though the sample size is small enough that I should be cautious about drawing conclusions. \u2026"
+      "text": "UFC: two events carry the SHA-256 of an empty string but count toward a 100% success rate — a real silent extraction failure. Checking for an existing issue before filing."
     },
     {
-      "ts": "12:56:23",
+      "ts": "14:01:36",
+      "agent": "Bug-Hunter",
       "label": "search_existing_issues (search)",
       "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
     },
     {
-      "ts": "12:57:07",
-      "label": "reasoning",
-      "text": "I'll file the issue and then work through potential enhancements for each project in parallel. For the crypto trading bot, I'm noticing the status JSON is missing key metrics like max drawdown, open positions, and equity\u2014plus a win rate of\u2026"
-    },
-    {
-      "ts": "12:57:08",
+      "ts": "14:01:38",
+      "agent": "Bug-Hunter",
       "label": "file_issue (bug)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Scraper marks empty-payload events as \"fresh\" \u2014 silent extraction failure (SHA-256 of empty string) (#14)"
+      "text": "AndyRBrett/ufc-dashboard — Scraper marks empty-payload events as \"fresh\" — silent extraction failure (SHA-256 of empty string) (#14)"
     },
     {
-      "ts": "12:57:11",
+      "ts": "14:01:52",
+      "agent": "Idea-Agent",
+      "label": "reasoning",
+      "text": "Now brainstorming enhancements across all four projects — ignoring what's broken, spreading ideas so no single project hogs them."
+    },
+    {
+      "ts": "14:01:53",
+      "agent": "Idea-Agent",
+      "label": "read_trading_bot_log (investigate)",
+      "text": "ok"
+    },
+    {
+      "ts": "14:01:53",
+      "agent": "Idea-Agent",
+      "label": "read_volleyball_results (investigate)",
+      "text": "ok"
+    },
+    {
+      "ts": "14:01:55",
+      "agent": "Idea-Agent",
+      "label": "read_ufc_scraper_status (investigate)",
+      "text": "ok"
+    },
+    {
+      "ts": "14:01:56",
+      "agent": "Idea-Agent",
+      "label": "read_overseer_status (investigate)",
+      "text": "ok"
+    },
+    {
+      "ts": "14:02:10",
+      "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Report a 30d window alongside 7d and flag low-sample win rates (effort low, impact medium)"
+      "text": "AndyRBrett/volleyball — Emit last_run_at separate from last_footage_at to distinguish \"idle\" from \"pipeline not running\" (effort low, impact high)"
     },
     {
-      "ts": "12:57:14",
+      "ts": "14:02:13",
+      "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/volleyball \u2014 Emit last_run_at separate from last_footage_at to distinguish \"idle\" from \"pipeline not running\" (effort low, impact high)"
+      "text": "AndyRBrett/overseer — Shared IDLE classification + run-freshness in read tools, with regression tests (effort low, impact high)"
     },
     {
-      "ts": "12:57:17",
+      "ts": "14:02:16",
+      "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Track per-event odds line-movement deltas over time (effort medium, impact medium)"
+      "text": "AndyRBrett/crypto-trading — Report a 30d/90d window alongside 7d and grey out low-sample win rates (effort low, impact medium)"
     },
     {
-      "ts": "12:57:19",
+      "ts": "14:02:19",
+      "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add idle-detection classification + run-freshness in read tools, with regression tests (effort low, impact high)"
+      "text": "AndyRBrett/ufc-dashboard — Persist odds snapshots and compute line-movement deltas over time (effort medium, impact medium)"
     },
     {
-      "ts": "12:57:34",
-      "label": "publish_digest (tool)",
-      "text": "digest published"
+      "ts": "14:02:40",
+      "agent": "Reviewer",
+      "label": "reasoning",
+      "text": "Merging the Bug-Hunter and Idea reports from their text only — deduping overlap, ranking ideas low-effort/high-impact first, and writing the two-section digest."
+    },
+    {
+      "ts": "14:02:58",
+      "agent": "Reviewer",
+      "label": "send_telegram_summary (digest)",
+      "text": "digest sent"
     }
   ]
 }

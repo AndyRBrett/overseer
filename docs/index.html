@@ -41,8 +41,23 @@
     .digest li::before { content: "•"; position: absolute; left: 2px; color: #64748b; }
     .digest p { margin: 4px 0; color: #cbd5e1; }
 
-    /* Timeline rows — label as a chip, detail wraps under it */
+    /* Agent group headers in the timeline — one per pipeline stage */
+    .agent-head { display: flex; align-items: center; gap: 8px; margin: 22px 0 6px;
+                  font-size: 12px; font-weight: 700; letter-spacing: .05em;
+                  text-transform: uppercase; color: #e2e8f0;
+                  padding-bottom: 6px; border-bottom: 1px solid #334155; }
+    .agent-head:first-child { margin-top: 0; }
+    .agent-head::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: #64748b; }
+    .agent-head.bug-hunter::before { background: #f87171; }
+    .agent-head.idea-agent::before { background: #fbbf24; }
+    .agent-head.reviewer::before  { background: #34d399; }
+
+    /* Timeline rows — label as a chip, detail wraps under it. Left border is
+       tinted to the agent that produced the row. */
     .item { border-left: 3px solid #475569; padding: 8px 0 8px 12px; margin: 10px 0; min-width: 0; }
+    .item.bug-hunter { border-left-color: #f87171; }
+    .item.idea-agent { border-left-color: #fbbf24; }
+    .item.reviewer  { border-left-color: #34d399; }
     .item .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
                   font-size: 11px; color: #94a3b8; }
     .chip { text-transform: uppercase; letter-spacing: .04em; font-weight: 600;
@@ -51,6 +66,8 @@
     .chip.idea { background: #78350f; color: #fde68a; }
     .chip.bug { background: #7f1d1d; color: #fecaca; }
     .chip.investigate { background: #1e3a8a; color: #bfdbfe; }
+    .chip.search { background: #334155; color: #cbd5e1; }
+    .chip.digest { background: #064e3b; color: #6ee7b7; }
     .chip.error { background: #7f1d1d; color: #fecaca; }
     .item .body { font-size: 13.5px; color: #cbd5e1; margin-top: 4px; }
 
@@ -82,6 +99,7 @@
 <body>
   <header>
     <h1>Project Overseer</h1>
+    <div class="sub">Three-agent weekly review · Bug-Hunter · Idea · Reviewer</div>
     <div class="sub" id="generated">Loading…</div>
   </header>
   <main>
@@ -104,7 +122,7 @@
     </div>
 
     <div class="card">
-      <div class="section-label">What the agent did</div>
+      <div class="section-label">What the agents did — Bug-Hunter → Idea → Reviewer</div>
       <div id="timeline"></div>
     </div>
   </main>

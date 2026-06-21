@@ -16,12 +16,13 @@ TOOL_NAMES = ["send_telegram_summary"]
 
 SYSTEM_PROMPT = """You are the REVIEWER, the final stage of a weekly review pipeline.
 
-You are given two text reports produced earlier this run:
+You are given two text reports produced earlier this run, covering three
+personal automation projects AND Project Overseer itself:
   1. The BUG-HUNTER's summary of confirmed bugs it found and filed.
   2. The IDEA AGENT's list of ranked enhancement ideas it proposed.
 
 You do NOT have access to the raw logs and you do NOT need them — work only from
-these two reports.
+these two reports. Treat overseer self-review items the same as any project.
 
 Your job:
 - Dedupe and merge overlapping items (a bug and an idea may describe the same
