@@ -188,6 +188,43 @@ class RunTracer:
             json.dump(payload, f, indent=2)
         print(f"[{_now()}] wrote {path}")
 
+    def write_history(self, path: str, max_runs: int = 26) -> None:
+        """Append this run's per-project health + counts to an append-only history
+        file the dashboard turns into trend sparklines (overseer #6).
+
+        Each run contributes one record keyed by date; a same-day re-run replaces
+        that day's record rather than double-counting. The file is capped to the
+        last `max_runs` records so it (and the sparklines) stay small. Per project
+        we store a 0..1 health score (ok=1, idle=0.5, error/blind=0) so a
+        regression shows up as the line dropping week over week.
+        """
+        try:
+            with open(path, encoding="utf-8") as f:
+                history = json.load(f)
+            runs = history.get("runs", []) if isinstance(history, dict) else []
+        except (FileNotFoundError, ValueError):
+            runs = []
+
+        now = datetime.now(timezone.utc)
+        record = {
+            "date": now.strftime("%Y-%m-%d"),
+            "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "status": self.status,
+            "counts": dict(self.counts),
+            "projects": {name: {"status": p.get("status"), "score": _status_score(p.get("status"))}
+                         for name, p in self.project_health().items()},
+        }
+        # Replace a record from the same day (re-run) instead of appending a dup.
+        if runs and runs[-1].get("date") == record["date"]:
+            runs[-1] = record
+        else:
+            runs.append(record)
+        runs = runs[-max_runs:]
+
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump({"runs": runs}, f, indent=2)
+        print(f"[{_now()}] wrote {path} ({len(runs)} run(s) of history)")
+
     def _render_html(self) -> str:
         rows = []
         for ev in self.events:
@@ -204,6 +241,15 @@ class RunTracer:
 
 _ACTIVITY_KEYS = ("trades", "signals_evaluated", "footage_processed", "frames_processed",
                   "clips_processed", "events_tracked", "runs_7d")
+
+
+# Per-project health collapsed to a 0..1 score the dashboard plots as a sparkline
+# (overseer #6): a drop from 1.0 to 0.5/0.0 is a visible week-over-week regression.
+_STATUS_SCORE = {"ok": 1.0, "idle": 0.5, "error": 0.0, "blind": 0.0}
+
+
+def _status_score(status) -> float:
+    return _STATUS_SCORE.get(status, 0.0)
 
 
 def activity_idle(data) -> bool:

@@ -65,15 +65,19 @@ Only the Anthropic key is required. Anything unset just makes that tool report
 
 Add these in your repo settings (Settings → Secrets and variables → Actions):
 - **Secrets:** `ANTHROPIC_API_KEY`, `OVERSEER_GITHUB_TOKEN`, and (optional, for
-  the Telegram digest) `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+  digest delivery) `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `SLACK_WEBHOOK_URL`
 - **Variables:** `TRADING_REPO`, `VOLLEYBALL_REPO`, `UFC_REPO`,
   `TRADING_DB_PATH`, `VOLLEYBALL_RESULTS_PATH`
 
-To get the Telegram values: message [@BotFather](https://t.me/BotFather) →
-`/newbot` for the `TELEGRAM_BOT_TOKEN`, then send your new bot a message and read
-your chat id from `https://api.telegram.org/bot<token>/getUpdates` for
-`TELEGRAM_CHAT_ID`. If you skip these, the Reviewer reports "not configured" and
-the run still succeeds — the digest just isn't sent to Telegram.
+The Reviewer fans the digest out to **every channel you've wired up** — Telegram
+and/or Slack — plus the web app. Each channel degrades independently: skip one
+and it reports "not configured" while the run still succeeds.
+
+- **Telegram:** message [@BotFather](https://t.me/BotFather) → `/newbot` for the
+  `TELEGRAM_BOT_TOKEN`, then send your new bot a message and read your chat id
+  from `https://api.telegram.org/bot<token>/getUpdates` for `TELEGRAM_CHAT_ID`.
+- **Slack:** create an [incoming webhook](https://api.slack.com/messaging/webhooks)
+  for the channel you want and store its URL in `SLACK_WEBHOOK_URL`.
 
 ### Data sources (for the `read_*` tools)
 
@@ -101,6 +105,13 @@ branch*, branch = `main`, folder = `/docs`. Your app URL appears there (like
 
 The app shows the latest digest and run stats, refreshed each week. That alone
 needs nothing further.
+
+**Trends (week over week).** Each run also appends a small record to
+`docs/history.json` (per-project health score + issue/enhancement counts, capped
+to the last ~26 runs). The dashboard turns it into inline sparklines — one per
+project plus an overall issues/enhancements trend — so a regression (a project
+sliding from healthy → idle → blind, or issue counts creeping up) is visible at a
+glance instead of being lost in a point-in-time snapshot.
 
 **3. Enable push (optional, one-time wiring):** push has to be *sent* by
 something — here, the weekly Action. To set that up:
@@ -137,15 +148,16 @@ python orchestrator.py            # for real
 python orchestrator.py --dry-run  # intercept all mutations, print instead
 ```
 
-This writes `docs/digest.json` and `overseer_report.html` locally so you can
-preview both.
+This writes `docs/digest.json`, appends to `docs/history.json`, and writes
+`overseer_report.html` locally so you can preview all of them.
 
 ## Files
 
 - `orchestrator.py` — runs the three agents sequentially; `--dry-run` flag
 - `agent_bug_hunter.py` / `agent_idea.py` / `agent_reviewer.py` — the three agents
 - `tools.py` — shared tool implementations, schemas, config, and the agent runtime
-- `tracer.py` — live console trace, HTML report, and `docs/digest.json` writer
+- `tracer.py` — live console trace, HTML report, `docs/digest.json` writer, and
+  the append-only `docs/history.json` trend log
 - `docs/` — the installable web app (GitHub Pages): `index.html`, `app.js`,
   `sw.js` (service worker / push handler), `manifest.webmanifest`, icons
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)

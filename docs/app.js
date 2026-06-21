@@ -7,6 +7,29 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
 
+// Tiny inline-SVG sparkline for week-over-week trends (overseer #6). Pass lo/hi
+// to pin the y-axis (e.g. 0..1 for health scores) so magnitude reads honestly;
+// omit them to auto-scale (e.g. issue/enhancement counts). Returns "" with <2
+// points — a single dot isn't a trend.
+function sparkline(values, { width = 96, height = 22, stroke = "#60a5fa", lo = null, hi = null } = {}) {
+  const vals = values.filter((v) => typeof v === "number");
+  if (vals.length < 2) return "";
+  const min = lo != null ? lo : Math.min(...vals);
+  const max = hi != null ? hi : Math.max(...vals);
+  const span = (max - min) || 1;
+  const stepX = width / (vals.length - 1);
+  const y = (v) => (height - 3 - ((v - min) / span) * (height - 6)).toFixed(1);
+  const pts = vals.map((v, i) => `${(i * stepX).toFixed(1)},${y(v)}`).join(" ");
+  const last = vals[vals.length - 1];
+  return `<svg class="spark" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${((vals.length - 1) * stepX).toFixed(1)}" cy="${y(last)}" r="2.2" fill="${stroke}"/>
+  </svg>`;
+}
+
+// Health-score line colour matches the project's current state.
+const SCORE_STROKE = { ok: "#34d399", idle: "#fbbf24", error: "#f87171", blind: "#fb923c" };
+
 // The three pipeline agents, used to colour-code and group the timeline.
 const AGENTS = {
   "Bug-Hunter": { slug: "bug-hunter", label: "🐛 Bug-Hunter" },
@@ -56,6 +79,17 @@ async function loadDigest() {
     if (!res.ok) throw new Error(res.status);
     const d = await res.json();
 
+    // Week-over-week history for the trend sparklines (overseer #6). Optional —
+    // it doesn't exist until the first run after history tracking shipped.
+    let history = null;
+    try {
+      const hres = await fetch("history.json?" + Date.now());
+      if (hres.ok) history = await hres.json();
+    } catch (e) { /* no history yet */ }
+    const runs = (history && history.runs) || [];
+    const scoreSeries = (name) =>
+      runs.map((r) => (r.projects && r.projects[name] ? r.projects[name].score : null));
+
     $("generated").textContent =
       "Last run: " + new Date(d.generated).toLocaleString() + " — " + (d.status || "");
     $("digest").innerHTML = formatDigest(d.summary || "");
@@ -93,11 +127,28 @@ async function loadDigest() {
           meta = (p.reason || "no data") + ((p.blind_cycles || 0) >= 2 ? ` · blind ${p.blind_cycles} cycles` : "") + lastOk;
           if ((p.blind_cycles || 0) >= 2) alert = " alert";
         }
+        const spark = sparkline(scoreSeries(name), { lo: 0, hi: 1, stroke: SCORE_STROKE[st] || "#94a3b8" });
         return `<div class="prow${alert}">
           <div><div class="pname">${escapeHtml(name)}</div>
             <div class="pmeta">${escapeHtml(meta)}</div></div>
-          <span class="pbadge ${st}">${badge}</span></div>`;
+          <div class="pright">${spark}<span class="pbadge ${st}">${badge}</span></div></div>`;
       }).join("");
+    }
+
+    // Trend card: issues + enhancements over the recorded run history (overseer #6).
+    if (runs.length >= 2) {
+      $("trends-card").style.display = "";
+      const dates = runs.map((r) => r.date);
+      const issues = runs.map((r) => (r.counts && r.counts.issues) || 0);
+      const enh = runs.map((r) => (r.counts && r.counts.enhancements) || 0);
+      const trow = (label, series, stroke) =>
+        `<div class="trow"><span class="tlabel">${label}</span>
+          ${sparkline(series, { stroke }) || '<span class="tnone">—</span>'}
+          <span class="tlast">${series[series.length - 1]}</span></div>`;
+      $("trends").innerHTML =
+        trow("Issues filed", issues, "#f87171") +
+        trow("Enhancements", enh, "#fbbf24") +
+        `<div class="trange">${escapeHtml(dates[0])} → ${escapeHtml(dates[dates.length - 1])} · ${runs.length} runs</div>`;
     }
 
     // Timeline grouped by agent — the pipeline runs Bug-Hunter → Idea → Reviewer

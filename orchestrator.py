@@ -53,11 +53,13 @@ def run_pipeline(dry_run=False):
         tracer.finish(status)
         tracer.write()
         tracer.write_digest(tools.DIGEST_PATH)
+        tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
         raise
 
     tracer.finish(status)
     tracer.write()
     tracer.write_digest(tools.DIGEST_PATH)
+    tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
 
 
 def main():

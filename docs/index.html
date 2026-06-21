@@ -84,6 +84,17 @@
     .pbadge.blind { background: #7c2d12; color: #fed7aa; }
     .pbadge.error { background: #7f1d1d; color: #fecaca; }
     .prow.alert .pmeta { color: #f59e0b; }
+    .prow .pright { display: flex; align-items: center; gap: 10px; }
+
+    /* Trend sparklines (week over week) */
+    .spark { display: block; opacity: .9; }
+    .trow { display: flex; align-items: center; gap: 10px; padding: 9px 0;
+            border-bottom: 1px solid #273449; }
+    .trow:last-of-type { border-bottom: 0; }
+    .trow .tlabel { font-size: 13px; color: #cbd5e1; flex: 1; }
+    .trow .tlast { font-size: 14px; font-weight: 700; min-width: 24px; text-align: right; }
+    .trow .tnone { color: #64748b; }
+    .trange { font-size: 11px; color: #94a3b8; margin-top: 8px; }
 
     button { font: inherit; background: #2563eb; color: #fff; border: 0; border-radius: 10px;
              padding: 12px 16px; width: 100%; cursor: pointer; }
@@ -114,6 +125,11 @@
     <div class="card" id="projects-card" style="display:none">
       <div class="section-label">Project health</div>
       <div id="projects"></div>
+    </div>
+
+    <div class="card" id="trends-card" style="display:none">
+      <div class="section-label">Trends (week over week)</div>
+      <div id="trends"></div>
     </div>
 
     <div class="card">

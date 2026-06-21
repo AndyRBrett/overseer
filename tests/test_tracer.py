@@ -1,8 +1,9 @@
 """Tests for the tracer: digest assembly, tool summaries, blind-spot health."""
 
 import json
+from datetime import datetime, timezone
 
-from tracer import RunTracer, _is_idle, activity_idle
+from tracer import RunTracer, _is_idle, _status_score, activity_idle
 
 
 def _tracer(tmp_path):
@@ -75,6 +76,58 @@ def test_project_health_error_counts_as_blind(tmp_path):
     t.tool_call(0, "read_trading_bot_log", {}, "Tool 'read_trading_bot_log' failed: boom", True)
     ph = t.project_health()
     assert ph["Trading bot"]["status"] == "error" and ph["Trading bot"]["blind_cycles"] == 1
+
+
+def test_status_score_maps_health_to_trend_value():
+    # ok is healthy (1.0), idle is half (0.5), error/blind/unknown bottom out (0).
+    assert _status_score("ok") == 1.0
+    assert _status_score("idle") == 0.5
+    assert _status_score("error") == 0.0
+    assert _status_score("blind") == 0.0
+    assert _status_score(None) == 0.0
+
+
+def test_write_history_appends_and_scores(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)
+    t.tool_call(0, "read_trading_bot_log", {}, '{"status": "not_configured"}', False)
+    t.finish("completed")
+    hpath = tmp_path / "history.json"
+    t.write_history(str(hpath))
+    runs = json.load(open(hpath))["runs"]
+    assert len(runs) == 1
+    rec = runs[0]
+    assert rec["projects"]["UFC dashboard"]["score"] == 1.0      # ok
+    assert rec["projects"]["Trading bot"]["score"] == 0.0        # blind
+    assert rec["counts"] == t.counts and rec["status"] == "completed"
+
+
+def test_write_history_replaces_same_day_run(tmp_path):
+    hpath = tmp_path / "history.json"
+    # First run today: UFC ok.
+    t1 = _tracer(tmp_path)
+    t1.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 1}', False)
+    t1.write_history(str(hpath))
+    # Re-run the SAME day: UFC now errors — must replace, not append a 2nd record.
+    t2 = _tracer(tmp_path)
+    t2.tool_call(0, "read_ufc_scraper_status", {}, "boom", True)
+    t2.write_history(str(hpath))
+    runs = json.load(open(hpath))["runs"]
+    assert len(runs) == 1
+    assert runs[0]["projects"]["UFC dashboard"]["score"] == 0.0  # latest state wins
+
+
+def test_write_history_caps_length(tmp_path):
+    hpath = tmp_path / "history.json"
+    # Pre-seed more records than the cap, each a distinct date.
+    seed = {"runs": [{"date": f"2026-01-{i:02d}", "counts": {}, "projects": {}} for i in range(1, 11)]}
+    hpath.write_text(json.dumps(seed))
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok"}', False)
+    t.write_history(str(hpath), max_runs=5)
+    runs = json.load(open(hpath))["runs"]
+    assert len(runs) == 5
+    assert runs[-1]["date"] == datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 
 def test_digest_assembly(tmp_path):

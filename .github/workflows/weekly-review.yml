@@ -34,20 +34,22 @@ jobs:
           UFC_REPO: ${{ vars.UFC_REPO }}
           TRADING_DB_PATH: ${{ vars.TRADING_DB_PATH }}
           VOLLEYBALL_RESULTS_PATH: ${{ vars.VOLLEYBALL_RESULTS_PATH }}
-          # Agent 3 (Reviewer) delivers the digest to Telegram (optional — the
-          # tool reports "not_configured" and the run still succeeds if unset).
+          # Agent 3 (Reviewer) delivers the digest to Telegram and/or a Slack
+          # incoming webhook (all optional — each reports "not_configured" and the
+          # run still succeeds if unset).
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: python orchestrator.py
 
       - name: Publish digest to the web app
         run: |
-          if git diff --quiet -- docs/digest.json; then
+          if git diff --quiet -- docs/digest.json docs/history.json; then
             echo "No digest change to publish."
           else
             git config user.name  "overseer-bot"
             git config user.email "overseer-bot@users.noreply.github.com"
-            git add docs/digest.json
+            git add docs/digest.json docs/history.json
             git commit -m "Weekly digest $(date -u +%Y-%m-%d)"
             git push
           fi

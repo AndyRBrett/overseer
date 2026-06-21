@@ -51,6 +51,12 @@ def _schedule_stale(age_hours):
 # Action commits it after each run so the web app shows the latest digest.
 DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 
+# Append-only week-over-week history the dashboard turns into trend sparklines,
+# so the overseer is a trend monitor and not just a point-in-time board
+# (overseer #6). Capped so the file (and the sparklines) stay small.
+HISTORY_PATH = os.getenv("HISTORY_PATH", "docs/history.json")
+HISTORY_MAX_RUNS = int(os.getenv("HISTORY_MAX_RUNS", "26"))  # ~6 months of weekly runs
+
 # ── DRY-RUN SWITCH ───────────────────────────────────────────────────────
 # When enabled, the mutating tools print what they WOULD do and return a
 # "dry_run" status instead of touching GitHub or Telegram. Toggled by the
@@ -229,9 +235,10 @@ TOOL_SCHEMAS = {
     "send_telegram_summary": {
         "name": "send_telegram_summary",
         "description": (
-            "Send the final weekly digest to Telegram. Call this exactly once, LAST, "
-            "after reviewing the Bug-Hunter and Idea agent outputs. The text should be "
-            "the complete digest split into 'Issues Found' and 'Top Enhancement Ideas (ranked)'."
+            "Send the final weekly digest to every configured channel (Telegram and/or "
+            "Slack). Call this exactly once, LAST, after reviewing the Bug-Hunter and Idea "
+            "agent outputs. The text should be the complete digest split into 'Issues Found' "
+            "and 'Top Enhancement Ideas (ranked)'."
         ),
         "input_schema": {
             "type": "object",
@@ -436,18 +443,9 @@ def propose_enhancement(repo, title, rationale, effort, impact):
 _TELEGRAM_LIMIT = 4096
 
 
-def send_telegram_summary(text):
-    """Send the Reviewer's weekly digest to Telegram (Bot API). Degrades to a
-    "not_configured" status when the bot token / chat id aren't set, so a run
-    never fails just because Telegram isn't wired up yet."""
-    if len(text) > _TELEGRAM_LIMIT:
-        text = text[: _TELEGRAM_LIMIT - 1] + "…"
-    if DRY_RUN:
-        print("\n[DRY-RUN] send_telegram_summary would send this digest:")
-        print("─" * 64)
-        print(text)
-        print("─" * 64 + "\n")
-        return {"status": "dry_run", "chars": len(text)}
+def _send_telegram(text):
+    """Deliver the digest to Telegram (Bot API). Returns a per-sink status dict;
+    "not_configured" when the bot token / chat id aren't set."""
     token = _env("TELEGRAM_BOT_TOKEN")
     chat_id = _env("TELEGRAM_CHAT_ID")
     if not (token and chat_id):
@@ -467,6 +465,59 @@ def send_telegram_summary(text):
     except Exception as exc:  # noqa: BLE001 — network/JSON issues
         return {"status": "error", "detail": f"Telegram send failed: {exc}"}
     return {"status": "sent", "message_id": body.get("result", {}).get("message_id")}
+
+
+def _send_slack(text):
+    """Deliver the digest to a Slack incoming webhook (overseer #6/#7). Returns a
+    per-sink status dict; "not_configured" when SLACK_WEBHOOK_URL isn't set, so a
+    run never fails just because Slack isn't wired up."""
+    url = _env("SLACK_WEBHOOK_URL")
+    if not url:
+        return {"status": "not_configured",
+                "detail": "Set SLACK_WEBHOOK_URL (an incoming webhook) to deliver the digest to Slack."}
+    payload = json.dumps({"text": text}).encode("utf-8")
+    req = urllib.request.Request(url, data=payload,
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        return {"status": "error", "detail": f"Slack webhook {exc.code}: {_oneline(detail, 200)}"}
+    except Exception as exc:  # noqa: BLE001 — network issues
+        return {"status": "error", "detail": f"Slack send failed: {exc}"}
+    return {"status": "sent"}
+
+
+def _overall_delivery_status(sinks):
+    """Collapse the per-sink results into one status: "sent" if any channel
+    delivered, "not_configured" if none are wired up, else "error"."""
+    statuses = [s.get("status") for s in sinks.values()]
+    if any(s == "sent" for s in statuses):
+        return "sent"
+    if all(s == "not_configured" for s in statuses):
+        return "not_configured"
+    return "error"
+
+
+def send_telegram_summary(text):
+    """Deliver the Reviewer's weekly digest to every configured channel — Telegram
+    and/or a Slack incoming webhook. Each channel degrades to "not_configured"
+    independently, so a run never fails just because one isn't wired up, and the
+    digest reaches you on whichever channels you've set up.
+
+    (Name kept for backwards-compat with the Reviewer's tool schema; it now fans
+    out to multiple sinks — overseer #7.)"""
+    if len(text) > _TELEGRAM_LIMIT:
+        text = text[: _TELEGRAM_LIMIT - 1] + "…"
+    if DRY_RUN:
+        print("\n[DRY-RUN] send_telegram_summary would send this digest (Telegram + Slack):")
+        print("─" * 64)
+        print(text)
+        print("─" * 64 + "\n")
+        return {"status": "dry_run", "chars": len(text)}
+    sinks = {"telegram": _send_telegram(text), "slack": _send_slack(text)}
+    return {"status": _overall_delivery_status(sinks), "sinks": sinks}
 
 
 TOOL_FUNCTIONS = {

@@ -3,15 +3,17 @@ Agent 3 — Reviewer.
 
 Takes the TEXT outputs of the Bug-Hunter and the Idea Agent (never the raw
 logs), dedupes overlapping items, decides what's actually worth surfacing this
-week, and sends one concise Telegram digest split into "Issues Found" and "Top
+week, and sends one concise digest split into "Issues Found" and "Top
 Enhancement Ideas (ranked)". Its only tool is send_telegram_summary, which it
-calls exactly once.
+calls exactly once; that tool fans the digest out to every configured channel
+(Telegram and/or Slack).
 """
 
 import tools
 
-# The Reviewer touches nothing but Telegram. It cannot read logs, file issues, or
-# propose enhancements — it only synthesizes what the first two agents reported.
+# The Reviewer touches nothing but the digest sender. It cannot read logs, file
+# issues, or propose enhancements — it only synthesizes what the first two agents
+# reported and delivers the result.
 TOOL_NAMES = ["send_telegram_summary"]
 
 SYSTEM_PROMPT = """You are the REVIEWER, the final stage of a weekly review pipeline.
