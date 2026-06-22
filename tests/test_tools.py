@@ -95,40 +95,11 @@ def test_project_block_lists_every_reviewed_project():
     assert "Project Overseer itself" in block
 
 
-def test_send_digest_not_configured(monkeypatch):
-    # No channel wired up (Telegram nor Slack) → overall not_configured, no crash.
+def test_send_telegram_not_configured(monkeypatch):
     monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
-    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
     o.set_dry_run(False)
     assert o.send_telegram_summary("hello")["status"] == "not_configured"
-
-
-def test_send_digest_fans_out_to_each_channel(monkeypatch):
-    # The digest is delivered to every configured channel; overall status is
-    # "sent" if any channel delivered (overseer #7).
-    o.set_dry_run(False)
-    monkeypatch.setattr(o, "_send_telegram", lambda text: {"status": "sent"})
-    monkeypatch.setattr(o, "_send_slack", lambda text: {"status": "not_configured"})
-    r = o.send_telegram_summary("digest")
-    assert r["status"] == "sent"
-    assert r["sinks"]["telegram"]["status"] == "sent"
-    assert r["sinks"]["slack"]["status"] == "not_configured"
-
-
-def test_send_digest_overall_status_collapsing():
-    # "sent" wins; all-not_configured → not_configured; otherwise error surfaces.
-    assert o._overall_delivery_status(
-        {"a": {"status": "sent"}, "b": {"status": "error"}}) == "sent"
-    assert o._overall_delivery_status(
-        {"a": {"status": "not_configured"}, "b": {"status": "not_configured"}}) == "not_configured"
-    assert o._overall_delivery_status(
-        {"a": {"status": "error"}, "b": {"status": "not_configured"}}) == "error"
-
-
-def test_slack_not_configured(monkeypatch):
-    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
-    assert o._send_slack("hi")["status"] == "not_configured"
 
 
 def test_dry_run_intercepts_all_mutations(capsys):

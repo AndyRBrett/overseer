@@ -65,19 +65,15 @@ Only the Anthropic key is required. Anything unset just makes that tool report
 
 Add these in your repo settings (Settings → Secrets and variables → Actions):
 - **Secrets:** `ANTHROPIC_API_KEY`, `OVERSEER_GITHUB_TOKEN`, and (optional, for
-  digest delivery) `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `SLACK_WEBHOOK_URL`
+  the Telegram digest) `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
 - **Variables:** `TRADING_REPO`, `VOLLEYBALL_REPO`, `UFC_REPO`,
   `TRADING_DB_PATH`, `VOLLEYBALL_RESULTS_PATH`
 
-The Reviewer fans the digest out to **every channel you've wired up** — Telegram
-and/or Slack — plus the web app. Each channel degrades independently: skip one
-and it reports "not configured" while the run still succeeds.
-
-- **Telegram:** message [@BotFather](https://t.me/BotFather) → `/newbot` for the
-  `TELEGRAM_BOT_TOKEN`, then send your new bot a message and read your chat id
-  from `https://api.telegram.org/bot<token>/getUpdates` for `TELEGRAM_CHAT_ID`.
-- **Slack:** create an [incoming webhook](https://api.slack.com/messaging/webhooks)
-  for the channel you want and store its URL in `SLACK_WEBHOOK_URL`.
+To get the Telegram values: message [@BotFather](https://t.me/BotFather) →
+`/newbot` for the `TELEGRAM_BOT_TOKEN`, then send your new bot a message and read
+your chat id from `https://api.telegram.org/bot<token>/getUpdates` for
+`TELEGRAM_CHAT_ID`. If you skip these, the Reviewer reports "not configured" and
+the run still succeeds — the digest just isn't sent to Telegram.
 
 ### Data sources (for the `read_*` tools)
 
