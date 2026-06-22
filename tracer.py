@@ -15,8 +15,16 @@ from __future__ import annotations
 
 import html
 import json
+import os
 import time
 from datetime import datetime, timezone
+
+# How many consecutive idle/blind cycles a project may sit at before the rollup
+# "nudges" it — promotes it from a quiet badge to an explicit call-out at the top
+# of the dashboard (overseer self-review: idle-detection + rollup). Configurable
+# so a noisier/quieter cadence can tune it without code changes; the threshold is
+# also emitted into the digest so the dashboard highlights the same projects.
+NUDGE_CYCLES = max(1, int(os.getenv("OVERSEER_NUDGE_CYCLES", "2")))
 
 # Maps each tool to a visual category: a label + colour used in the timeline.
 # This is what turns a flat log into something you can read at a glance —
@@ -161,6 +169,42 @@ class RunTracer:
                                    "blind_cycles": prev.get("blind_cycles", 0) + 1}
         return projects
 
+    def rollup(self) -> dict:
+        """A scannable, top-of-dashboard summary of this run (idle-detection +
+        rollup). Reuses the per-project health flags (status / idle_cycles /
+        blind_cycles) rather than inventing new state: every project that isn't
+        "ok" becomes an attention row, and any that's been idle/blind for
+        >= NUDGE_CYCLES is flagged `nudge` so a project that's quietly gone dark
+        (e.g. volleyball idle 3 cycles) is impossible to miss instead of being
+        buried in the timeline.
+        """
+        health = self.project_health()
+        attention = []
+        for name, p in health.items():
+            status = p.get("status")
+            if status == "ok":
+                continue
+            cycles = p.get("idle_cycles", 0) if status == "idle" else p.get("blind_cycles", 0)
+            attention.append({
+                "name": name,
+                "status": status,
+                "detail": _attention_detail(status, p),
+                "cycles": cycles,
+                "nudge": cycles >= NUDGE_CYCLES,
+            })
+        # Nudged projects first, then the rest, each alphabetical — the things
+        # that need action surface at the top of the list.
+        attention.sort(key=lambda a: (not a["nudge"], a["name"]))
+        return {
+            "ok": sum(1 for p in health.values() if p.get("status") == "ok"),
+            "total": len(health),
+            "issues": self.counts["issues"],
+            "enhancements": self.counts["enhancements"],
+            "errors": self.counts["errors"],
+            "nudge_threshold": NUDGE_CYCLES,
+            "attention": attention,
+        }
+
     def write_digest(self, path: str) -> None:
         """Emit docs/digest.json — what the installable web app reads."""
         timeline = []
@@ -181,6 +225,7 @@ class RunTracer:
             "status": self.status,
             "summary": self.digest_text or "(no digest produced this run)",
             "counts": dict(self.counts),
+            "rollup": self.rollup(),
             "projects": self.project_health(),
             "timeline": timeline,
         }
@@ -273,6 +318,20 @@ def _is_idle(obj: dict) -> bool:
         return True
     data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
     return activity_idle(data)
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" + ("" if n == 1 else "s")
+
+
+def _attention_detail(status: str, p: dict) -> str:
+    """One-line reason a project needs attention, built from its health flags."""
+    if status == "idle":
+        return "no recent activity · idle " + _plural(p.get("idle_cycles", 0), "cycle")
+    if status == "blind":
+        reason = p.get("reason") or "no data"
+        return f"{reason} · blind " + _plural(p.get("blind_cycles", 0), "cycle")
+    return p.get("reason") or status
 
 
 def _tool_summary(ev: dict) -> str:

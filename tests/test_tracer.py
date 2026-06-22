@@ -3,6 +3,7 @@
 import json
 from datetime import datetime, timezone
 
+import tracer
 from tracer import RunTracer, _is_idle, _status_score, activity_idle
 
 
@@ -128,6 +129,58 @@ def test_write_history_caps_length(tmp_path):
     runs = json.load(open(hpath))["runs"]
     assert len(runs) == 5
     assert runs[-1]["date"] == datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def test_rollup_flags_idle_project_past_threshold(tmp_path, monkeypatch):
+    monkeypatch.setattr(tracer, "NUDGE_CYCLES", 2)
+    t = _tracer(tmp_path)
+    t.prev_projects = {"Trading bot": {"status": "idle", "last_ok": "x", "idle_cycles": 2}}
+    # Trading bot idle for a 3rd cycle → past threshold, must be nudged.
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+    # UFC healthy → counts toward "ok", never appears in attention.
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 49}', False)
+    r = t.rollup()
+    assert r["ok"] == 1 and r["total"] == 2 and r["nudge_threshold"] == 2
+    assert [a["name"] for a in r["attention"]] == ["Trading bot"]
+    nudged = r["attention"][0]
+    assert nudged["status"] == "idle" and nudged["cycles"] == 3 and nudged["nudge"] is True
+    assert "idle 3 cycles" in nudged["detail"]
+
+
+def test_rollup_below_threshold_is_not_nudged(tmp_path, monkeypatch):
+    monkeypatch.setattr(tracer, "NUDGE_CYCLES", 3)
+    t = _tracer(tmp_path)
+    # First idle cycle, threshold 3 → listed for attention but not yet nudged.
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+    r = t.rollup()
+    assert r["attention"][0]["cycles"] == 1
+    assert r["attention"][0]["nudge"] is False
+
+
+def test_rollup_sorts_nudged_first(tmp_path, monkeypatch):
+    monkeypatch.setattr(tracer, "NUDGE_CYCLES", 2)
+    t = _tracer(tmp_path)
+    t.prev_projects = {"UFC dashboard": {"status": "blind", "last_ok": None, "blind_cycles": 2}}
+    # UFC blind for a 3rd cycle (nudged); Trading bot freshly idle (not nudged).
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "not_configured"}', False)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+    r = t.rollup()
+    # Nudged project sorts ahead of the merely-flagged one.
+    assert [a["name"] for a in r["attention"]] == ["UFC dashboard", "Trading bot"]
+    assert r["attention"][0]["nudge"] is True and r["attention"][1]["nudge"] is False
+
+
+def test_rollup_present_in_digest(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 9}', False)
+    t.finish("completed")
+    t.write_digest(str(tmp_path / "d.json"))
+    d = json.load(open(tmp_path / "d.json"))
+    assert "rollup" in d
+    assert d["rollup"]["ok"] == 1 and d["rollup"]["attention"] == []
 
 
 def test_digest_assembly(tmp_path):

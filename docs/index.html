@@ -71,6 +71,19 @@
     .chip.error { background: #7f1d1d; color: #fecaca; }
     .item .body { font-size: 13.5px; color: #cbd5e1; margin-top: 4px; }
 
+    /* Rollup — top-of-dashboard "at a glance" summary (idle-detection + rollup) */
+    .rollup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .rc { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+          background: #334155; color: #cbd5e1; white-space: nowrap; }
+    .rc.ok { background: #064e3b; color: #6ee7b7; }
+    .rc.warn { background: #713f12; color: #fde68a; }
+    .nudges { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .nudge { display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+             background: #2a1d10; border: 1px solid #7c2d12; border-radius: 9px; }
+    .nudge.idle { background: #2a230f; border-color: #713f12; }
+    .nudge .ntext { font-size: 13px; color: #e2e8f0; }
+    .nudge .ntext b { color: #f8fafc; }
+
     /* Per-project health (blind-spot tracking) */
     .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
             padding: 9px 0; border-bottom: 1px solid #273449; }
@@ -114,6 +127,11 @@
     <div class="sub" id="generated">Loading…</div>
   </header>
   <main>
+    <div class="card" id="rollup-card" style="display:none">
+      <div class="section-label">This week at a glance</div>
+      <div id="rollup"></div>
+    </div>
+
     <div class="stats" id="stats"></div>
 
     <div class="card">

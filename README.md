@@ -102,6 +102,15 @@ branch*, branch = `main`, folder = `/docs`. Your app URL appears there (like
 The app shows the latest digest and run stats, refreshed each week. That alone
 needs nothing further.
 
+**At a glance + idle nudges.** The top of the dashboard shows a one-line rollup
+of the run — how many projects are healthy, how many need attention, and how many
+issues/ideas came out of it — so each weekly review is scannable in seconds. Any
+project that's been idle or blind for **≥ `OVERSEER_NUDGE_CYCLES`** consecutive
+runs (default 2) is promoted from a quiet badge to an explicit call-out at the
+top, so a project quietly going dark (e.g. volleyball idle for several cycles)
+can't hide in the timeline. The threshold is reused by the per-project health
+card; set the `OVERSEER_NUDGE_CYCLES` variable to tune it without code changes.
+
 **Trends (week over week).** Each run also appends a small record to
 `docs/history.json` (per-project health score + issue/enhancement counts, capped
 to the last ~26 runs). The dashboard turns it into inline sparklines — one per

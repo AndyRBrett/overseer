@@ -104,6 +104,31 @@ async function loadDigest() {
       `<div class="stat"><div class="n">${c[k] ?? 0}</div><div class="l">${label}</div></div>`
     ).join("");
 
+    // Top-of-dashboard rollup — the run "at a glance" so a regression (e.g. a
+    // project gone idle for several cycles) is visible immediately instead of
+    // buried in the timeline. Reuses the server-computed health flags.
+    const rollup = d.rollup;
+    const nudgeAt = (rollup && rollup.nudge_threshold) || 2;
+    if (rollup) {
+      const att = rollup.attention || [];
+      const chips = [
+        `<span class="rc ok">${rollup.ok}/${rollup.total} healthy</span>`,
+        att.length ? `<span class="rc warn">${att.length} need${att.length === 1 ? "s" : ""} attention</span>` : "",
+        `<span class="rc">${rollup.issues} issue${rollup.issues === 1 ? "" : "s"} filed</span>`,
+        `<span class="rc">${rollup.enhancements} idea${rollup.enhancements === 1 ? "" : "s"}</span>`,
+      ].filter(Boolean).join("");
+      // Only projects past the nudge threshold get an explicit call-out row.
+      const nudges = att.filter((a) => a.nudge).map((a) => {
+        const st = ["idle", "blind", "error"].includes(a.status) ? a.status : "blind";
+        const badge = { idle: "IDLE", blind: "BLIND", error: "ERROR" }[st];
+        return `<div class="nudge ${st}"><span class="pbadge ${st}">${badge}</span>
+          <span class="ntext"><b>${escapeHtml(a.name)}</b> — ${escapeHtml(a.detail)}</span></div>`;
+      }).join("");
+      $("rollup").innerHTML = `<div class="rollup-chips">${chips}</div>` +
+        (nudges ? `<div class="nudges">${nudges}</div>` : "");
+      $("rollup-card").style.display = "";
+    }
+
     // Per-project health with BLIND badges (blind-spot tracking)
     const projects = d.projects || {};
     const names = Object.keys(projects);
@@ -118,14 +143,14 @@ async function loadDigest() {
         if (st === "ok") {
           meta = "healthy";
         } else if (st === "idle") {
-          meta = "no recent activity" + ((p.idle_cycles || 0) >= 2 ? ` · idle ${p.idle_cycles} cycles` : "");
-          if ((p.idle_cycles || 0) >= 2) alert = " alert";
+          meta = "no recent activity" + ((p.idle_cycles || 0) >= nudgeAt ? ` · idle ${p.idle_cycles} cycles` : "");
+          if ((p.idle_cycles || 0) >= nudgeAt) alert = " alert";
         } else if (st === "error") {
           meta = p.reason || "read failed";
           alert = " alert";
         } else {
-          meta = (p.reason || "no data") + ((p.blind_cycles || 0) >= 2 ? ` · blind ${p.blind_cycles} cycles` : "") + lastOk;
-          if ((p.blind_cycles || 0) >= 2) alert = " alert";
+          meta = (p.reason || "no data") + ((p.blind_cycles || 0) >= nudgeAt ? ` · blind ${p.blind_cycles} cycles` : "") + lastOk;
+          if ((p.blind_cycles || 0) >= nudgeAt) alert = " alert";
         }
         const spark = sparkline(scoreSeries(name), { lo: 0, hi: 1, stroke: SCORE_STROKE[st] || "#94a3b8" });
         return `<div class="prow${alert}">

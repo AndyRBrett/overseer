@@ -8,6 +8,23 @@
     "issues": 0,
     "enhancements": 8
   },
+  "rollup": {
+    "ok": 3,
+    "total": 4,
+    "issues": 0,
+    "enhancements": 8,
+    "errors": 0,
+    "nudge_threshold": 2,
+    "attention": [
+      {
+        "name": "Volleyball",
+        "status": "idle",
+        "detail": "no recent activity · idle 3 cycles",
+        "cycles": 3,
+        "nudge": true
+      }
+    ]
+  },
   "projects": {
     "Trading bot": {
       "status": "ok",
