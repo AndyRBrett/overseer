@@ -1,7 +1,7 @@
 {
   "generated": "2026-06-29T16:51:13Z",
   "status": "completed",
-  "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- None this week. Bug-Hunter checked all four sources; crypto bot is healthy (signals evaluated, all valid HOLDs), and nothing else met the filing bar.\n\nTop Enhancement Ideas (ranked)\n1. CRYPTO \u2014 Exclude capital injections from Sharpe/returns (effort: low, impact: high): equity step-jumps (10k\u219229k\u219249k) are deposits, not gains, inflating Sharpe to a nonsensical 13.29 \u2014 fixing this stops false confidence in performance.\n2. OVERSEER \u2014 Add run miss-detection / dead-man's switch (effort: low, impact: high): it only runs weekly with no alert if a run silently fails to fire.\n3. VOLLEYBALL \u2014 Alert when no footage ingested (effort: low, impact: medium): pipeline self-test is green but it has never ingested footage, so the empty dashboard hides the real gap.\n4. UFC \u2014 Denoise line-movement scraping (effort: medium, impact: low): data is healthy and rich, just some noise to clean up.",
+  "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- None this week. Bug-Hunter checked all four sources; crypto bot is healthy (signals evaluated, all valid HOLDs), and nothing else met the filing bar.\n\nTop Enhancement Ideas (ranked)\n1. CRYPTO \u2014 Exclude capital injections from Sharpe/returns (effort: low, impact: high): deposits are being counted as gains, inflating the Sharpe ratio \u2014 fixing this stops false confidence in performance.\n2. OVERSEER \u2014 Add run miss-detection / dead-man's switch (effort: low, impact: high): it only runs weekly with no alert if a run silently fails to fire.\n3. VOLLEYBALL \u2014 Alert when no footage ingested (effort: low, impact: medium): pipeline self-test is green but it has never ingested footage, so the empty dashboard hides the real gap.\n4. UFC \u2014 Denoise line-movement scraping (effort: medium, impact: low): data is healthy and rich, just some noise to clean up.",
   "counts": {
     "tools": 9,
     "errors": 0,
@@ -51,12 +51,6 @@
   },
   "timeline": [
     {
-      "ts": "16:48:42",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "I'll start by loading all the data sources concurrently to get everything I need."
-    },
-    {
       "ts": "16:48:43",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
@@ -81,18 +75,6 @@
       "text": "ok"
     },
     {
-      "ts": "16:49:47",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "Looking at the crypto trading bot's metrics \u2014 it shows a status of ok with an age of 33.9 hours since its last run on June 28th, but it's marked as idle false, which seems inconsistent since that's more than a day for what should be a dail\u2026"
-    },
-    {
-      "ts": "16:49:50",
-      "agent": "Idea-Agent",
-      "label": "reasoning",
-      "text": "I'll start by fetching all the project statuses in parallel to get a complete picture of what we're working with."
-    },
-    {
       "ts": "16:49:51",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (investigate)",
@@ -115,18 +97,6 @@
       "agent": "Idea-Agent",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
-    },
-    {
-      "ts": "16:50:52",
-      "agent": "Idea-Agent",
-      "label": "reasoning",
-      "text": "Looking at the trading bot metrics, the performance data is concerning\u2014negative PnL over both 30 and 90 days with only 20 trades executed despite 10 signals generated, and there are contradictory rejection states where the same signal gets\u2026"
-    },
-    {
-      "ts": "16:51:07",
-      "agent": "Reviewer",
-      "label": "reasoning",
-      "text": "The reports are incomplete, but I can work with what's there. The Bug-Hunter report confirms no bugs were filed this week\u2014none of the issues examined met the threshold for filing. The Idea Agent report is similarly truncated, giving a summ\u2026"
     },
     {
       "ts": "16:51:07",

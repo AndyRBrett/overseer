@@ -183,6 +183,20 @@ def test_rollup_present_in_digest(tmp_path):
     assert d["rollup"]["ok"] == 1 and d["rollup"]["attention"] == []
 
 
+def test_write_digest_excludes_thinking_text(tmp_path):
+    # docs/digest.json is published on a public GitHub Pages site; raw model
+    # "thinking" text reasons freely over whatever the read tools returned
+    # (e.g. a project's exact PnL), so it must never end up in the public
+    # timeline — only the sanitized tool-call summaries may.
+    t = _tracer(tmp_path)
+    t.thinking(0, "account balance is $41,200 after today's deposit")
+    t.tool_call(0, "read_trading_bot_log", {}, '{"status": "ok", "trades": 2}', False)
+    t.write_digest(str(tmp_path / "d.json"))
+    d = json.load(open(tmp_path / "d.json"))
+    assert all(row["label"] != "reasoning" for row in d["timeline"])
+    assert not any("41,200" in json.dumps(row) for row in d["timeline"])
+
+
 def test_digest_assembly(tmp_path):
     t = _tracer(tmp_path)
     t.set_digest("ISSUES FOUND\n- none")

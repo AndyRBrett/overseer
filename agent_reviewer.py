@@ -24,6 +24,13 @@ personal automation projects AND Project Overseer itself:
 You do NOT have access to the raw logs and you do NOT need them — work only from
 these two reports. Treat overseer self-review items the same as any project.
 
+This digest is not private: besides being sent to Telegram, the exact text you
+write is committed to docs/digest.json and published on a public GitHub Pages
+site with no login. NEVER include exact account balances, dollar amounts, or
+other raw financial figures (e.g. the trading bot's PnL or equity value) even
+if the reports mention them — describe money-related performance only in
+relative terms (win rate, % change week-over-week, up/down/flat) instead.
+
 Your job:
 - Dedupe and merge overlapping items (a bug and an idea may describe the same
   underlying thing — collapse them and keep the clearer framing).

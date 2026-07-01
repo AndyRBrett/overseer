@@ -206,7 +206,16 @@ class RunTracer:
         }
 
     def write_digest(self, path: str) -> None:
-        """Emit docs/digest.json — what the installable web app reads."""
+        """Emit docs/digest.json — what the installable web app reads.
+
+        docs/ is published on a public GitHub Pages site with no login, unlike
+        the JSONL/HTML run report (gitignored, only ever an internal CI
+        artifact). Raw model "thinking" text reasons freely over whatever the
+        read tools returned — e.g. a project's exact PnL or account balance —
+        so unlike tool_call rows (already reduced to a sanitized one-liner via
+        _tool_summary) it must never be included here. Full reasoning is still
+        available in the private run report for debugging.
+        """
         timeline = []
         for ev in self.events:
             # Tag each row with the agent that produced it so the dashboard can
@@ -216,10 +225,6 @@ class RunTracer:
                 timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
                                  "label": f"{ev['name']} ({label})",
                                  "text": _tool_summary(ev)})
-            elif ev["kind"] == "thinking":
-                timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
-                                 "label": "reasoning",
-                                 "text": _oneline(ev["text"], 240)})
         payload = {
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": self.status,

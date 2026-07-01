@@ -8,6 +8,8 @@ and against the dry-run flag failing to intercept a mutating tool.
 import sqlite3
 from datetime import datetime, timezone
 
+import pytest
+
 import tools as o
 
 
@@ -102,9 +104,10 @@ def test_send_telegram_not_configured(monkeypatch):
     assert o.send_telegram_summary("hello")["status"] == "not_configured"
 
 
-def test_dry_run_intercepts_all_mutations(capsys):
+def test_dry_run_intercepts_all_mutations(capsys, monkeypatch):
     # The --dry-run safety switch must intercept every mutating tool so nothing
     # reaches GitHub or Telegram while testing changes.
+    monkeypatch.setitem(o.PROJECTS["trading_bot"], "repo", "a/b")
     o.set_dry_run(True)
     try:
         assert o.file_issue("a/b", "bug", "body")["status"] == "dry_run"
@@ -114,3 +117,39 @@ def test_dry_run_intercepts_all_mutations(capsys):
         o.set_dry_run(False)
     out = capsys.readouterr().out
     assert out.count("[DRY-RUN]") == 3
+
+
+def test_file_issue_rejects_unconfigured_repo():
+    # file_issue must not act on a repo outside the configured project list,
+    # even in dry-run — the allowlist is the enforcement boundary, not the
+    # dry-run switch.
+    with pytest.raises(ValueError):
+        o.file_issue("not-configured/repo", "title", "body")
+
+
+def test_propose_enhancement_rejects_unconfigured_repo():
+    with pytest.raises(ValueError):
+        o.propose_enhancement("not-configured/repo", "title", "why", "low", "high")
+
+
+def test_search_existing_issues_rejects_unconfigured_repo():
+    with pytest.raises(ValueError):
+        o.search_existing_issues("not-configured/repo", "bug")
+
+
+def test_search_existing_issues_strips_scope_qualifiers(monkeypatch):
+    # A query containing repo:/org:/user: qualifiers must not be able to widen
+    # the search past the repo we just allowlist-checked.
+    monkeypatch.setitem(o.PROJECTS["trading_bot"], "repo", "a/b")
+    captured = {}
+
+    class FakeGithub:
+        def search_issues(self, q):
+            captured["q"] = q
+            return []
+
+    monkeypatch.setattr(o, "_github", lambda: FakeGithub())
+    o.search_existing_issues("a/b", "crash repo:other/secret org:evil-org")
+    assert "repo:other/secret" not in captured["q"]
+    assert "org:evil-org" not in captured["q"]
+    assert captured["q"].startswith("repo:a/b is:issue in:title,body")

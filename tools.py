@@ -24,6 +24,7 @@ status the agent notes and works around, so the pipeline always runs end to end.
 
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -114,6 +115,24 @@ CORE_PROJECTS = ("trading_bot", "volleyball", "ufc")
 # any other project — it gets its own read tool (read_overseer_status) and the
 # agents file bugs / propose enhancements against the overseer repo too.
 REVIEW_PROJECTS = CORE_PROJECTS + ("overseer",)
+
+# Repo-scoped tools (file_issue, propose_enhancement, search_existing_issues) take
+# a `repo` argument straight from the model's tool call. The system prompt tells
+# the model which repos to use, but that's not an enforcement boundary — a model
+# steered off course (e.g. by injected content in a project's status file) could
+# otherwise target any repo the shared PAT can write to. Enforce it in code too.
+def _allowed_repo_slugs():
+    return {cfg["repo"] for cfg in PROJECTS.values() if cfg["repo"]}
+
+
+def _check_repo_allowed(repo):
+    allowed = _allowed_repo_slugs()
+    if not any(repo.lower() == r.lower() for r in allowed):
+        raise ValueError(
+            f"Repo '{repo}' is not one of the configured project repos "
+            f"({', '.join(sorted(allowed)) or 'none configured'}) — refusing to act on it."
+        )
+
 
 # Maps each read tool to the project it reports on — used to track per-project
 # read health (blind-spot detection) across runs. (overseer self-review #1)
@@ -394,9 +413,13 @@ def read_overseer_status():
 
 
 def search_existing_issues(repo, query):
+    _check_repo_allowed(repo)
     # GitHub's search API requires an `is:issue`/`is:pull-request` qualifier
     # (omitting it 422s). Iterate-and-break instead of slicing the lazy
     # PaginatedList, which can IndexError on empty results.
+    # Strip any repo:/org:/user: qualifiers the model's query might contain so
+    # it can't widen the search past the repo we just checked.
+    query = re.sub(r"\b(?:repo|org|user):\S+", "", query).strip()
     q = f"repo:{repo} is:issue in:title,body {query}"
     matches = []
     for issue in _github().search_issues(q):
@@ -408,6 +431,7 @@ def search_existing_issues(repo, query):
 
 
 def file_issue(repo, title, body):
+    _check_repo_allowed(repo)
     if DRY_RUN:
         print("\n[DRY-RUN] file_issue would file a GitHub issue:")
         print(f"          repo : {repo}")
@@ -419,6 +443,7 @@ def file_issue(repo, title, body):
 
 
 def propose_enhancement(repo, title, rationale, effort, impact):
+    _check_repo_allowed(repo)
     if DRY_RUN:
         print("\n[DRY-RUN] propose_enhancement would file a labelled GitHub issue:")
         print(f"          repo  : {repo}")
