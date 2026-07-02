@@ -43,7 +43,9 @@ class ScriptedClient:
         class _Messages:
             @staticmethod
             def create(**kwargs):
-                client.calls.append(kwargs)
+                # Snapshot the messages list: run_agent keeps mutating it after
+                # this call, and assertions need what the API actually saw.
+                client.calls.append({**kwargs, "messages": list(kwargs.get("messages", []))})
                 return client.responses.pop(0)
 
         self.responses = list(responses)
@@ -89,6 +91,42 @@ SCRIPT = [
               issue_number=7),
     _text(SUMMARY),
 ]
+
+
+def test_run_agent_continues_after_max_tokens_truncation():
+    # A response cut off by the output token limit (stop_reason "max_tokens",
+    # no tool calls) must NOT end the loop — the live Janitor run "completed"
+    # mid-task exactly this way. The loop should nudge and keep going.
+    truncated = SimpleNamespace(
+        content=[SimpleNamespace(type="text", text="I verified #24 and will now")],
+        stop_reason="max_tokens",
+    )
+    client = ScriptedClient([truncated, _text("done: closed #24")])
+    out = o.run_agent(client, agent="T", system="s", tool_names=["list_open_issues"],
+                      user_message="go", tracer=StubTracer(), max_iterations=5)
+    assert out == "done: closed #24"
+    assert client.responses == []  # both scripted responses were consumed
+    nudge = client.calls[1]["messages"][-1]
+    assert nudge["role"] == "user" and "cut off" in nudge["content"]
+
+
+def test_run_agent_still_runs_tools_on_truncated_response(fake_remote, monkeypatch):
+    # If truncation happened AFTER a complete tool_use block, that call must
+    # still be executed rather than nudging (or worse, ending the loop).
+    repo, _ = fake_remote
+    monkeypatch.setattr(o, "_github", lambda: (_ for _ in ()).throw(AssertionError("unused")))
+    truncated_with_tool = SimpleNamespace(
+        content=[SimpleNamespace(type="tool_use", name="setup_fix_workspace",
+                                 input={"repo": repo, "issue_number": 3}, id="toolu_x")],
+        stop_reason="max_tokens",
+    )
+    tracer = StubTracer()
+    out = o.run_agent(client=ScriptedClient([truncated_with_tool, _text("ok")]),
+                      agent="T", system="s", tool_names=["setup_fix_workspace"],
+                      user_message="go", tracer=tracer, max_iterations=5)
+    assert out == "ok"
+    (name, result), = tracer.tool_results
+    assert name == "setup_fix_workspace" and result["status"] == "ok"
 
 
 def test_fixer_stage_end_to_end(fake_remote, monkeypatch):

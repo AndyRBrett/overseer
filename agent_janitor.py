@@ -58,6 +58,10 @@ Process, per repo:
    issue asked for, where it is implemented (file + commit SHA), and that the
    Janitor verified it in a fresh clone. The comment is the audit trail — the
    owner will spot-check it.
+   Close each issue IN THE SAME TURN you finish verifying it — do not batch
+   the closes for the end of the run. Verification without the close is a
+   failure mode: an interrupted run would leave verified-done issues open with
+   nothing recorded.
 4. If a request is only PARTIALLY implemented, or you cannot find clear
    evidence, leave it open. If your findings would still help (e.g. "80% of
    this landed in <sha>, the remaining piece is X"), record them with

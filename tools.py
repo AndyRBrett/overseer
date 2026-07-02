@@ -36,8 +36,13 @@ from datetime import datetime, timedelta, timezone
 
 from tracer import RunTracer, activity_idle
 
-# All three agents run on the same model unless overridden.
+# All agents run on the same model unless overridden.
 MODEL = os.getenv("OVERSEER_MODEL", "claude-opus-4-8")
+
+# Per-response output budget. Adaptive thinking spends from this too, so it
+# must be generous: at 4096 a long think could swallow the whole budget and
+# truncate the response (see the max_tokens handling in run_agent).
+MAX_TOKENS = int(os.getenv("OVERSEER_MAX_TOKENS", "16384"))
 
 # Safety bound on each agent's tool-use loop. Without this, a model that keeps
 # calling tools would never terminate. On the final iteration we drop the tools
@@ -992,7 +997,7 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer,
 
         response = client.messages.create(
             model=MODEL,
-            max_tokens=4096,
+            max_tokens=MAX_TOKENS,
             # Adaptive thinking with summarized display: judgment-heavy work
             # (bug vs. enhancement, effort/impact ranking, dedupe), and the
             # summaries are what the visual trace shows.
@@ -1017,13 +1022,25 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer,
         # Preserve full content (incl. thinking + tool_use) for the next turn.
         messages.append({"role": "assistant", "content": response.content})
 
-        if response.stop_reason != "tool_use":
+        tool_uses = [b for b in response.content if b.type == "tool_use"]
+
+        if response.stop_reason == "max_tokens" and not tool_uses:
+            # Truncated mid-thought with nothing runnable. Breaking here would
+            # silently end the agent mid-task — live validation caught the
+            # Janitor verifying issues and then "completing" without acting.
+            # Nudge it to pick up where it left off instead.
+            tracer.assistant_text(iteration, "(response hit the output token limit — asking the agent to continue)")
+            messages.append({"role": "user", "content": (
+                "Your previous response was cut off by the output token limit. "
+                "Continue exactly where you left off; if you were about to call "
+                "a tool, issue that tool call now.")})
+            continue
+
+        if not tool_uses:
             break
 
         tool_results = []
-        for block in response.content:
-            if block.type != "tool_use":
-                continue
+        for block in tool_uses:
             # Isolate tool failures: a raising tool becomes an error result the
             # agent can route around, not a crash that aborts the whole run.
             try:

@@ -7,21 +7,22 @@
 #                 fix goes all the way to a real PR for owner review
 #
 # Push-triggered because workflow dispatch needs actions:write, which the
-# session driving this validation doesn't have. Gated on a commit-message
-# marker so ordinary pushes to the branch cost nothing: it only runs when the
-# head commit message contains [run-live].
+# session driving this validation doesn't have. Gated on a trigger FILE, not a
+# commit-message marker: a marker string can appear in prose describing it
+# (which double-fired this workflow once). It only runs when a commit touches
+# .github/live-validation-trigger.
 name: Live Validation (janitor + fixer)
 
 on:
   push:
     branches: [claude/overseer-auto-fix-fef9c2]
+    paths: [".github/live-validation-trigger"]
 
 permissions:
   contents: read
 
 jobs:
   live:
-    if: contains(github.event.head_commit.message, '[run-live]')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
