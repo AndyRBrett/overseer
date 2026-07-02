@@ -36,8 +36,12 @@ from datetime import datetime, timedelta, timezone
 
 from tracer import RunTracer, activity_idle
 
-# All agents run on the same model unless overridden.
+# Two model tiers to keep the weekly cost down. The Fixer gets the heavy model
+# (writing correct code + repro tests is the judgment-heavy stage); the
+# investigate/summarize agents (Bug-Hunter, Idea, Reviewer, Janitor) run on the
+# light model, which is roughly 5x cheaper per token.
 MODEL = os.getenv("OVERSEER_MODEL", "claude-opus-4-8")
+LIGHT_MODEL = os.getenv("OVERSEER_LIGHT_MODEL", "claude-sonnet-5")
 
 # Per-response output budget. Adaptive thinking spends from this too, so it
 # must be generous: at 4096 a long think could swallow the whole budget and
@@ -975,7 +979,7 @@ def _oneline(text, limit=160):
 
 
 def run_agent(client, *, agent, system, tool_names, user_message, tracer,
-              max_iterations=MAX_ITERATIONS):
+              max_iterations=MAX_ITERATIONS, model=None):
     """Run one agent's client.messages.create tool-use loop to completion.
 
     Reuses the TOOL_FUNCTIONS dispatch pattern: the model may only call the
@@ -988,6 +992,7 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer,
     orchestrator can pass it on to the next agent.
     """
     tracer.set_agent(agent)
+    model = model or MODEL
     specs = tool_specs(tool_names)
     messages = [{"role": "user", "content": user_message}]
     final_text = ""
@@ -996,7 +1001,7 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer,
         last_iteration = iteration == max_iterations - 1
 
         response = client.messages.create(
-            model=MODEL,
+            model=model,
             max_tokens=MAX_TOKENS,
             # Adaptive thinking with summarized display: judgment-heavy work
             # (bug vs. enhancement, effort/impact ranking, dedupe), and the

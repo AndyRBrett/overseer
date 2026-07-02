@@ -1,11 +1,17 @@
 # Project Overseer
 
 Agentic weekly review of personal automation projects, run as a **four-agent
-pipeline** on Claude (Opus 4.8). The agents investigate three projects, file
-issues on GitHub, **fix what they can and open pull requests**, send a digest
-to **Telegram**, and publish that digest to an **installable web app** (PWA)
+pipeline** on Claude. The agents investigate three projects, file issues on
+GitHub, **fix what they can and open pull requests**, send a digest to
+**Telegram**, and publish that digest to an **installable web app** (PWA)
 you can add to your phone's home screen and get a weekly push notification
 from.
+
+To keep the weekly cost down the pipeline uses two model tiers: the **Fixer**
+runs on Opus 4.8 (`OVERSEER_MODEL`) since writing correct code and tests is
+the judgment-heavy stage, while the Bug-Hunter, Idea Agent, Reviewer, and
+Janitor run on Sonnet 5 (`OVERSEER_LIGHT_MODEL`), which is roughly 5x cheaper
+per token.
 
 Everything is hosted by GitHub: the pipeline runs on **GitHub Actions** (weekly
 cron), the dashboard is served by **GitHub Pages** from `docs/`, and the push

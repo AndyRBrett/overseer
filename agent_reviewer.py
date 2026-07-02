@@ -75,4 +75,5 @@ def run(client, tracer, bug_output, idea_output, fix_output=""):
         tool_names=TOOL_NAMES,
         user_message=_build_user_message(bug_output, idea_output, fix_output),
         tracer=tracer,
+        model=tools.LIGHT_MODEL,  # dedupe + summarize: light tier is enough
     )

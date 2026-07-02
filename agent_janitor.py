@@ -98,6 +98,7 @@ def run(client, tracer):
         user_message=USER_MESSAGE,
         tracer=tracer,
         max_iterations=MAX_ITERATIONS,
+        model=tools.LIGHT_MODEL,  # verify + close: light tier is enough
     )
 
 

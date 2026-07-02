@@ -93,6 +93,32 @@ SCRIPT = [
 ]
 
 
+def test_model_tiers_per_agent():
+    # Cost control: the Fixer runs on the heavy model, every other agent on the
+    # light tier. Drive each agent's run() with a scripted client and check
+    # which model each one actually requests.
+    import agent_bug_hunter
+    import agent_idea
+    import agent_janitor
+    import agent_reviewer
+
+    def model_used(run_call):
+        client = ScriptedClient([_text("done")])
+        run_call(client)
+        return client.calls[0]["model"]
+
+    tracer = StubTracer()
+    assert model_used(lambda c: agent_fixer.run(c, tracer, "bugs")) == o.MODEL
+    for light_run in (
+        lambda c: agent_bug_hunter.run(c, tracer),
+        lambda c: agent_idea.run(c, tracer),
+        lambda c: agent_reviewer.run(c, tracer, "bugs", "ideas", "fixes"),
+        lambda c: agent_janitor.run(c, tracer),
+    ):
+        assert model_used(light_run) == o.LIGHT_MODEL
+    assert o.LIGHT_MODEL != o.MODEL
+
+
 def test_run_agent_continues_after_max_tokens_truncation():
     # A response cut off by the output token limit (stop_reason "max_tokens",
     # no tool calls) must NOT end the loop — the live Janitor run "completed"
