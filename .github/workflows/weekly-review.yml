@@ -10,6 +10,10 @@ on:
         description: "Dry run: intercept every mutating tool (issues, PRs, pushes, Telegram) and print what WOULD happen. Skips digest publish + push notification."
         type: boolean
         default: false
+      max_fixes:
+        description: "Max PRs the Fixer may open this run (FIXER_MAX_FIXES). Enforced in code by open_pull_request."
+        type: string
+        default: "2"
 
 # Needed so the run can commit the updated digest back into docs/ (GitHub Pages).
 permissions:
@@ -46,6 +50,9 @@ jobs:
           # tool reports "not_configured" and the run still succeeds if unset).
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Manual runs can dial the Fixer's PR budget (e.g. 1 for a supervised
+          # first run); scheduled runs use the default.
+          FIXER_MAX_FIXES: ${{ inputs.max_fixes || '2' }}
         run: python orchestrator.py ${{ inputs.dry_run == true && '--dry-run' || '' }}
 
       - name: Publish digest to the web app
