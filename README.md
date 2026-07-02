@@ -36,9 +36,12 @@ to the same bar as any other project (`read_overseer_status`):
    ("Fixes #N" is appended so the issue closes on merge). Issues that need an
    owner-only decision (scope/product choices, credentials, paid services, data
    deletion, deploy changes) are **escalated instead**: the plain issue stands,
-   with the Fixer's findings posted as a comment. Two guarantees are enforced in
-   the tools, not just the prompt: only configured project repos can be touched,
-   and the default branch can never be committed to or pushed.
+   with the Fixer's findings posted as a comment. Three guarantees are enforced
+   in the tools, not just the prompt: only configured project repos can be
+   touched; the default branch can never be committed to or pushed (the clone's
+   remote holds no credentials — the token is attached only for
+   `commit_and_push`'s own guarded push); and `FIXER_MAX_FIXES` is a hard cap —
+   `open_pull_request` refuses once the budget is spent.
 3. **Idea Agent** (`agent_idea.py`) — ignores what's broken and brainstorms at
    least three `propose_enhancement()` ideas across the projects, each ranked by
    effort vs impact. Outputs a structured idea list.

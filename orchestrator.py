@@ -42,6 +42,8 @@ def run_pipeline(dry_run=False):
     import anthropic
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
+    tools.reset_fix_run()  # fresh per-run PR budget for the Fixer
+
     tracer = RunTracer()
     tracer.read_tools = tools.READ_TOOLS
     tracer.prev_projects = tools.load_prev_projects()

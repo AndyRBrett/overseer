@@ -18,12 +18,20 @@ from tests.conftest import BUGGY_CALC, FIXED_CALC, remote_branches, remote_file
 class FakeGithub:
     """Stands in for the PyGithub client where a test needs the API surface."""
 
-    def __init__(self):
+    def __init__(self, issues=(), open_prs=()):
         self.pulls = []
         self.comments = []
+        self.issues = list(issues)
+        self.open_prs = list(open_prs)
 
     def get_repo(self, slug):
         return self
+
+    def get_issues(self, state):
+        return self.issues
+
+    def get_pulls(self, state):
+        return self.open_prs
 
     def create_pull(self, **kw):
         self.pulls.append(kw)
@@ -155,6 +163,65 @@ def test_open_pull_request_links_the_issue(fake_remote, monkeypatch):
     (pull,) = gh.pulls
     assert pull["head"] == ws["branch"] and pull["base"] == "main"
     assert "Fixes #7" in pull["body"]  # closes the issue on merge
+
+
+def test_shell_git_push_cannot_use_credentials(fake_remote, monkeypatch):
+    # run_in_workspace lets the agent run arbitrary git, so the clone's remote
+    # must hold no credentials — otherwise a shell `git push origin main` would
+    # bypass commit_and_push's default-branch guard.
+    repo, origin = fake_remote
+    monkeypatch.setenv("GITHUB_TOKEN", "ghp_sekret12345")
+    o.setup_fix_workspace(repo, 7)
+    # The stored URL (git may rewrite the effective one via insteadOf rules):
+    url = o.run_in_workspace(repo, "git config remote.origin.url")["output"].strip()
+    assert url == f"https://github.com/{repo}.git"       # not the clone source, no token
+    o.write_workspace_file(repo, "calc.py", FIXED_CALC)
+    o.run_in_workspace(repo, "git add -A && git commit -m sneaky")
+    r = o.run_in_workspace(repo, "git push origin HEAD", timeout=30)
+    assert r["status"] == "timeout" or r["exit_code"] != 0
+    assert remote_branches(origin) == ["main"]           # nothing reached the remote
+
+
+def test_open_pull_request_enforces_fix_budget(fake_remote, monkeypatch):
+    # FIXER_MAX_FIXES is a hard cap in the tool, not advice in the prompt: with
+    # a budget of 1, the second PR is refused no matter what the agent decides.
+    repo, _ = fake_remote
+    gh = FakeGithub()
+    monkeypatch.setattr(o, "_github", lambda: gh)
+    monkeypatch.setattr(o, "FIXER_MAX_FIXES", 1)
+    o.reset_fix_run()
+    o.setup_fix_workspace(repo, 7)
+    o.write_workspace_file(repo, "calc.py", FIXED_CALC)
+    o.commit_and_push(repo, "fix add()")
+    assert o.open_pull_request(repo, "Fix add()", "body", 7)["status"] == "opened"
+    r = o.open_pull_request(repo, "Another fix", "body", 8)
+    assert r["status"] == "refused" and "budget" in r["detail"].lower()
+    assert len(gh.pulls) == 1
+
+
+def test_list_open_issues_surfaces_open_fix_prs(fake_remote, monkeypatch):
+    # The prompt tells the fixer to skip issues that already have an open
+    # overseer/fix-* PR, so the tool must actually surface those PRs.
+    from datetime import datetime, timezone
+    repo, _ = fake_remote
+    issue = SimpleNamespace(number=7, title="add() wrong", body="details",
+                            labels=[], html_url="https://example.test/i/7",
+                            created_at=datetime.now(timezone.utc),
+                            pull_request=None)
+    fix_pr = SimpleNamespace(number=41, title="Fix add()",
+                             html_url="https://example.test/pr/41",
+                             head=SimpleNamespace(ref="overseer/fix-7-abc123"))
+    other_pr = SimpleNamespace(number=40, title="unrelated",
+                               html_url="https://example.test/pr/40",
+                               head=SimpleNamespace(ref="feature/foo"))
+    gh = FakeGithub(issues=[issue], open_prs=[other_pr, fix_pr])
+    monkeypatch.setattr(o, "_github", lambda: gh)
+    r = o.list_open_issues(repo)
+    assert r["status"] == "ok"
+    assert [i["number"] for i in r["open_issues"]] == [7]
+    assert r["open_fix_prs"] == [{"number": 41, "branch": "overseer/fix-7-abc123",
+                                  "title": "Fix add()",
+                                  "url": "https://example.test/pr/41"}]
 
 
 def test_comment_on_issue(fake_remote, monkeypatch):

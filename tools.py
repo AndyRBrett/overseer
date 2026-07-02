@@ -615,6 +615,17 @@ FIXER_COMMAND_TIMEOUT = int(os.getenv("FIXER_COMMAND_TIMEOUT", "180"))
 _FIXER_OUTPUT_LIMIT = 10_000   # chars of command output returned to the agent
 _WORKSPACE_FILE_LIMIT = 50_000
 
+# How many PRs the Fixer may open per run. Enforced HERE (open_pull_request
+# refuses past the budget), not just in the agent prompt.
+FIXER_MAX_FIXES = int(os.getenv("FIXER_MAX_FIXES", "2"))
+_fix_prs_opened = 0
+
+
+def reset_fix_run():
+    """Reset the per-run PR budget. Called at the start of each pipeline run."""
+    global _fix_prs_opened
+    _fix_prs_opened = 0
+
 # repo slug -> {"dir", "branch", "default_branch", "committed", "pushed"}
 _workspaces = {}
 
@@ -671,8 +682,9 @@ def list_open_issues(repo):
     if repo not in configured_repos():
         return {"status": "error",
                 "detail": f"'{repo}' is not a configured project repo — refusing."}
+    gh_repo = _github().get_repo(repo)
     issues = []
-    for issue in _github().get_repo(repo).get_issues(state="open"):
+    for issue in gh_repo.get_issues(state="open"):
         if issue.pull_request is not None:
             continue  # the Issues API also returns PRs; the fixer wants issues only
         issues.append({
@@ -685,7 +697,17 @@ def list_open_issues(repo):
         })
         if len(issues) >= 20:
             break
-    return {"status": "ok", "repo": repo, "open_issues": issues}
+    # Open overseer/fix-* PRs from previous runs, so the fixer can skip issues
+    # that already have a fix in flight (the branch name carries the issue
+    # number: overseer/fix-<issue>-<suffix>). Without this, cross-run dedupe
+    # would rely on data the agent can't see.
+    fix_prs = []
+    for pr in gh_repo.get_pulls(state="open"):
+        if pr.head.ref.startswith(FIX_BRANCH_PREFIX):
+            fix_prs.append({"number": pr.number, "branch": pr.head.ref,
+                            "title": pr.title, "url": pr.html_url})
+    return {"status": "ok", "repo": repo, "open_issues": issues,
+            "open_fix_prs": fix_prs}
 
 
 def setup_fix_workspace(repo, issue_number):
@@ -710,6 +732,11 @@ def setup_fix_workspace(repo, issue_number):
         return {"status": "error", "detail": f"branch creation failed: {out}"}
     _git(workdir, "config", "user.name", "overseer-bot")
     _git(workdir, "config", "user.email", "overseer-bot@users.noreply.github.com")
+    # Strip the token from the clone's remote: run_in_workspace lets the agent
+    # run arbitrary git, and a credentialed remote would let a shell `git push`
+    # bypass commit_and_push's default-branch guard. commit_and_push re-attaches
+    # the token only for its own push.
+    _git(workdir, "remote", "set-url", "origin", f"https://github.com/{repo}.git")
     _, files = _git(workdir, "ls-files")
     file_list = files.splitlines()
     _workspaces[repo] = {"dir": workdir, "branch": branch,
@@ -726,8 +753,9 @@ def run_in_workspace(repo, command, timeout=None):
     timeout = min(int(timeout or FIXER_COMMAND_TIMEOUT), 600)
     # No .pyc files in the clone: stale bytecode can mask a just-written fix
     # (same size + same mtime second reuses the old pyc), and __pycache__ would
-    # otherwise be swept into the fix commit by `git add -A`.
-    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    # otherwise be swept into the fix commit by `git add -A`. And never let git
+    # prompt for credentials — there is no terminal, it would hang until timeout.
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "GIT_TERMINAL_PROMPT": "0"}
     try:
         proc = subprocess.run(command, shell=True, cwd=ws["dir"], env=env,
                               capture_output=True, text=True, timeout=timeout)
@@ -794,7 +822,13 @@ def commit_and_push(repo, message):
         print(f"          message: {_oneline(message, 200)}\n")
         return {"status": "dry_run", "branch": current,
                 "detail": "Committed locally; push to origin skipped (dry run)."}
-    code, out = _git(ws["dir"], "push", "-u", "origin", current, timeout=120)
+    # The remote is kept credential-free (see setup_fix_workspace); attach the
+    # token just for this push, then strip it again.
+    _git(ws["dir"], "remote", "set-url", "origin", _clone_url(repo))
+    try:
+        code, out = _git(ws["dir"], "push", "-u", "origin", current, timeout=120)
+    finally:
+        _git(ws["dir"], "remote", "set-url", "origin", f"https://github.com/{repo}.git")
     if code != 0:
         return {"status": "error", "detail": f"git push failed: {out}"}
     ws["pushed"] = True
@@ -802,7 +836,15 @@ def commit_and_push(repo, message):
 
 
 def open_pull_request(repo, title, body, issue_number):
+    global _fix_prs_opened
     ws = _workspace(repo)
+    # The per-run budget is enforced here, not just in the prompt — a run with
+    # FIXER_MAX_FIXES=1 opens at most one PR no matter what the agent decides.
+    if _fix_prs_opened >= FIXER_MAX_FIXES:
+        return {"status": "refused",
+                "detail": f"Fix budget spent: {FIXER_MAX_FIXES} PR(s) already opened "
+                          "this run (FIXER_MAX_FIXES). Escalate remaining issues "
+                          "with comment_on_issue instead."}
     body = f"{body}\n\nFixes #{issue_number}\n\n_PR opened by Project Overseer._"
     if DRY_RUN:
         if not ws["committed"]:
@@ -813,6 +855,7 @@ def open_pull_request(repo, title, body, issue_number):
         print(f"          head : {ws['branch']} -> {ws['default_branch']}")
         print(f"          title: {title}")
         print(f"          body : {_oneline(body, 300)}\n")
+        _fix_prs_opened += 1
         return {"status": "dry_run", "repo": repo, "title": title,
                 "branch": ws["branch"], "issue_number": issue_number}
     if not ws["pushed"]:
@@ -820,6 +863,7 @@ def open_pull_request(repo, title, body, issue_number):
                 "detail": "Branch not pushed yet — call commit_and_push first."}
     pr = _github().get_repo(repo).create_pull(
         title=title, body=body, head=ws["branch"], base=ws["default_branch"])
+    _fix_prs_opened += 1
     return {"status": "opened", "number": pr.number, "url": pr.html_url,
             "branch": ws["branch"]}
 
@@ -839,9 +883,11 @@ def comment_on_issue(repo, issue_number, comment):
 
 
 def cleanup_workspaces():
-    """Remove all fixer clones. Called by the orchestrator after the run."""
+    """Remove all fixer clones and reset the per-run PR budget. Called by the
+    orchestrator after the run (and by tests between cases)."""
     for repo in list(_workspaces):
         shutil.rmtree(_workspaces.pop(repo)["dir"], ignore_errors=True)
+    reset_fix_run()
 
 
 TOOL_FUNCTIONS = {

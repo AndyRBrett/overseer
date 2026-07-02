@@ -23,8 +23,9 @@ import tools
 MAX_ITERATIONS = int(os.getenv("FIXER_MAX_ITERATIONS", "50"))
 
 # How many issues the Fixer may attempt per weekly run — keeps run time and PR
-# review load bounded. The prompt tells the agent to respect this.
-MAX_FIXES = int(os.getenv("FIXER_MAX_FIXES", "2"))
+# review load bounded. Enforced in tools.open_pull_request (it refuses past the
+# budget), and stated in the prompt so the agent plans around it.
+MAX_FIXES = tools.FIXER_MAX_FIXES
 
 # The Fixer can inspect issues and work in a repo clone, but it cannot file new
 # issues or send the digest — the workspace tools plus issue comments only.
@@ -57,8 +58,10 @@ doesn't say which is wanted.
 
 Process, per issue — in this order, no shortcuts:
 1. list_open_issues on the repo; cross-reference the Bug-Hunter report below.
-   Prefer issues the Bug-Hunter just filed. Skip issues that already have an
-   open overseer/fix-* PR mentioned in their comments.
+   Prefer issues the Bug-Hunter just filed. The result includes open_fix_prs —
+   open overseer/fix-* PRs from earlier runs, whose branch names contain the
+   issue number — skip any issue that already has one. If nothing is clearly
+   fixable, don't invent work: write your summary saying so and stop.
 2. setup_fix_workspace(repo, issue_number) — you get a fresh clone on an
    overseer/fix-<issue> branch. Never work anywhere else; commit_and_push will
    refuse the default branch.
@@ -69,7 +72,9 @@ Process, per issue — in this order, no shortcuts:
    If you cannot reproduce or confirm the root cause with tool output, ESCALATE
    — comment your findings on the issue and move on. Never guess-fix.
 4. Write a test that REPRODUCES the bug and run it — it must FAIL for the
-   reason the issue describes. Put it wherever the repo keeps tests.
+   reason the issue describes. Put it wherever the repo keeps tests; if the
+   repo has no test suite, write a standalone reproduction script you can run
+   directly and say so in the PR body.
 5. Implement the smallest correct fix. Match the repo's existing style.
 6. Re-run the reproducing test (must now pass) AND the repo's full test suite
    (must not regress). If the suite was already broken for unrelated reasons,
@@ -87,8 +92,10 @@ Hard rules:
 - Never force-push, never touch the default branch, never rewrite history.
 - Never disable, skip, or weaken an existing test to make the suite pass.
 - Never put credentials or tokens in code, commits, or PR text.
-- Stay inside the workspace clone; don't install global software or touch
-  anything outside the repo.
+- Stay inside the workspace clone and don't touch anything outside the repo.
+  Installing the project's own dependencies to run its tests (e.g.
+  `pip install -r requirements.txt`) is fine — the runner is ephemeral — but
+  don't install unrelated software.
 
 When you're done, STOP calling tools and write a concise structured summary as
 your final message, one block per issue you looked at:
