@@ -16,8 +16,8 @@ tool logic lives in exactly one place. This file also hosts:
   - `run_agent`, the shared client.messages.create tool-use loop
   - the `--dry-run` switch (`set_dry_run`) that intercepts the mutating tools
     (file_issue, propose_enhancement, send_telegram_summary, plus the fixer's
-    push / open_pull_request / comment_on_issue) so a run can be tested
-    without anything hitting GitHub or Telegram
+    push / open_pull_request / comment_on_issue and the janitor's close_issue)
+    so a run can be tested without anything hitting GitHub or Telegram
 
 Configuration is via environment variables (see README.md). Anything not
 configured degrades gracefully: the matching tool returns a "not_configured"
@@ -356,6 +356,25 @@ TOOL_SCHEMAS = {
                 "repo": {"type": "string"},
                 "issue_number": {"type": "integer"},
                 "comment": {"type": "string"},
+            },
+            "required": ["repo", "issue_number", "comment"],
+        },
+    },
+    "close_issue": {
+        "name": "close_issue",
+        "description": (
+            "Close a GitHub issue as completed, posting an explanatory comment "
+            "first. Only close an issue when you can cite the specific commit "
+            "or merged PR that resolved it — the comment must contain that "
+            "evidence so the owner can spot-check the close."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "issue_number": {"type": "integer"},
+                "comment": {"type": "string",
+                            "description": "Why this is being closed, citing the commit SHA or PR that implemented it."},
             },
             "required": ["repo", "issue_number", "comment"],
         },
@@ -882,6 +901,24 @@ def comment_on_issue(repo, issue_number, comment):
     return {"status": "commented", "issue_number": issue_number, "url": c.html_url}
 
 
+def close_issue(repo, issue_number, comment):
+    """Comment-then-close, atomically from the agent's point of view: every
+    close carries its evidence. Reopening is one click, so this is the mildest
+    mutating tool — but it still respects the repo allowlist and dry-run."""
+    if repo not in configured_repos():
+        return {"status": "error",
+                "detail": f"'{repo}' is not a configured project repo — refusing."}
+    if DRY_RUN:
+        print("\n[DRY-RUN] close_issue would close an issue as completed:")
+        print(f"          repo : {repo} issue #{issue_number}")
+        print(f"          why  : {_oneline(comment, 300)}\n")
+        return {"status": "dry_run", "repo": repo, "issue_number": issue_number}
+    issue = _github().get_repo(repo).get_issue(issue_number)
+    issue.create_comment(comment)
+    issue.edit(state="closed", state_reason="completed")
+    return {"status": "closed", "issue_number": issue_number, "url": issue.html_url}
+
+
 def cleanup_workspaces():
     """Remove all fixer clones and reset the per-run PR budget. Called by the
     orchestrator after the run (and by tests between cases)."""
@@ -906,6 +943,7 @@ TOOL_FUNCTIONS = {
     "commit_and_push": commit_and_push,
     "open_pull_request": open_pull_request,
     "comment_on_issue": comment_on_issue,
+    "close_issue": close_issue,
     "send_telegram_summary": send_telegram_summary,
 }
 

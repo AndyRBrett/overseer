@@ -1,0 +1,73 @@
+# TEMPORARY SCAFFOLDING — delete before merging.
+#
+# Supervised live validation of the new agents, in two ordered steps:
+#   1. Janitor  — verifies already-implemented open issues and closes them
+#                 with commit evidence (exercises comment_on_issue/close_issue)
+#   2. Pipeline — the real weekly run with FIXER_MAX_FIXES=1, so at most one
+#                 fix goes all the way to a real PR for owner review
+#
+# Push-triggered because workflow dispatch needs actions:write, which the
+# session driving this validation doesn't have. Gated on a commit-message
+# marker so ordinary pushes to the branch cost nothing: it only runs when the
+# head commit message contains [run-live].
+name: Live Validation (janitor + fixer)
+
+on:
+  push:
+    branches: [claude/overseer-auto-fix-fef9c2]
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    if: contains(github.event.head_commit.message, '[run-live]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Janitor — verify and close already-implemented issues
+        # Even if the Janitor hits its iteration cap or crashes, still run the
+        # pipeline step; both traces get audited from the artifact.
+        continue-on-error: true
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+        run: python agent_janitor.py
+
+      - name: Live pipeline (FIXER_MAX_FIXES=1)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+          TRADING_DB_PATH: ${{ vars.TRADING_DB_PATH }}
+          VOLLEYBALL_RESULTS_PATH: ${{ vars.VOLLEYBALL_RESULTS_PATH }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FIXER_MAX_FIXES: "1"
+        run: python orchestrator.py
+
+      - name: Upload run reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: overseer-live-validation-reports
+          path: |
+            janitor_report.html
+            janitor_run.jsonl
+            overseer_report.html
+            overseer_run.jsonl
+          if-no-files-found: ignore

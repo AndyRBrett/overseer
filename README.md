@@ -182,6 +182,9 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `orchestrator.py` — runs the four agents sequentially; `--dry-run` flag
 - `agent_bug_hunter.py` / `agent_fixer.py` / `agent_idea.py` / `agent_reviewer.py`
   — the four agents
+- `agent_janitor.py` — standalone issue-tracker triage (not part of the weekly
+  run): verifies which open issues are already implemented and closes them with
+  commit evidence; `python agent_janitor.py [--dry-run]`
 - `tools.py` — shared tool implementations, schemas, config, and the agent runtime
 - `tracer.py` — live console trace, HTML report, `docs/digest.json` writer, and
   the append-only `docs/history.json` trend log

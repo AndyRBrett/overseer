@@ -44,7 +44,12 @@ class FakeGithub:
             gh.comments.append((number, text))
             return SimpleNamespace(html_url=f"https://example.test/issue/{number}#c1")
 
-        return SimpleNamespace(create_comment=create_comment)
+        def edit(**kw):
+            gh.edits.append((number, kw))
+
+        self.edits = getattr(self, "edits", [])
+        return SimpleNamespace(create_comment=create_comment, edit=edit,
+                               html_url=f"https://example.test/issue/{number}")
 
 
 # ── guards ───────────────────────────────────────────────────────────────
@@ -231,6 +236,42 @@ def test_comment_on_issue(fake_remote, monkeypatch):
     r = o.comment_on_issue(repo, 12, "Needs an owner decision: A or B.")
     assert r["status"] == "commented"
     assert gh.comments == [(12, "Needs an owner decision: A or B.")]
+
+
+def test_close_issue_comments_then_closes(fake_remote, monkeypatch):
+    repo, _ = fake_remote
+    gh = FakeGithub()
+    monkeypatch.setattr(o, "_github", lambda: gh)
+    r = o.close_issue(repo, 24, "Implemented in abc1234 (bot/metrics.py); verified in a fresh clone.")
+    assert r["status"] == "closed"
+    # The evidence comment lands before the close, and the close is 'completed'.
+    assert gh.comments == [(24, "Implemented in abc1234 (bot/metrics.py); verified in a fresh clone.")]
+    assert gh.edits == [(24, {"state": "closed", "state_reason": "completed"})]
+
+
+def test_close_issue_refuses_unconfigured_repo():
+    assert o.close_issue("evil/other-repo", 1, "why")["status"] == "error"
+
+
+def test_close_issue_dry_run(fake_remote, capsys):
+    repo, _ = fake_remote
+    o.set_dry_run(True)
+    try:
+        assert o.close_issue(repo, 5, "done in abc123")["status"] == "dry_run"
+    finally:
+        o.set_dry_run(False)
+    assert "[DRY-RUN]" in capsys.readouterr().out
+
+
+def test_janitor_tool_subset_cannot_change_code():
+    # The Janitor verifies and closes; it must never see the tools that could
+    # modify a repo or open PRs.
+    import agent_janitor
+    names = {t["name"] for t in o.tool_specs(agent_janitor.TOOL_NAMES)}
+    assert "close_issue" in names and "comment_on_issue" in names
+    for forbidden in ("write_workspace_file", "commit_and_push",
+                      "open_pull_request", "file_issue", "send_telegram_summary"):
+        assert forbidden not in names
 
 
 # ── dry run ──────────────────────────────────────────────────────────────
