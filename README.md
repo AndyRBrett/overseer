@@ -1,10 +1,11 @@
 # Project Overseer
 
-Agentic weekly review of personal automation projects, run as a **three-agent
+Agentic weekly review of personal automation projects, run as a **four-agent
 pipeline** on Claude (Opus 4.8). The agents investigate three projects, file
-issues on GitHub, send a digest to **Telegram**, and publish that digest to an
-**installable web app** (PWA) you can add to your phone's home screen and get a
-weekly push notification from.
+issues on GitHub, **fix what they can and open pull requests**, send a digest
+to **Telegram**, and publish that digest to an **installable web app** (PWA)
+you can add to your phone's home screen and get a weekly push notification
+from.
 
 Everything is hosted by GitHub: the pipeline runs on **GitHub Actions** (weekly
 cron), the dashboard is served by **GitHub Pages** from `docs/`, and the push
@@ -13,9 +14,9 @@ notification is sent by the same Action. No third-party servers.
 Every run also produces a visual report (`overseer_report.html`, uploaded as an
 Actions artifact) showing each agent's reasoning and every tool call.
 
-## Design — three agents, separated concerns
+## Design — four agents, separated concerns
 
-The work is split across three sequential agents (orchestrated by
+The work is split across four sequential agents (orchestrated by
 `orchestrator.py`) so no single agent ever conflates "this is broken" with
 "this could be better". Each agent is its own `client.messages.create` tool-use
 loop and is only given the tools it's allowed to use. The Bug-Hunter and Idea
@@ -25,13 +26,27 @@ to the same bar as any other project (`read_overseer_status`):
 1. **Bug-Hunter** (`agent_bug_hunter.py`) — investigates and calls `file_issue()`
    for **confirmed bugs only**. It never proposes enhancements (it isn't even
    shown that tool). Outputs a structured summary of what it found and filed.
-2. **Idea Agent** (`agent_idea.py`) — ignores what's broken and brainstorms at
+2. **Fixer** (`agent_fixer.py`) — takes the Bug-Hunter's report and **actually
+   fixes** the clearest fixable issues (at most `FIXER_MAX_FIXES`, default 2).
+   For each one it clones the repo into a scratch workspace on an
+   `overseer/fix-<issue>` branch, investigates root cause with real evidence
+   (runs the code, the tests, git blame), writes a test that **reproduces** the
+   bug, implements the fix, verifies the test now passes plus the full suite,
+   pushes the branch, and opens a PR whose body carries the evidence
+   ("Fixes #N" is appended so the issue closes on merge). Issues that need an
+   owner-only decision (scope/product choices, credentials, paid services, data
+   deletion, deploy changes) are **escalated instead**: the plain issue stands,
+   with the Fixer's findings posted as a comment. Two guarantees are enforced in
+   the tools, not just the prompt: only configured project repos can be touched,
+   and the default branch can never be committed to or pushed.
+3. **Idea Agent** (`agent_idea.py`) — ignores what's broken and brainstorms at
    least three `propose_enhancement()` ideas across the projects, each ranked by
    effort vs impact. Outputs a structured idea list.
-3. **Reviewer** (`agent_reviewer.py`) — receives the two agents' **text outputs**
+4. **Reviewer** (`agent_reviewer.py`) — receives the three agents' **text outputs**
    (not the raw logs), dedupes overlap, decides what's worth surfacing this week,
    and calls `send_telegram_summary()` exactly once with a digest split into
-   "Issues Found" and "Top Enhancement Ideas (ranked)".
+   "Issues Found" (each tagged PR opened / needs your decision / not attempted),
+   "Fixes Opened (PRs)", and "Top Enhancement Ideas (ranked)".
 
 All tool implementations live in `tools.py`, which every agent imports from, so
 tool logic is never duplicated. The Reviewer's digest is also captured into
@@ -39,10 +54,13 @@ tool logic is never duplicated. The Reviewer's digest is also captured into
 
 ### Dry run (test safely)
 
-`python orchestrator.py --dry-run` runs the entire pipeline but intercepts the
-three mutating tools — `file_issue`, `propose_enhancement`, and
-`send_telegram_summary` — so they **print what they WOULD do** instead of
-touching GitHub or Telegram. Use it to preview changes before anything goes live.
+`python orchestrator.py --dry-run` runs the entire pipeline but intercepts every
+mutating tool — `file_issue`, `propose_enhancement`, `send_telegram_summary`,
+and the Fixer's push / `open_pull_request` / `comment_on_issue` — so they
+**print what they WOULD do** instead of touching GitHub or Telegram. The Fixer
+still clones, edits, tests, and commits locally in its scratch workspace, but
+nothing is pushed and no PR or comment is created. Use it to preview changes
+before anything goes live.
 
 **Overseer reviews itself, too.** Both the Bug-Hunter and the Idea agent treat
 the overseer repo as a fourth project: `read_overseer_status` checks its own
@@ -59,7 +77,7 @@ Only the Anthropic key is required. Anything unset just makes that tool report
 | # | Thing | How to get it |
 |---|-------|---------------|
 | 1 | **Anthropic API key** | console.anthropic.com → API Keys → Create. The only required value. |
-| 2 | **GitHub token** (PAT) | github.com → Settings → Developer settings → Fine-grained tokens. Give it your 3 project repos with **Issues: Read and write**. |
+| 2 | **GitHub token** (PAT) | github.com → Settings → Developer settings → Fine-grained tokens. Give it your 3 project repos with **Issues: Read and write**, plus **Contents: Read and write** and **Pull requests: Read and write** so the Fixer can push fix branches and open PRs. |
 | 3 | **Project repo slugs** | `owner/name` for each repo, so issues file in the right place. |
 | 4 | **Data source paths** | Where each project's data lives (see below). Skip any you don't have. |
 
@@ -158,8 +176,9 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 
 ## Files
 
-- `orchestrator.py` — runs the three agents sequentially; `--dry-run` flag
-- `agent_bug_hunter.py` / `agent_idea.py` / `agent_reviewer.py` — the three agents
+- `orchestrator.py` — runs the four agents sequentially; `--dry-run` flag
+- `agent_bug_hunter.py` / `agent_fixer.py` / `agent_idea.py` / `agent_reviewer.py`
+  — the four agents
 - `tools.py` — shared tool implementations, schemas, config, and the agent runtime
 - `tracer.py` — live console trace, HTML report, `docs/digest.json` writer, and
   the append-only `docs/history.json` trend log

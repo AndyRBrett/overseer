@@ -13,7 +13,10 @@ permissions:
 jobs:
   overseer:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The Fixer stage clones project repos and runs their test suites, so a
+    # run that attempts a couple of fixes takes meaningfully longer than a
+    # review-only run.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
