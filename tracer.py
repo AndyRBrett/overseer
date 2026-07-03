@@ -142,6 +142,7 @@ class RunTracer:
             if ev["kind"] != "tool_call" or ev["name"] not in self.read_tools:
                 continue
             label = self.read_tools[ev["name"]]
+            obj = {}
             if ev["is_error"]:
                 status, reason = "error", _oneline(ev["result"], 120)
             else:
@@ -156,17 +157,21 @@ class RunTracer:
                     status, reason = "idle", "read OK but no recent activity / stale data"
                 else:
                     status, reason = "ok", None
-            prev = self.prev_projects.get(label, {})
+            # Prefer the project's self-reported `app` name from its status file;
+            # fall back to the static READ_TOOLS label when a read fails or the
+            # file omits `app`, so the name stays stable across healthy/blind runs.
+            name = _app_name(obj) or label
+            prev = self.prev_projects.get(name, {})
             if status == "ok":
-                projects[label] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+                projects[name] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
             elif status == "idle":
                 # Idle read fine, so last_ok updates; track how long it's been quiet.
-                projects[label] = {"status": "idle", "reason": reason, "last_ok": now_iso,
-                                   "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
+                projects[name] = {"status": "idle", "reason": reason, "last_ok": now_iso,
+                                  "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
             else:
-                projects[label] = {"status": status, "reason": reason,
-                                   "last_ok": prev.get("last_ok"),
-                                   "blind_cycles": prev.get("blind_cycles", 0) + 1}
+                projects[name] = {"status": status, "reason": reason,
+                                  "last_ok": prev.get("last_ok"),
+                                  "blind_cycles": prev.get("blind_cycles", 0) + 1}
         return projects
 
     def rollup(self) -> dict:
@@ -307,6 +312,20 @@ def activity_idle(data) -> bool:
         return True
     present = [data[k] for k in _ACTIVITY_KEYS if k in data]
     return bool(present) and all(v in (0, None) for v in present)
+
+
+def _app_name(obj: dict):
+    """A project's self-reported display name: the `app` field of the status file
+    it publishes, surfaced through the read tool's `data`. Preferring it lets a
+    repo rename itself on the dashboard (e.g. Volleyball → coachvision) without a
+    code change. Returns None when there's no readable `app` so the caller can
+    fall back to the static READ_TOOLS label."""
+    data = obj.get("data") if isinstance(obj, dict) else None
+    if isinstance(data, dict):
+        app = data.get("app")
+        if isinstance(app, str) and app.strip():
+            return app.strip()
+    return None
 
 
 def _is_idle(obj: dict) -> bool:

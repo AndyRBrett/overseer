@@ -72,6 +72,29 @@ def test_is_idle_handles_malformed_status_json():
     assert _is_idle({"status": "ok", "data": {"odds_fingerprint": "", "events_tracked": 0}}) is True
 
 
+def test_project_health_prefers_app_name_from_status_file(tmp_path):
+    # A project self-identifies via the `app` field of its published status file;
+    # that name must win over the static READ_TOOLS label so a repo can rebrand
+    # (Volleyball → coachvision) on the dashboard without a code change.
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "Volleyball"}  # stale fallback label
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "data": {"app": "coachvision", "domain": "martial_arts", "runs_7d": 5}}', False)
+    ph = t.project_health()
+    assert "coachvision" in ph and "Volleyball" not in ph
+    assert ph["coachvision"]["status"] == "ok"
+
+
+def test_project_health_falls_back_to_label_without_app(tmp_path):
+    # No readable `app` (e.g. a blind read, or a status file that omits it) →
+    # the static label is used, so the name stays stable across healthy/blind runs.
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "coachvision"}
+    t.tool_call(0, "read_trading_bot_log", {}, '{"status": "not_configured"}', False)
+    ph = t.project_health()
+    assert ph["coachvision"]["status"] == "blind"
+
+
 def test_project_health_error_counts_as_blind(tmp_path):
     t = _tracer(tmp_path)
     t.tool_call(0, "read_trading_bot_log", {}, "Tool 'read_trading_bot_log' failed: boom", True)

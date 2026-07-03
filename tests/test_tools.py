@@ -90,7 +90,7 @@ def test_project_block_lists_every_reviewed_project():
     # Project Overseer itself — all four must appear in the shared prompt block.
     block = o.project_block()
     assert "Crypto trading bot" in block
-    assert "Volleyball CV pipeline" in block
+    assert "coachvision" in block
     assert "UFC fight card dashboard" in block
     assert "Project Overseer itself" in block
 

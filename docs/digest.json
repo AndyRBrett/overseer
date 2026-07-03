@@ -17,7 +17,7 @@
     "nudge_threshold": 2,
     "attention": [
       {
-        "name": "Volleyball",
+        "name": "coachvision",
         "status": "idle",
         "detail": "no recent activity \u00b7 idle 4 cycles",
         "cycles": 4,
@@ -31,13 +31,6 @@
       "last_ok": "2026-06-29T16:51:13Z",
       "blind_cycles": 0
     },
-    "Volleyball": {
-      "status": "idle",
-      "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-06-29T16:51:13Z",
-      "blind_cycles": 0,
-      "idle_cycles": 4
-    },
     "UFC dashboard": {
       "status": "ok",
       "last_ok": "2026-06-29T16:51:13Z",
@@ -47,6 +40,13 @@
       "status": "ok",
       "last_ok": "2026-06-29T16:51:13Z",
       "blind_cycles": 0
+    },
+    "coachvision": {
+      "status": "idle",
+      "reason": "read OK but no recent activity / stale data",
+      "last_ok": "2026-06-29T16:51:13Z",
+      "blind_cycles": 0,
+      "idle_cycles": 4
     }
   },
   "timeline": [

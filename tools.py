@@ -87,8 +87,11 @@ PROJECTS = {
         "db_path": _env("TRADING_DB_PATH"),              # local deployments
         "status_path": _env("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
     },
+    # Internal key + env vars stay "volleyball"/VOLLEYBALL_* (the deployment's
+    # GitHub Variables are wired to them); only the human-facing name changed
+    # after the repo rebranded from Volleyball to coachvision (martial arts).
     "volleyball": {
-        "label": "Volleyball CV pipeline (ball + player tracking, coaching feedback)",
+        "label": "coachvision — martial-arts CV pipeline (technique tracking + coaching feedback)",
         "repo": _env("VOLLEYBALL_REPO"),
         "results_path": _env("VOLLEYBALL_RESULTS_PATH"),                       # local
         "status_path": _env("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
@@ -117,9 +120,13 @@ REVIEW_PROJECTS = CORE_PROJECTS + ("overseer",)
 
 # Maps each read tool to the project it reports on — used to track per-project
 # read health (blind-spot detection) across runs. (overseer self-review #1)
+# The value is only a FALLBACK display name: when a project publishes an `app`
+# field in its overseer-status.json, that self-reported name wins on the
+# dashboard (see tracer.project_health / _app_name). This label is what shows
+# when the read fails or the status file omits `app`.
 READ_TOOLS = {
     "read_trading_bot_log": "Trading bot",
-    "read_volleyball_results": "Volleyball",
+    "read_volleyball_results": "coachvision",
     "read_ufc_scraper_status": "UFC dashboard",
     "read_overseer_status": "Overseer",
 }
