@@ -47,10 +47,16 @@ def _now() -> str:
 
 
 class RunTracer:
-    def __init__(self, jsonl_path="overseer_run.jsonl", html_path="overseer_report.html"):
+    def __init__(self, jsonl_path="overseer_run.jsonl", html_path="overseer_report.html",
+                 usage_path="overseer_usage.jsonl"):
         self.events: list[dict] = []
         self.jsonl_path = jsonl_path
         self.html_path = html_path
+        # Dedicated append-only token-usage log (one JSONL line per API call), so
+        # cache write/read behaviour is reviewable per agent per run rather than
+        # only inferable from the Anthropic Console. Appended live so it survives
+        # even a hard kill (e.g. the CI job's timeout) mid-run.
+        self.usage_path = usage_path
         self._t0 = time.monotonic()
         self.counts = {"tools": 0, "errors": 0, "issues": 0, "enhancements": 0}
         self.digest_text = None
@@ -71,6 +77,8 @@ class RunTracer:
         return f"({self.agent}) " if self.agent else ""
 
     def start(self) -> None:
+        # Fresh usage log per run (mirrors the truncate semantics of write()).
+        open(self.usage_path, "w", encoding="utf-8").close()
         self._record("run_start")
         print(f"\n[{_now()}] ── overseer run started ──")
 
@@ -104,6 +112,36 @@ class RunTracer:
         )
         tag = "ERROR" if is_error else category.upper()
         print(f"[{_now()}] [{tag:9}] {self._prefix()}{name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
+
+    def usage(self, iteration: int, usage) -> None:
+        """Record token usage (incl. prompt-cache write/read) for one
+        messages.create call. Written two ways: into the main event stream
+        (so it rides along in overseer_run.jsonl, the uploaded CI artifact) and
+        appended live to the dedicated overseer_usage.jsonl for standalone review.
+        `usage` is the SDK's response.usage object; fields default to None if the
+        SDK ever omits one."""
+        fields = {
+            "input_tokens": getattr(usage, "input_tokens", None),
+            "cache_creation_input_tokens": getattr(usage, "cache_creation_input_tokens", None),
+            "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", None),
+            "output_tokens": getattr(usage, "output_tokens", None),
+        }
+        self._record("usage", iteration=iteration, **fields)
+        line = {
+            "iso_ts": datetime.now(timezone.utc).isoformat(),
+            "agent": self.agent,
+            "iteration": iteration,
+            **fields,
+        }
+        with open(self.usage_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(line) + "\n")
+        print(
+            f"[{_now()}] [USAGE · turn {iteration}] {self._prefix()}"
+            f"in={fields['input_tokens']} "
+            f"cache_write={fields['cache_creation_input_tokens']} "
+            f"cache_read={fields['cache_read_input_tokens']} "
+            f"out={fields['output_tokens']}"
+        )
 
     def set_digest(self, text: str) -> None:
         """The final digest the agent publishes — surfaced on the dashboard."""

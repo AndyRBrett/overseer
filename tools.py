@@ -542,12 +542,18 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
             # (bug vs. enhancement, effort/impact ranking, dedupe), and the
             # summaries are what the visual trace shows.
             thinking={"type": "adaptive", "display": "summarized"},
-            # Cache the static prefix (tools + system + earlier turns).
-            cache_control={"type": "ephemeral"},
+            # Cache the static prefix (tools + system + earlier turns). 1h TTL
+            # (vs the 5m default) so the cache survives slow tool round-trips
+            # within an agent's loop; it can't span the weekly run gap regardless.
+            cache_control={"type": "ephemeral", "ttl": "1h"},
             system=system,
             tools=[] if last_iteration else specs,
             messages=messages,
         )
+
+        # Record token usage (incl. cache write/read) for this call so cache
+        # behaviour can be reviewed per agent per iteration — see tracer.usage.
+        tracer.usage(iteration, response.usage)
 
         texts = []
         for block in response.content:

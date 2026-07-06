@@ -3,3 +3,4 @@ __pycache__/
 .env
 overseer_report.html
 overseer_run.jsonl
+overseer_usage.jsonl

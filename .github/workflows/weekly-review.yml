@@ -67,4 +67,5 @@ jobs:
           path: |
             overseer_report.html
             overseer_run.jsonl
+            overseer_usage.jsonl
           if-no-files-found: ignore
