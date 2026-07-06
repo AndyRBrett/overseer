@@ -1,135 +1,198 @@
 {
-  "generated": "2026-06-29T16:51:13Z",
+  "generated": "2026-07-06T16:50:21Z",
   "status": "completed",
-  "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- None this week. Bug-Hunter checked all four sources; crypto bot is healthy (signals evaluated, all valid HOLDs), and nothing else met the filing bar.\n\nTop Enhancement Ideas (ranked)\n1. CRYPTO \u2014 Exclude capital injections from Sharpe/returns (effort: low, impact: high): equity step-jumps (10k\u219229k\u219249k) are deposits, not gains, inflating Sharpe to a nonsensical 13.29 \u2014 fixing this stops false confidence in performance.\n2. OVERSEER \u2014 Add run miss-detection / dead-man's switch (effort: low, impact: high): it only runs weekly with no alert if a run silently fails to fire.\n3. COACHVISION \u2014 Alert when no footage ingested (effort: low, impact: medium): pipeline self-test is green but it has never ingested footage, so the empty dashboard hides the real gap.\n4. UFC \u2014 Denoise line-movement scraping (effort: medium, impact: low): data is healthy and rich, just some noise to clean up.",
+  "summary": "\ud83d\udccb Weekly Review \u2014 2026-07-06\n\nIssues Found\n- ufc-dashboard (#25): \"pages build and deployment\" workflow failing intermittently \u2014 7d success rate down to 86% (~7/50 runs). Data pipeline itself is healthy; it's the publish/deploy step. Other 3 projects (crypto-trading, coachvision, overseer) healthy \u2014 crypto is underperforming but that's strategy, not a defect; coachvision is idle-not-broken (no footage, self-test passes).\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Dead-man's-switch heartbeat alert for missed weekly runs (effort: low, impact: high): independent heartbeat ping catches silent monitoring failures if overseer itself stops running.\n2. ufc-dashboard \u2014 Pin main-event line moves + convert odds to implied probability (effort: low, impact: high): surface main events instead of burying them among magnitude-sorted alerts.\n3. crypto-trading \u2014 What-if threshold replay/tuner from logged reject codes (effort: medium, impact: high): bot traded 0/10 signals at \u221210.8% alpha; sweep logged thresholds to find params that would beat buy-hold.\n4. coachvision \u2014 Demo/sample-output mode from the passing self-test fixture (effort: low, impact: medium): render the 77-frame self-test as a labelled sample to show value and drive activation.\n5. crypto-trading \u2014 Benchmark-aware regime filter (effort: medium, impact: medium): scale toward buy-hold in strong uptrends using existing MA-slope/ADX signals to cut chronic underperformance.",
   "counts": {
-    "tools": 9,
+    "tools": 17,
     "errors": 0,
-    "issues": 0,
-    "enhancements": 0
+    "issues": 1,
+    "enhancements": 6
   },
   "rollup": {
-    "ok": 3,
+    "ok": 2,
     "total": 4,
-    "issues": 0,
-    "enhancements": 0,
+    "issues": 1,
+    "enhancements": 6,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "coachvision",
         "status": "idle",
-        "detail": "no recent activity \u00b7 idle 4 cycles",
-        "cycles": 4,
+        "detail": "no recent activity \u00b7 idle 5 cycles",
+        "cycles": 5,
         "nudge": true
+      },
+      {
+        "name": "Overseer",
+        "status": "idle",
+        "detail": "no recent activity \u00b7 idle 1 cycle",
+        "cycles": 1,
+        "nudge": false
       }
     ]
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-06-29T16:51:13Z",
-      "blind_cycles": 0
-    },
-    "UFC dashboard": {
-      "status": "ok",
-      "last_ok": "2026-06-29T16:51:13Z",
-      "blind_cycles": 0
-    },
-    "Overseer": {
-      "status": "ok",
-      "last_ok": "2026-06-29T16:51:13Z",
+      "last_ok": "2026-07-06T16:50:21Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-06-29T16:51:13Z",
+      "last_ok": "2026-07-06T16:50:21Z",
       "blind_cycles": 0,
-      "idle_cycles": 4
+      "idle_cycles": 5
+    },
+    "UFC dashboard": {
+      "status": "ok",
+      "last_ok": "2026-07-06T16:50:21Z",
+      "blind_cycles": 0
+    },
+    "Overseer": {
+      "status": "idle",
+      "reason": "read OK but no recent activity / stale data",
+      "last_ok": "2026-07-06T16:50:21Z",
+      "blind_cycles": 0,
+      "idle_cycles": 1
     }
   },
   "timeline": [
     {
-      "ts": "16:48:42",
+      "ts": "16:47:07",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I'll start by loading all the data sources concurrently to get everything I need."
+      "text": "I'll start by reading through all the logs in parallel to get a complete picture."
     },
     {
-      "ts": "16:48:43",
+      "ts": "16:47:08",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:48:44",
+      "ts": "16:47:10",
       "agent": "Bug-Hunter",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:48:48",
+      "ts": "16:47:13",
       "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'pages build and deployment', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/28793814994', 'at': '2026-07-06T13:07:57+00:00\u2026"
     },
     {
-      "ts": "16:48:50",
+      "ts": "16:47:15",
       "agent": "Bug-Hunter",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:49:47",
+      "ts": "16:48:02",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "Looking at the crypto trading bot's metrics \u2014 it shows a status of ok with an age of 33.9 hours since its last run on June 28th, but it's marked as idle false, which seems inconsistent since that's more than a day for what should be a dail\u2026"
+      "text": "Looking at the trading bot metrics, the status shows it's active with about 10 hours of runtime, but there's a major red flag in the equity curve \u2014 it jumps from 10,000 to nearly 50,000 in just four hours, which doesn't align with the smal\u2026"
     },
     {
-      "ts": "16:49:50",
+      "ts": "16:48:02",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
+    },
+    {
+      "ts": "16:48:12",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "I should file a bug report for the UFC pages deployment issue."
+    },
+    {
+      "ts": "16:48:12",
+      "agent": "Bug-Hunter",
+      "label": "file_issue (bug)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 \"pages build and deployment\" workflow failing intermittently \u2014 7d success rate down to 86% (#25)"
+    },
+    {
+      "ts": "16:48:32",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'll start by fetching all the project statuses in parallel to get a complete picture of what we're working with."
+      "text": "I'll start by reading through all the statuses concurrently."
     },
     {
-      "ts": "16:49:51",
+      "ts": "16:48:33",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:49:52",
+      "ts": "16:48:34",
       "agent": "Idea-Agent",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:49:56",
+      "ts": "16:48:38",
       "agent": "Idea-Agent",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'pages build and deployment', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/28793814994', 'at': '2026-07-06T13:07:57+00:00\u2026"
     },
     {
-      "ts": "16:49:57",
+      "ts": "16:48:39",
       "agent": "Idea-Agent",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:50:52",
+      "ts": "16:49:30",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "Looking at the trading bot metrics, the performance data is concerning\u2014negative PnL over both 30 and 90 days with only 20 trades executed despite 10 signals generated, and there are contradictory rejection states where the same signal gets\u2026"
+      "text": "Looking at the trading bot's performance, I notice it's generating signals but not acting on them\u2014mostly staying in \"in_position\" or \"no_position\" states while underperforming buy-hold by 10.8%. I'm thinking about ways to improve this: add\u2026"
     },
     {
-      "ts": "16:51:07",
+      "ts": "16:49:33",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Add a dead-man's-switch heartbeat alert if the overseer misses its weekly run (effort low, impact high)"
+    },
+    {
+      "ts": "16:49:36",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 Surface main-event line moves in a pinned section and convert odds to implied win probability (effort low, impact high)"
+    },
+    {
+      "ts": "16:49:39",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/crypto-trading \u2014 Build a what-if threshold replay that backtests breakout/exit params against logged reject codes and buy-hold alpha (effort medium, impact high)"
+    },
+    {
+      "ts": "16:49:42",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/volleyball \u2014 Add a demo/sample-output mode so the coachvision dashboard is meaningful before any footage is ingested (effort low, impact medium)"
+    },
+    {
+      "ts": "16:49:45",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/crypto-trading \u2014 Add a benchmark-aware regime filter that scales exposure toward buy-hold in strong uptrends (effort medium, impact medium)"
+    },
+    {
+      "ts": "16:49:48",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Add schema validation + a smoke-test suite for each project's overseer-status.json read path (effort medium, impact medium)"
+    },
+    {
+      "ts": "16:50:14",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "The reports are incomplete, but I can work with what's there. The Bug-Hunter report confirms no bugs were filed this week\u2014none of the issues examined met the threshold for filing. The Idea Agent report is similarly truncated, giving a summ\u2026"
+      "text": "Looking at the bug reports and ideas, I see bug-hunter found one deployment issue with the ufc-dashboard. The idea agent has six proposals, though the first one about overseer heartbeat monitoring is based on slightly outdated data\u2014bug-hun\u2026"
     },
     {
-      "ts": "16:51:07",
+      "ts": "16:50:14",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
