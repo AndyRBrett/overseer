@@ -108,6 +108,30 @@ function buildCopyText(d) {
   return lines.join("\n");
 }
 
+// Flatten the "what the agents did" timeline into readable plain text, grouped
+// by agent, for the timeline card's Copy button.
+function buildTimelineText(d) {
+  const timeline = (d && d.timeline) || [];
+  if (!timeline.length) return "What the agents did\n\n(no run yet)";
+  const lines = ["What the agents did — Bug-Hunter → Idea → Reviewer"];
+  let lastAgent = null;
+  for (const t of timeline) {
+    const agent = t.agent || "";
+    if (agent !== lastAgent) {
+      lastAgent = agent;
+      lines.push("", agentLabel(agent) || agent || "—");
+    }
+    const label = String(t.label || "").trim();
+    const text = String(t.text || "").trim();
+    lines.push(`- ${t.ts}${label ? " · " + label : ""}${text ? ": " + text : ""}`);
+  }
+  if (d.generated) {
+    lines.push("", `Last run: ${new Date(d.generated).toLocaleString()}` +
+      (d.status ? " — " + d.status : ""));
+  }
+  return lines.join("\n");
+}
+
 function flashCopyBtn(btn, label, ok) {
   clearTimeout(btn._resetTimer);
   btn.textContent = label;
@@ -118,8 +142,7 @@ function flashCopyBtn(btn, label, ok) {
   }, 1600);
 }
 
-async function copyRecord(record, btn) {
-  const text = buildCopyText(record);
+async function copyText(text, btn) {
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(text);
@@ -141,10 +164,20 @@ async function copyRecord(record, btn) {
   }
 }
 
+function copyRecord(record, btn) {
+  copyText(buildCopyText(record), btn);
+}
+
 function copyDigest() {
   const btn = $("copy-digest");
   if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
   copyRecord(latestDigest, btn);
+}
+
+function copyTimeline() {
+  const btn = $("copy-timeline");
+  if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
+  copyText(buildTimelineText(latestDigest), btn);
 }
 
 // Render the "Previous runs" log from the history file. The last history record
@@ -360,6 +393,7 @@ async function enablePush() {
 
 $("enable").addEventListener("click", enablePush);
 $("copy-digest").addEventListener("click", copyDigest);
+$("copy-timeline").addEventListener("click", copyTimeline);
 // Per-run Copy buttons in the history log are rendered dynamically, so delegate.
 $("history-log").addEventListener("click", (e) => {
   const btn = e.target.closest(".run-copy");
