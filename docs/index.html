@@ -111,6 +111,17 @@
 
     button { font: inherit; background: #2563eb; color: #fff; border: 0; border-radius: 10px;
              padding: 12px 16px; width: 100%; cursor: pointer; }
+
+    /* "Latest digest" header + its inline Copy button (copy pertinent details to
+       clipboard so they're easy to paste into a note/message from your phone). */
+    .card-head { display: flex; align-items: center; justify-content: space-between;
+                 gap: 10px; margin-bottom: 10px; }
+    .card-head .section-label { margin: 0; }
+    .copy-btn { width: auto; flex: none; font-size: 12px; font-weight: 600;
+                padding: 7px 14px; background: #334155; color: #e2e8f0;
+                border: 1px solid #475569; border-radius: 8px; }
+    .copy-btn:active { background: #475569; }
+    .copy-btn.copied { background: #064e3b; border-color: #065f46; color: #6ee7b7; }
     .muted { color: #94a3b8; font-size: 13px; }
     textarea { width: 100%; min-height: 110px; background: #0b1220; color: #93c5fd;
                border: 1px solid #334155; border-radius: 8px; padding: 8px;
@@ -151,7 +162,10 @@
     </div>
 
     <div class="card">
-      <div class="section-label">Latest digest</div>
+      <div class="card-head">
+        <div class="section-label">Latest digest</div>
+        <button id="copy-digest" class="copy-btn" type="button">Copy</button>
+      </div>
       <div class="digest" id="digest">No run yet.</div>
     </div>
 

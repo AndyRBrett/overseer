@@ -3,6 +3,9 @@
 
 const $ = (id) => document.getElementById(id);
 
+// Last digest loaded, kept so the Copy button can assemble a plain-text version.
+let latestDigest = null;
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
@@ -73,11 +76,77 @@ function formatDigest(text) {
   return html || "<p>(no summary)</p>";
 }
 
+// Assemble the "pertinent details" as plain text for the Copy button — the
+// digest summary plus project health, run counts and the run time, so it drops
+// cleanly into a note or message from your phone.
+function buildCopyText(d) {
+  const lines = [(d.summary || "No run yet.").trim()];
+
+  const projects = d.projects || {};
+  const names = Object.keys(projects);
+  if (names.length) {
+    lines.push("", "Project health");
+    for (const name of names) {
+      const p = projects[name] || {};
+      const badge = String(p.status || "unknown").toUpperCase();
+      lines.push(`- ${name}: ${badge}${p.reason ? " — " + p.reason : ""}`);
+    }
+  }
+
+  const c = d.counts || {};
+  lines.push("",
+    `Tool calls: ${c.tools ?? 0} · Issues filed: ${c.issues ?? 0} · ` +
+    `Enhancements: ${c.enhancements ?? 0} · Errors: ${c.errors ?? 0}`);
+
+  if (d.generated) {
+    lines.push("",
+      `Last run: ${new Date(d.generated).toLocaleString()}` +
+      (d.status ? " — " + d.status : ""));
+  }
+  return lines.join("\n");
+}
+
+function flashCopyBtn(btn, label, ok) {
+  clearTimeout(btn._resetTimer);
+  btn.textContent = label;
+  btn.classList.toggle("copied", ok);
+  btn._resetTimer = setTimeout(() => {
+    btn.textContent = "Copy";
+    btn.classList.remove("copied");
+  }, 1600);
+}
+
+async function copyDigest() {
+  const btn = $("copy-digest");
+  if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
+  const text = buildCopyText(latestDigest);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for older / non-secure-context mobile browsers.
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    flashCopyBtn(btn, "Copied!", true);
+  } catch (e) {
+    flashCopyBtn(btn, "Copy failed", false);
+  }
+}
+
 async function loadDigest() {
   try {
     const res = await fetch("digest.json?" + Date.now()); // bust cache
     if (!res.ok) throw new Error(res.status);
     const d = await res.json();
+    latestDigest = d;
 
     // Week-over-week history for the trend sparklines (overseer #6). Optional —
     // it doesn't exist until the first run after history tracking shipped.
@@ -248,5 +317,6 @@ async function enablePush() {
 }
 
 $("enable").addEventListener("click", enablePush);
+$("copy-digest").addEventListener("click", copyDigest);
 registerSW();
 loadDigest();
