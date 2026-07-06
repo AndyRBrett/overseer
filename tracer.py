@@ -246,7 +246,9 @@ class RunTracer:
         that day's record rather than double-counting. The file is capped to the
         last `max_runs` records so it (and the sparklines) stay small. Per project
         we store a 0..1 health score (ok=1, idle=0.5, error/blind=0) so a
-        regression shows up as the line dropping week over week.
+        regression shows up as the line dropping week over week. The run's digest
+        `summary` is stored too, so the dashboard can offer an expandable log of
+        past digests, not just the latest one.
         """
         try:
             with open(path, encoding="utf-8") as f:
@@ -260,6 +262,7 @@ class RunTracer:
             "date": now.strftime("%Y-%m-%d"),
             "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": self.status,
+            "summary": self.digest_text or "",
             "counts": dict(self.counts),
             "projects": {name: {"status": p.get("status"), "score": _status_score(p.get("status"))}
                          for name, p in self.project_health().items()},

@@ -5,6 +5,8 @@ const $ = (id) => document.getElementById(id);
 
 // Last digest loaded, kept so the Copy button can assemble a plain-text version.
 let latestDigest = null;
+// Previous runs shown in the "Previous runs" log, indexed by their Copy button.
+let priorRuns = [];
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -116,10 +118,8 @@ function flashCopyBtn(btn, label, ok) {
   }, 1600);
 }
 
-async function copyDigest() {
-  const btn = $("copy-digest");
-  if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
-  const text = buildCopyText(latestDigest);
+async function copyRecord(record, btn) {
+  const text = buildCopyText(record);
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       await navigator.clipboard.writeText(text);
@@ -139,6 +139,45 @@ async function copyDigest() {
   } catch (e) {
     flashCopyBtn(btn, "Copy failed", false);
   }
+}
+
+function copyDigest() {
+  const btn = $("copy-digest");
+  if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
+  copyRecord(latestDigest, btn);
+}
+
+// Render the "Previous runs" log from the history file. The last history record
+// is the current run (already shown in "Latest digest"), so the archive lists
+// everything before it, most recent first, each an expandable digest.
+function renderHistory(runs) {
+  priorRuns = runs.slice(0, -1).reverse();
+  if (!priorRuns.length) return;
+  $("history-card").style.display = "";
+  $("history-log").innerHTML = priorRuns.map((r, i) => {
+    const when = r.generated
+      ? new Date(r.generated).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+      : (r.date || "");
+    const c = r.counts || {};
+    const meta =
+      `${c.issues ?? 0} issue${c.issues === 1 ? "" : "s"} · ` +
+      `${c.enhancements ?? 0} idea${c.enhancements === 1 ? "" : "s"}` +
+      (r.status && r.status !== "completed" ? " · " + escapeHtml(r.status) : "");
+    const body = r.summary
+      ? formatDigest(r.summary)
+      : '<p class="muted">Digest text wasn\'t recorded for this run.</p>';
+    const copyBtn = r.summary
+      ? `<button class="copy-btn run-copy" type="button" data-run="${i}" style="margin-top:12px">Copy</button>`
+      : "";
+    return `<details class="run">
+      <summary>
+        <span><span class="rdate">${escapeHtml(when)}</span>
+          <span class="rmeta">${meta}</span></span>
+        <span class="rchevron">▶</span>
+      </summary>
+      <div class="rbody"><div class="digest">${body}</div>${copyBtn}</div>
+    </details>`;
+  }).join("");
 }
 
 async function loadDigest() {
@@ -245,6 +284,9 @@ async function loadDigest() {
         `<div class="trange">${escapeHtml(dates[0])} → ${escapeHtml(dates[dates.length - 1])} · ${runs.length} runs</div>`;
     }
 
+    // Previous-runs log — expandable archive of earlier digests (history log).
+    renderHistory(runs);
+
     // Timeline grouped by agent — the pipeline runs Bug-Hunter → Idea → Reviewer
     // in order, so a header is emitted each time the agent changes.
     let lastAgent = null;
@@ -318,5 +360,12 @@ async function enablePush() {
 
 $("enable").addEventListener("click", enablePush);
 $("copy-digest").addEventListener("click", copyDigest);
+// Per-run Copy buttons in the history log are rendered dynamically, so delegate.
+$("history-log").addEventListener("click", (e) => {
+  const btn = e.target.closest(".run-copy");
+  if (!btn) return;
+  const run = priorRuns[Number(btn.dataset.run)];
+  if (run) copyRecord(run, btn);
+});
 registerSW();
 loadDigest();

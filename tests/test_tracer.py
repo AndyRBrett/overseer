@@ -126,6 +126,28 @@ def test_write_history_appends_and_scores(tmp_path):
     assert rec["counts"] == t.counts and rec["status"] == "completed"
 
 
+def test_write_history_records_digest_summary(tmp_path):
+    # The run's digest text is stored per record so the dashboard can offer an
+    # expandable log of past digests, not just the latest one.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)
+    t.set_digest("Issues Found\n- something broke")
+    t.finish("completed")
+    hpath = tmp_path / "history.json"
+    t.write_history(str(hpath))
+    rec = json.load(open(hpath))["runs"][0]
+    assert rec["summary"] == "Issues Found\n- something broke"
+
+
+def test_write_history_summary_defaults_to_empty(tmp_path):
+    # A run that produced no digest stores an empty string, not null/KeyError.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)
+    t.write_history(str(tmp_path / "history.json"))
+    rec = json.load(open(tmp_path / "history.json"))["runs"][0]
+    assert rec["summary"] == ""
+
+
 def test_write_history_replaces_same_day_run(tmp_path):
     hpath = tmp_path / "history.json"
     # First run today: UFC ok.
