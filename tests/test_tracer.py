@@ -126,6 +126,19 @@ def test_write_history_appends_and_scores(tmp_path):
     assert rec["counts"] == t.counts and rec["status"] == "completed"
 
 
+def test_digest_timeline_ships_full_reasoning_when_truncated(tmp_path):
+    # Long reasoning is truncated for the timeline row but the full text (capped)
+    # rides along as text_full so the dashboard can expand it in place.
+    t = _tracer(tmp_path)
+    t.thinking(0, "x" * 500)
+    t.thinking(0, "short thought")
+    t.write_digest(str(tmp_path / "d.json"))
+    tl = json.load(open(tmp_path / "d.json"))["timeline"]
+    assert tl[0]["text"].endswith("…") and len(tl[0]["text"]) == 240
+    assert tl[0]["text_full"] == "x" * 500
+    assert "text_full" not in tl[1]  # short rows don't carry a duplicate
+
+
 def test_write_history_records_digest_summary(tmp_path):
     # The run's digest text is stored per record so the dashboard can offer an
     # expandable log of past digests, not just the latest one.

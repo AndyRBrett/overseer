@@ -11,6 +11,55 @@ let priorRuns = [];
 function escapeHtml(s) {
   return String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 }
+const escapeAttr = (s) => escapeHtml(s).replace(/"/g, "&quot;");
+
+// ── GitHub links in digest/timeline text ──────────────────────────────────
+// Repos the run actually touched, harvested from the timeline's file_issue /
+// propose_enhancement / search rows (their text starts with the repo slug —
+// see tracer._tool_summary). Used to turn "ufc-dashboard (#25)" in the digest
+// into a tappable link to the real issue.
+let repoMap = { slugs: new Set(), byShort: new Map() };
+
+function buildRepoMap(d) {
+  const slugs = new Set();
+  const byShort = new Map();
+  for (const t of (d && d.timeline) || []) {
+    const txt = String(t.text || "");
+    const m = txt.match(/^([\w.-]+\/[\w.-]+) — /) || txt.match(/^searched ([\w.-]+\/[\w.-]+):/);
+    if (!m) continue;
+    slugs.add(m[1]);
+    byShort.set(m[1].split("/")[1].toLowerCase(), m[1]);
+  }
+  return { slugs, byShort };
+}
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Linkify one already-HTML-escaped line: known repo slugs become repo links,
+// and once a line is associated with a repo, its "#123" references become
+// issue links. Resolution is per line so a digest bullet like
+// "ufc-dashboard (#25): …" links #25 to the right repo.
+function linkifyLine(escaped) {
+  let html = escaped;
+  let lineRepo = null;
+  for (const slug of repoMap.slugs) {
+    if (!html.includes(slug)) continue;
+    lineRepo = lineRepo || slug;
+    html = html.split(slug).join(
+      `<a href="https://github.com/${slug}" target="_blank" rel="noopener">${slug}</a>`);
+  }
+  if (!lineRepo) {
+    for (const [short, slug] of repoMap.byShort) {
+      const re = new RegExp(`(^|[^\\w/-])${escapeRegExp(short)}(?![\\w-])`, "i");
+      if (re.test(html)) { lineRepo = slug; break; }
+    }
+  }
+  if (lineRepo) {
+    html = html.replace(/#(\d+)\b/g,
+      `<a href="https://github.com/${lineRepo}/issues/$1" target="_blank" rel="noopener">#$1</a>`);
+  }
+  return html;
+}
 
 // Tiny inline-SVG sparkline for week-over-week trends (overseer #6). Pass lo/hi
 // to pin the y-axis (e.g. 0..1 for health scores) so magnitude reads honestly;
@@ -59,7 +108,7 @@ function formatDigest(text) {
     const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
     if (bullet) {
       if (!inList) { html += "<ul>"; inList = true; }
-      html += `<li>${escapeHtml(bullet[1])}</li>`;
+      html += `<li>${linkifyLine(escapeHtml(bullet[1]))}</li>`;
       continue;
     }
 
@@ -71,7 +120,7 @@ function formatDigest(text) {
     if (isHeading) {
       html += `<h3>${escapeHtml(line)}</h3>`;
     } else {
-      html += `<p>${escapeHtml(line)}</p>`;
+      html += `<p>${linkifyLine(escapeHtml(line))}</p>`;
     }
   }
   closeList();
@@ -122,7 +171,7 @@ function buildTimelineText(d) {
       lines.push("", agentLabel(agent) || agent || "—");
     }
     const label = String(t.label || "").trim();
-    const text = String(t.text || "").trim();
+    const text = String(t.text_full || t.text || "").trim();
     lines.push(`- ${t.ts}${label ? " · " + label : ""}${text ? ": " + text : ""}`);
   }
   if (d.generated) {
@@ -168,6 +217,15 @@ function copyRecord(record, btn) {
   copyText(buildCopyText(record), btn);
 }
 
+// Native share sheet (Messages / Notes / mail) — one tap fewer than
+// copy-switch-paste on phones. The Share buttons stay hidden on browsers
+// without navigator.share, where Copy already covers it.
+const canShare = !!navigator.share;
+
+function shareText(text) {
+  navigator.share({ title: "Project Overseer", text }).catch(() => { /* user cancelled */ });
+}
+
 function copyDigest() {
   const btn = $("copy-digest");
   if (!latestDigest) { flashCopyBtn(btn, "Nothing yet", false); return; }
@@ -199,8 +257,10 @@ function renderHistory(runs) {
     const body = r.summary
       ? formatDigest(r.summary)
       : '<p class="muted">Digest text wasn\'t recorded for this run.</p>';
-    const copyBtn = r.summary
-      ? `<button class="copy-btn run-copy" type="button" data-run="${i}" style="margin-top:12px">Copy</button>`
+    const btns = r.summary
+      ? `<div class="head-btns" style="margin-top:12px">` +
+        (canShare ? `<button class="copy-btn run-share" type="button" data-run="${i}">Share</button>` : "") +
+        `<button class="copy-btn run-copy" type="button" data-run="${i}">Copy</button></div>`
       : "";
     return `<details class="run">
       <summary>
@@ -208,9 +268,39 @@ function renderHistory(runs) {
           <span class="rmeta">${meta}</span></span>
         <span class="rchevron">▶</span>
       </summary>
-      <div class="rbody"><div class="digest">${body}</div>${copyBtn}</div>
+      <div class="rbody"><div class="digest">${body}</div>${btns}</div>
     </details>`;
   }).join("");
+}
+
+// "2 days ago" reads faster than a full timestamp when the real question is
+// "is this fresh, or did a run get missed?"
+function relativeTime(iso) {
+  const t = new Date(iso).getTime();
+  if (!isFinite(t)) return "";
+  const s = Math.round((Date.now() - t) / 1000);
+  if (s < 90) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 90) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 36) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const days = Math.round(h / 24);
+  if (days < 11) return `${days} day${days === 1 ? "" : "s"} ago`;
+  const w = Math.round(days / 7);
+  return `${w} week${w === 1 ? "" : "s"} ago`;
+}
+
+// The pipeline runs weekly, so anything older than 8 days means a missed run —
+// tint the header line amber and say so instead of leaving a quiet stale date.
+function renderGenerated(d) {
+  const el = $("generated");
+  const ageDays = (Date.now() - new Date(d.generated).getTime()) / 86400000;
+  const overdue = isFinite(ageDays) && ageDays > 8;
+  const exact = new Date(d.generated).toLocaleString(undefined,
+    { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  el.textContent = `Last run: ${relativeTime(d.generated)} (${exact}) — ${d.status || ""}` +
+    (overdue ? " · next run overdue" : "");
+  el.classList.toggle("stale", overdue);
 }
 
 async function loadDigest() {
@@ -219,6 +309,7 @@ async function loadDigest() {
     if (!res.ok) throw new Error(res.status);
     const d = await res.json();
     latestDigest = d;
+    repoMap = buildRepoMap(d);
 
     // Week-over-week history for the trend sparklines (overseer #6). Optional —
     // it doesn't exist until the first run after history tracking shipped.
@@ -231,8 +322,7 @@ async function loadDigest() {
     const scoreSeries = (name) =>
       runs.map((r) => (r.projects && r.projects[name] ? r.projects[name].score : null));
 
-    $("generated").textContent =
-      "Last run: " + new Date(d.generated).toLocaleString() + " — " + (d.status || "");
+    renderGenerated(d);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};
@@ -335,14 +425,38 @@ async function loadDigest() {
         lastAgent = agent;
         header = `<div class="agent-head ${slug}">${escapeHtml(agentLabel(agent))}</div>`;
       }
+      // Truncated reasoning ships its full text in text_full — render it
+      // tap-to-expand instead of dead-ending at "…".
+      const full = t.text_full && t.text_full !== t.text ? t.text_full : null;
+      const bodyAttrs = full
+        ? ` class="body expandable" data-full="${escapeAttr(full)}" data-short="${escapeAttr(t.text)}"`
+        : ' class="body"';
       return `${header}<div class="item ${slug}">
         <div class="meta">${cat ? `<span class="chip ${known}">${escapeHtml(cat)}</span>` : ""}
           <span>${escapeHtml(t.ts)} · ${escapeHtml(name)}</span></div>
-        <div class="body">${escapeHtml(t.text)}</div></div>`;
+        <div${bodyAttrs}>${linkifyLine(escapeHtml(t.text))}</div></div>`;
     }).join("");
+    updateTimelineToggle();
   } catch (e) {
-    $("generated").textContent = "No digest published yet.";
+    // First-run empty state: explain what will appear and when, instead of a
+    // dead end.
+    $("generated").textContent = "Waiting for the first weekly run.";
+    $("digest").innerHTML =
+      "<p>No digest yet. This page fills in automatically after the weekly " +
+      "review runs (Mondays 14:00 UTC via GitHub Actions) — you'll get the " +
+      "digest, per-project health, and trends here.</p>" +
+      "<p class=\"muted\">Already expecting data? Check the repo's Actions tab " +
+      "to see if the run failed, or pull down / tap ↻ to reload.</p>";
   }
+}
+
+// The step-by-step trace is collapsed by default; the summary row says how
+// much is behind it so collapsing doesn't hide that the data exists.
+function updateTimelineToggle() {
+  const n = ((latestDigest && latestDigest.timeline) || []).length;
+  $("timeline-toggle").textContent = $("timeline-details").open
+    ? "Hide steps"
+    : (n ? `Show all ${n} steps` : "Show all steps");
 }
 
 // ── service worker (required for push + installability) ──────────────────
@@ -394,12 +508,55 @@ async function enablePush() {
 $("enable").addEventListener("click", enablePush);
 $("copy-digest").addEventListener("click", copyDigest);
 $("copy-timeline").addEventListener("click", copyTimeline);
-// Per-run Copy buttons in the history log are rendered dynamically, so delegate.
+if (canShare) {
+  $("share-digest").classList.remove("hidden");
+  $("share-timeline").classList.remove("hidden");
+  $("share-digest").addEventListener("click", () => {
+    if (latestDigest) shareText(buildCopyText(latestDigest));
+  });
+  $("share-timeline").addEventListener("click", () => {
+    if (latestDigest) shareText(buildTimelineText(latestDigest));
+  });
+}
+// Per-run Copy/Share buttons in the history log are rendered dynamically, so delegate.
 $("history-log").addEventListener("click", (e) => {
-  const btn = e.target.closest(".run-copy");
+  const btn = e.target.closest(".run-copy, .run-share");
   if (!btn) return;
   const run = priorRuns[Number(btn.dataset.run)];
-  if (run) copyRecord(run, btn);
+  if (!run) return;
+  if (btn.classList.contains("run-share")) shareText(buildCopyText(run));
+  else copyRecord(run, btn);
 });
+$("timeline-details").addEventListener("toggle", updateTimelineToggle);
+
+// Tap a truncated reasoning row to swap in its full text (and back).
+$("timeline").addEventListener("click", (e) => {
+  const body = e.target.closest(".body.expandable");
+  if (!body || e.target.closest("a")) return;
+  const open = body.classList.toggle("open");
+  body.innerHTML = linkifyLine(escapeHtml(open ? body.dataset.full : body.dataset.short));
+});
+
+// Manual refresh — an installed PWA has no reload button, so give it one.
+$("refresh").addEventListener("click", async () => {
+  const btn = $("refresh");
+  btn.disabled = true;
+  btn.classList.add("spin");
+  try { await loadDigest(); } finally {
+    setTimeout(() => { btn.classList.remove("spin"); btn.disabled = false; }, 400);
+  }
+});
+
+// Push setup is a one-time action — once done (or dismissed), stop giving it
+// space. localStorage can throw in some private-browsing modes; ignore that.
+const PUSH_HIDDEN_KEY = "overseer-push-card-hidden";
+try {
+  if (localStorage.getItem(PUSH_HIDDEN_KEY)) $("push-card").style.display = "none";
+} catch (e) { /* private mode */ }
+$("push-hide").addEventListener("click", () => {
+  try { localStorage.setItem(PUSH_HIDDEN_KEY, "1"); } catch (e) { /* private mode */ }
+  $("push-card").style.display = "none";
+});
+
 registerSW();
 loadDigest();

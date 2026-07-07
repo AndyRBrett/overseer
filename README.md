@@ -102,6 +102,15 @@ branch*, branch = `main`, folder = `/docs`. Your app URL appears there (like
 The app shows the latest digest and run stats, refreshed each week. That alone
 needs nothing further.
 
+The dashboard follows your system light/dark theme, and every card is built for
+phone-first reading: the digest and agent timeline have **Copy** (and, on
+browsers with a native share sheet, **Share**) buttons, filed issues are
+tappable links to GitHub, the step-by-step agent trace is collapsed behind a
+"Show all steps" toggle, truncated reasoning expands in place, and a
+**Previous runs** card archives past digests. The header shows how long ago the
+last run happened (amber if a weekly run looks overdue) with a manual refresh
+button.
+
 **At a glance + idle nudges.** The top of the dashboard shows a one-line rollup
 of the run — how many projects are healthy, how many need attention, and how many
 issues/ideas came out of it — so each weekly review is scannable in seconds. Any

@@ -3,49 +3,86 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>Project Overseer</title>
   <style>
-    :root { color-scheme: dark; }
+    /* Theme variables — dark is the default; light kicks in with the system
+       setting. Saturated chips/badges keep fixed colours (self-contained dark
+       pills) so they read identically on both schemes. */
+    :root {
+      color-scheme: dark;
+      --bg: #0f172a; --card: #1e293b; --card2: #17233b;
+      --border: #334155; --border2: #273449;
+      --text: #e2e8f0; --text2: #cbd5e1; --text-strong: #f8fafc;
+      --muted: #94a3b8; --faint: #64748b; --link: #60a5fa;
+      --code-bg: #0b1220; --code-text: #93c5fd;
+      --btn2-bg: #334155; --btn2-border: #475569; --btn2-text: #e2e8f0; --btn2-active: #475569;
+      --stale: #fbbf24;
+      --nudge-bg: #2a1d10; --nudge-border: #7c2d12;
+      --nudge-idle-bg: #2a230f; --nudge-idle-border: #713f12;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        color-scheme: light;
+        --bg: #f1f5f9; --card: #ffffff; --card2: #f8fafc;
+        --border: #d8e0ea; --border2: #e2e8f0;
+        --text: #1e293b; --text2: #334155; --text-strong: #0f172a;
+        --muted: #64748b; --faint: #94a3b8; --link: #2563eb;
+        --code-bg: #e8eef5; --code-text: #1d4ed8;
+        --btn2-bg: #e2e8f0; --btn2-border: #cbd5e1; --btn2-text: #1e293b; --btn2-active: #cbd5e1;
+        --stale: #b45309;
+        --nudge-bg: #fff7ed; --nudge-border: #fdba74;
+        --nudge-idle-bg: #fefce8; --nudge-idle-border: #fde047;
+      }
+    }
     * { box-sizing: border-box; }
     body { font: 15px/1.55 -apple-system, system-ui, sans-serif; margin: 0;
-           background: #0f172a; color: #e2e8f0;
+           background: var(--bg); color: var(--text);
            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
            overflow-wrap: anywhere; }              /* never let long tokens overflow */
     header { padding: 22px 18px 10px; }
     header h1 { margin: 0; font-size: 19px; }
-    header .sub { color: #94a3b8; font-size: 13px; margin-top: 2px; }
+    header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .icon-btn { width: auto; flex: none; background: transparent; color: var(--muted);
+                border: 1px solid var(--border); border-radius: 8px; padding: 4px 11px;
+                font-size: 16px; line-height: 1.3; cursor: pointer; }
+    .icon-btn:disabled { opacity: .5; }
+    .icon-btn.spin { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #generated.stale { color: var(--stale); }
     main { padding: 8px 18px 40px; max-width: 780px; margin: 0 auto; }
 
     .stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
-    .stat { background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
             padding: 10px 14px; flex: 1; min-width: 70px; }
     .stat .n { font-size: 22px; font-weight: 700; }
-    .stat .l { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em; }
+    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
             padding: 16px; margin: 12px 0; overflow: hidden; }   /* clip stray overflow */
-    .section-label { font-size: 11px; color: #94a3b8; text-transform: uppercase;
+    .section-label { font-size: 11px; color: var(--muted); text-transform: uppercase;
                      letter-spacing: .05em; margin: 0 0 10px; }
 
     /* Readable digest: headings + bullet rows instead of one raw text blob */
     .digest h3 { font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
-                 color: #f8fafc; margin: 16px 0 6px; }
+                 color: var(--text-strong); margin: 16px 0 6px; }
     .digest h3:first-child { margin-top: 0; }
     .digest ul { margin: 0; padding: 0; list-style: none; }
-    .digest li { position: relative; padding: 6px 0 6px 16px; border-bottom: 1px solid #273449;
-                 font-size: 14px; color: #cbd5e1; }
+    .digest li { position: relative; padding: 6px 0 6px 16px; border-bottom: 1px solid var(--border2);
+                 font-size: 14px; color: var(--text2); }
     .digest li:last-child { border-bottom: 0; }
-    .digest li::before { content: "•"; position: absolute; left: 2px; color: #64748b; }
-    .digest p { margin: 4px 0; color: #cbd5e1; }
+    .digest li::before { content: "•"; position: absolute; left: 2px; color: var(--faint); }
+    .digest p { margin: 4px 0; color: var(--text2); }
 
     /* Agent group headers in the timeline — one per pipeline stage */
     .agent-head { display: flex; align-items: center; gap: 8px; margin: 22px 0 6px;
                   font-size: 12px; font-weight: 700; letter-spacing: .05em;
-                  text-transform: uppercase; color: #e2e8f0;
-                  padding-bottom: 6px; border-bottom: 1px solid #334155; }
+                  text-transform: uppercase; color: var(--text);
+                  padding-bottom: 6px; border-bottom: 1px solid var(--border); }
     .agent-head:first-child { margin-top: 0; }
     .agent-head::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: #64748b; }
     .agent-head.bug-hunter::before { background: #f87171; }
@@ -54,12 +91,12 @@
 
     /* Timeline rows — label as a chip, detail wraps under it. Left border is
        tinted to the agent that produced the row. */
-    .item { border-left: 3px solid #475569; padding: 8px 0 8px 12px; margin: 10px 0; min-width: 0; }
+    .item { border-left: 3px solid var(--btn2-border); padding: 8px 0 8px 12px; margin: 10px 0; min-width: 0; }
     .item.bug-hunter { border-left-color: #f87171; }
     .item.idea-agent { border-left-color: #fbbf24; }
     .item.reviewer  { border-left-color: #34d399; }
     .item .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-                  font-size: 11px; color: #94a3b8; }
+                  font-size: 11px; color: var(--muted); }
     .chip { text-transform: uppercase; letter-spacing: .04em; font-weight: 600;
             font-size: 10px; padding: 2px 8px; border-radius: 999px;
             background: #334155; color: #cbd5e1; }
@@ -69,7 +106,12 @@
     .chip.search { background: #334155; color: #cbd5e1; }
     .chip.digest { background: #064e3b; color: #6ee7b7; }
     .chip.error { background: #7f1d1d; color: #fecaca; }
-    .item .body { font-size: 13.5px; color: #cbd5e1; margin-top: 4px; }
+    .item .body { font-size: 13.5px; color: var(--text2); margin-top: 4px; }
+    /* Truncated reasoning expands in place with a tap (full text ships in the
+       digest as text_full). */
+    .item .body.expandable { cursor: pointer; }
+    .item .body.expandable::after { content: " more"; color: var(--link); font-size: 12px; }
+    .item .body.expandable.open::after { content: " less"; }
 
     /* Rollup — top-of-dashboard "at a glance" summary (idle-detection + rollup) */
     .rollup-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -79,17 +121,17 @@
     .rc.warn { background: #713f12; color: #fde68a; }
     .nudges { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
     .nudge { display: flex; align-items: center; gap: 10px; padding: 9px 11px;
-             background: #2a1d10; border: 1px solid #7c2d12; border-radius: 9px; }
-    .nudge.idle { background: #2a230f; border-color: #713f12; }
-    .nudge .ntext { font-size: 13px; color: #e2e8f0; }
-    .nudge .ntext b { color: #f8fafc; }
+             background: var(--nudge-bg); border: 1px solid var(--nudge-border); border-radius: 9px; }
+    .nudge.idle { background: var(--nudge-idle-bg); border-color: var(--nudge-idle-border); }
+    .nudge .ntext { font-size: 13px; color: var(--text); }
+    .nudge .ntext b { color: var(--text-strong); }
 
     /* Per-project health (blind-spot tracking) */
     .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px;
-            padding: 9px 0; border-bottom: 1px solid #273449; }
+            padding: 9px 0; border-bottom: 1px solid var(--border2); }
     .prow:last-child { border-bottom: 0; }
     .prow .pname { font-size: 14px; }
-    .prow .pmeta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .prow .pmeta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .pbadge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
               padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
     .pbadge.ok { background: #064e3b; color: #6ee7b7; }
@@ -102,12 +144,12 @@
     /* Trend sparklines (week over week) */
     .spark { display: block; opacity: .9; }
     .trow { display: flex; align-items: center; gap: 10px; padding: 9px 0;
-            border-bottom: 1px solid #273449; }
+            border-bottom: 1px solid var(--border2); }
     .trow:last-of-type { border-bottom: 0; }
-    .trow .tlabel { font-size: 13px; color: #cbd5e1; flex: 1; }
+    .trow .tlabel { font-size: 13px; color: var(--text2); flex: 1; }
     .trow .tlast { font-size: 14px; font-weight: 700; min-width: 24px; text-align: right; }
-    .trow .tnone { color: #64748b; }
-    .trange { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+    .trow .tnone { color: var(--faint); }
+    .trange { font-size: 11px; color: var(--muted); margin-top: 8px; }
 
     button { font: inherit; background: #2563eb; color: #fff; border: 0; border-radius: 10px;
              padding: 12px 16px; width: 100%; cursor: pointer; }
@@ -117,37 +159,50 @@
     .card-head { display: flex; align-items: center; justify-content: space-between;
                  gap: 10px; margin-bottom: 10px; }
     .card-head .section-label { margin: 0; }
+    .head-btns { display: flex; gap: 8px; flex: none; }
+
+    /* Timeline collapsed by default — the digest is the read, the step-by-step
+       trace is forensics. The summary row shows how much is hidden. */
+    #timeline-details > summary { list-style: none; cursor: pointer; font-size: 13px;
+                                  color: var(--muted); padding: 2px 0; -webkit-tap-highlight-color: transparent; }
+    #timeline-details > summary::-webkit-details-marker { display: none; }
+    #timeline-details > summary::before { content: "▶"; display: inline-block; font-size: 10px;
+                                          color: var(--faint); margin-right: 7px; transition: transform .15s ease; }
+    #timeline-details[open] > summary::before { transform: rotate(90deg); }
     .copy-btn { width: auto; flex: none; font-size: 12px; font-weight: 600;
-                padding: 7px 14px; background: #334155; color: #e2e8f0;
-                border: 1px solid #475569; border-radius: 8px; }
-    .copy-btn:active { background: #475569; }
+                padding: 7px 14px; background: var(--btn2-bg); color: var(--btn2-text);
+                border: 1px solid var(--btn2-border); border-radius: 8px; }
+    .copy-btn:active { background: var(--btn2-active); }
     .copy-btn.copied { background: #064e3b; border-color: #065f46; color: #6ee7b7; }
 
     /* Previous-runs log — each past digest as a native collapsible <details> row
        so old weekly reviews stay browsable (and copyable) on the phone. */
-    .run { border: 1px solid #334155; border-radius: 10px; margin: 10px 0;
-           background: #17233b; overflow: hidden; }
+    .run { border: 1px solid var(--border); border-radius: 10px; margin: 10px 0;
+           background: var(--card2); overflow: hidden; }
     .run > summary { list-style: none; cursor: pointer; padding: 12px 14px;
                      display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .run > summary::-webkit-details-marker { display: none; }
-    .run .rdate { font-size: 14px; font-weight: 600; color: #f8fafc; }
-    .run .rmeta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
-    .run .rchevron { color: #64748b; font-size: 11px; flex: none; transition: transform .15s ease; }
+    .run .rdate { font-size: 14px; font-weight: 600; color: var(--text-strong); }
+    .run .rmeta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .run .rchevron { color: var(--faint); font-size: 11px; flex: none; transition: transform .15s ease; }
     .run[open] .rchevron { transform: rotate(90deg); }
-    .run[open] > summary { border-bottom: 1px solid #334155; }
+    .run[open] > summary { border-bottom: 1px solid var(--border); }
     .run .rbody { padding: 6px 14px 14px; }
-    .muted { color: #94a3b8; font-size: 13px; }
-    textarea { width: 100%; min-height: 110px; background: #0b1220; color: #93c5fd;
-               border: 1px solid #334155; border-radius: 8px; padding: 8px;
+    .muted { color: var(--muted); font-size: 13px; }
+    textarea { width: 100%; min-height: 110px; background: var(--code-bg); color: var(--code-text);
+               border: 1px solid var(--border); border-radius: 8px; padding: 8px;
                font: 12px/1.4 monospace; }
-    code { background: #0b1220; border-radius: 5px; padding: 1px 6px; word-break: break-all; }
+    code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; word-break: break-all; }
     .hidden { display: none; }
-    a { color: #60a5fa; }
+    a { color: var(--link); }
   </style>
 </head>
 <body>
   <header>
-    <h1>Project Overseer</h1>
+    <div class="head-row">
+      <h1>Project Overseer</h1>
+      <button id="refresh" class="icon-btn" type="button" aria-label="Refresh" title="Refresh">↻</button>
+    </div>
     <div class="sub">Three-agent weekly review · Bug-Hunter · Idea · Reviewer</div>
     <div class="sub" id="generated">Loading…</div>
   </header>
@@ -158,12 +213,6 @@
     </div>
 
     <div class="stats" id="stats"></div>
-
-    <div class="card">
-      <button id="enable">Enable weekly push notifications</button>
-      <div id="notif-help" class="muted hidden" style="margin-top:12px"></div>
-      <textarea id="sub" class="hidden" readonly></textarea>
-    </div>
 
     <div class="card" id="projects-card" style="display:none">
       <div class="section-label">Project health</div>
@@ -178,7 +227,10 @@
     <div class="card">
       <div class="card-head">
         <div class="section-label">Latest digest</div>
-        <button id="copy-digest" class="copy-btn" type="button">Copy</button>
+        <span class="head-btns">
+          <button id="share-digest" class="copy-btn hidden" type="button">Share</button>
+          <button id="copy-digest" class="copy-btn" type="button">Copy</button>
+        </span>
       </div>
       <div class="digest" id="digest">No run yet.</div>
     </div>
@@ -191,9 +243,25 @@
     <div class="card">
       <div class="card-head">
         <div class="section-label">What the agents did — Bug-Hunter → Idea → Reviewer</div>
-        <button id="copy-timeline" class="copy-btn" type="button">Copy</button>
+        <span class="head-btns">
+          <button id="share-timeline" class="copy-btn hidden" type="button">Share</button>
+          <button id="copy-timeline" class="copy-btn" type="button">Copy</button>
+        </span>
       </div>
-      <div id="timeline"></div>
+      <details id="timeline-details">
+        <summary id="timeline-toggle">Show all steps</summary>
+        <div id="timeline"></div>
+      </details>
+    </div>
+
+    <div class="card" id="push-card">
+      <div class="card-head">
+        <div class="section-label">Weekly push notification</div>
+        <button id="push-hide" class="copy-btn" type="button">Hide</button>
+      </div>
+      <button id="enable">Enable weekly push notifications</button>
+      <div id="notif-help" class="muted hidden" style="margin-top:12px"></div>
+      <textarea id="sub" class="hidden" readonly></textarea>
     </div>
   </main>
   <script src="app.js"></script>

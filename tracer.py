@@ -222,9 +222,16 @@ class RunTracer:
                                  "label": f"{ev['name']} ({label})",
                                  "text": _tool_summary(ev)})
             elif ev["kind"] == "thinking":
-                timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
-                                 "label": "reasoning",
-                                 "text": _oneline(ev["text"], 240)})
+                entry = {"ts": ev["ts"], "agent": ev.get("agent"),
+                         "label": "reasoning",
+                         "text": _oneline(ev["text"], 240)}
+                # Ship the full reasoning (capped) alongside the truncated line
+                # so the dashboard can expand it in place instead of dead-ending
+                # at "…" — the full text otherwise lives only in the CI artifact.
+                full = _oneline(ev["text"], 2000)
+                if full != entry["text"]:
+                    entry["text_full"] = full
+                timeline.append(entry)
         payload = {
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": self.status,
