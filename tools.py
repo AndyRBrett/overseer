@@ -1,11 +1,12 @@
 """
 Shared tools, config, and agent runtime for the Project Overseer pipeline.
 
-The overseer is split into three sequential agents (see orchestrator.py):
+The overseer is split into four sequential agents (see orchestrator.py):
 
   1. Bug-Hunter  — investigates and files confirmed bugs only
-  2. Idea Agent  — brainstorms ranked enhancement ideas only
-  3. Reviewer    — dedupes both outputs and sends one Telegram digest
+  2. Fixer       — clones the repo, reproduces + fixes filed bugs, opens PRs
+  3. Idea Agent  — brainstorms ranked enhancement ideas only
+  4. Reviewer    — dedupes all outputs and sends one Telegram digest
 
 Every agent script imports its tool implementations from this module so the
 tool logic lives in exactly one place. This file also hosts:
@@ -14,8 +15,9 @@ tool logic lives in exactly one place. This file also hosts:
   - the `TOOL_FUNCTIONS` dispatch table reused by each agent loop
   - `run_agent`, the shared client.messages.create tool-use loop
   - the `--dry-run` switch (`set_dry_run`) that intercepts the mutating tools
-    (file_issue, propose_enhancement, send_telegram_summary) so a run can be
-    tested without anything hitting GitHub or Telegram
+    (file_issue, propose_enhancement, send_telegram_summary, plus the fixer's
+    push / open_pull_request / comment_on_issue and the janitor's close_issue)
+    so a run can be tested without anything hitting GitHub or Telegram
 
 Configuration is via environment variables (see README.md). Anything not
 configured degrades gracefully: the matching tool returns a "not_configured"
@@ -24,14 +26,27 @@ status the agent notes and works around, so the pipeline always runs end to end.
 
 import json
 import os
+import secrets
+import shutil
+import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
 from tracer import RunTracer, activity_idle
 
-# All three agents run on the same model unless overridden.
+# Two model tiers to keep the weekly cost down. The Fixer gets the heavy model
+# (writing correct code + repro tests is the judgment-heavy stage); the
+# investigate/summarize agents (Bug-Hunter, Idea, Reviewer, Janitor) run on the
+# light model, which is roughly 5x cheaper per token.
 MODEL = os.getenv("OVERSEER_MODEL", "claude-opus-4-8")
+LIGHT_MODEL = os.getenv("OVERSEER_LIGHT_MODEL", "claude-sonnet-5")
+
+# Per-response output budget. Adaptive thinking spends from this too, so it
+# must be generous: at 4096 a long think could swallow the whole budget and
+# truncate the response (see the max_tokens handling in run_agent).
+MAX_TOKENS = int(os.getenv("OVERSEER_MAX_TOKENS", "16384"))
 
 # Safety bound on each agent's tool-use loop. Without this, a model that keeps
 # calling tools would never terminate. On the final iteration we drop the tools
@@ -237,6 +252,147 @@ TOOL_SCHEMAS = {
                 "impact": {"type": "string", "enum": ["low", "medium", "high"]},
             },
             "required": ["repo", "title", "rationale", "effort", "impact"],
+        },
+    },
+    "list_open_issues": {
+        "name": "list_open_issues",
+        "description": "List the open GitHub issues in a project repo (number, title, body, labels). Use this to pick which filed bugs to attempt a fix for.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"repo": {"type": "string"}},
+            "required": ["repo"],
+        },
+    },
+    "setup_fix_workspace": {
+        "name": "setup_fix_workspace",
+        "description": (
+            "Clone a project repo into a scratch workspace and create a fresh fix "
+            "branch (overseer/fix-<issue>) off the default branch. Must be called "
+            "before any other workspace tool for that repo. Re-calling replaces the "
+            "workspace, discarding uncommitted work."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "issue_number": {"type": "integer"},
+            },
+            "required": ["repo", "issue_number"],
+        },
+    },
+    "run_in_workspace": {
+        "name": "run_in_workspace",
+        "description": (
+            "Run a shell command inside the repo's workspace clone (tests, grep, "
+            "git log/blame, pip install, reproduction scripts). Returns exit code "
+            "and combined stdout+stderr, truncated if long."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "command": {"type": "string"},
+                "timeout": {"type": "integer",
+                            "description": "Seconds before the command is killed (default 180, max 600)."},
+            },
+            "required": ["repo", "command"],
+        },
+    },
+    "read_workspace_file": {
+        "name": "read_workspace_file",
+        "description": "Read a file from the repo's workspace clone (path relative to the repo root).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "path": {"type": "string"},
+            },
+            "required": ["repo", "path"],
+        },
+    },
+    "write_workspace_file": {
+        "name": "write_workspace_file",
+        "description": "Write (create or fully overwrite) a file in the repo's workspace clone. Path is relative to the repo root.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "path": {"type": "string"},
+                "content": {"type": "string"},
+            },
+            "required": ["repo", "path", "content"],
+        },
+    },
+    "commit_and_push": {
+        "name": "commit_and_push",
+        "description": (
+            "Commit all workspace changes and push the fix branch to origin. "
+            "Refuses to commit on the default branch — only the overseer/fix-* "
+            "branch created by setup_fix_workspace can be pushed."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "message": {"type": "string", "description": "Commit message."},
+            },
+            "required": ["repo", "message"],
+        },
+    },
+    "open_pull_request": {
+        "name": "open_pull_request",
+        "description": (
+            "Open a pull request from the pushed fix branch into the default "
+            "branch. The body should state the root cause, the fix, and the test "
+            "evidence; 'Fixes #<issue>' is appended automatically so the issue "
+            "closes on merge."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "title": {"type": "string"},
+                "body": {"type": "string"},
+                "issue_number": {"type": "integer"},
+            },
+            "required": ["repo", "title", "body", "issue_number"],
+        },
+    },
+    "comment_on_issue": {
+        "name": "comment_on_issue",
+        "description": (
+            "Post a comment on an existing GitHub issue. Use this when escalating: "
+            "record what you investigated, the root cause evidence, and the "
+            "decision the owner needs to make — so the issue is actionable even "
+            "without a PR."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "issue_number": {"type": "integer"},
+                "comment": {"type": "string"},
+            },
+            "required": ["repo", "issue_number", "comment"],
+        },
+    },
+    "close_issue": {
+        "name": "close_issue",
+        "description": (
+            "Close a GitHub issue as completed, posting an explanatory comment "
+            "first. Only close an issue when you can cite the specific commit "
+            "or merged PR that resolved it — the comment must contain that "
+            "evidence so the owner can spot-check the close."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "repo": {"type": "string"},
+                "issue_number": {"type": "integer"},
+                "comment": {"type": "string",
+                            "description": "Why this is being closed, citing the commit SHA or PR that implemented it."},
+            },
+            "required": ["repo", "issue_number", "comment"],
         },
     },
     "send_telegram_summary": {
@@ -482,6 +638,311 @@ def send_telegram_summary(text):
     return {"status": "sent", "message_id": body.get("result", {}).get("message_id")}
 
 
+# ── FIXER WORKSPACE TOOLS ────────────────────────────────────────────────
+# The Fixer agent works in a real clone of the target repo: it investigates,
+# writes a reproducing test, fixes, runs the tests, then pushes a fix branch and
+# opens a PR. Two hard guarantees are enforced HERE, not just in the prompt:
+#   - only repos configured in PROJECTS can be touched (setup_fix_workspace)
+#   - the default branch can never be committed to or pushed (commit_and_push)
+
+FIX_BRANCH_PREFIX = "overseer/fix-"
+FIXER_COMMAND_TIMEOUT = int(os.getenv("FIXER_COMMAND_TIMEOUT", "180"))
+_FIXER_OUTPUT_LIMIT = 10_000   # chars of command output returned to the agent
+_WORKSPACE_FILE_LIMIT = 50_000
+
+# How many PRs the Fixer may open per run. Enforced HERE (open_pull_request
+# refuses past the budget), not just in the agent prompt.
+FIXER_MAX_FIXES = int(os.getenv("FIXER_MAX_FIXES", "2"))
+_fix_prs_opened = 0
+
+
+def reset_fix_run():
+    """Reset the per-run PR budget. Called at the start of each pipeline run."""
+    global _fix_prs_opened
+    _fix_prs_opened = 0
+
+# repo slug -> {"dir", "branch", "default_branch", "committed", "pushed"}
+_workspaces = {}
+
+
+def configured_repos():
+    """Repo slugs the fixer is allowed to touch — exactly the configured projects."""
+    return {cfg["repo"] for cfg in PROJECTS.values() if cfg.get("repo")}
+
+
+def _clone_url(repo_slug):
+    """Token-authenticated HTTPS clone URL. Tests monkeypatch this to a local path."""
+    token = os.getenv("OVERSEER_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN")
+    if not token:
+        raise RuntimeError(
+            "No GitHub token for cloning. OVERSEER_GITHUB_TOKEN needs Contents "
+            "and Pull requests read/write on the project repos."
+        )
+    return f"https://x-access-token:{token}@github.com/{repo_slug}.git"
+
+
+def _scrub_secrets(text):
+    """Git prints the remote URL (token included) in clone/push errors, and the
+    agent may run `git remote -v`. Never let the token reach the model or logs."""
+    for var in ("OVERSEER_GITHUB_TOKEN", "GITHUB_TOKEN"):
+        token = os.getenv(var)
+        if token:
+            text = text.replace(token, "***")
+    return text
+
+
+def _git(workdir, *args, timeout=60):
+    proc = subprocess.run(["git", *args], cwd=workdir,
+                          capture_output=True, text=True, timeout=timeout)
+    return proc.returncode, _scrub_secrets((proc.stdout + proc.stderr).strip())
+
+
+def _workspace(repo):
+    ws = _workspaces.get(repo)
+    if ws is None:
+        raise RuntimeError(f"No workspace for {repo} — call setup_fix_workspace first.")
+    return ws
+
+
+def _ws_file(ws, path):
+    """Resolve a repo-relative path, refusing anything that escapes the clone."""
+    root = os.path.realpath(ws["dir"])
+    full = os.path.realpath(os.path.join(root, path))
+    if full != root and not full.startswith(root + os.sep):
+        raise ValueError(f"Path escapes the workspace: {path}")
+    return full
+
+
+def list_open_issues(repo):
+    if repo not in configured_repos():
+        return {"status": "error",
+                "detail": f"'{repo}' is not a configured project repo — refusing."}
+    gh_repo = _github().get_repo(repo)
+    issues = []
+    for issue in gh_repo.get_issues(state="open"):
+        if issue.pull_request is not None:
+            continue  # the Issues API also returns PRs; the fixer wants issues only
+        issues.append({
+            "number": issue.number,
+            "title": issue.title,
+            "body": _oneline(issue.body or "", 2000),
+            "labels": [l.name for l in issue.labels],
+            "url": issue.html_url,
+            "created_at": issue.created_at.isoformat(),
+        })
+        if len(issues) >= 20:
+            break
+    # Open overseer/fix-* PRs from previous runs, so the fixer can skip issues
+    # that already have a fix in flight (the branch name carries the issue
+    # number: overseer/fix-<issue>-<suffix>). Without this, cross-run dedupe
+    # would rely on data the agent can't see.
+    fix_prs = []
+    for pr in gh_repo.get_pulls(state="open"):
+        if pr.head.ref.startswith(FIX_BRANCH_PREFIX):
+            fix_prs.append({"number": pr.number, "branch": pr.head.ref,
+                            "title": pr.title, "url": pr.html_url})
+    return {"status": "ok", "repo": repo, "open_issues": issues,
+            "open_fix_prs": fix_prs}
+
+
+def setup_fix_workspace(repo, issue_number):
+    if repo not in configured_repos():
+        return {"status": "error",
+                "detail": f"'{repo}' is not a configured project repo — refusing to clone it."}
+    old = _workspaces.pop(repo, None)
+    if old:
+        shutil.rmtree(old["dir"], ignore_errors=True)
+    workdir = tempfile.mkdtemp(prefix="overseer-fix-" + repo.replace("/", "-") + "-")
+    code, out = _git(workdir, "clone", _clone_url(repo), ".", timeout=300)
+    if code != 0:
+        shutil.rmtree(workdir, ignore_errors=True)
+        return {"status": "error", "detail": f"git clone failed: {out}"}
+    _, default_branch = _git(workdir, "rev-parse", "--abbrev-ref", "HEAD")
+    # Random suffix so a retry (or a stale branch from a crashed run) never
+    # collides with an existing remote branch.
+    branch = f"{FIX_BRANCH_PREFIX}{issue_number}-{secrets.token_hex(3)}"
+    code, out = _git(workdir, "checkout", "-b", branch)
+    if code != 0:
+        shutil.rmtree(workdir, ignore_errors=True)
+        return {"status": "error", "detail": f"branch creation failed: {out}"}
+    _git(workdir, "config", "user.name", "overseer-bot")
+    _git(workdir, "config", "user.email", "overseer-bot@users.noreply.github.com")
+    # Strip the token from the clone's remote: run_in_workspace lets the agent
+    # run arbitrary git, and a credentialed remote would let a shell `git push`
+    # bypass commit_and_push's default-branch guard. commit_and_push re-attaches
+    # the token only for its own push.
+    _git(workdir, "remote", "set-url", "origin", f"https://github.com/{repo}.git")
+    _, files = _git(workdir, "ls-files")
+    file_list = files.splitlines()
+    _workspaces[repo] = {"dir": workdir, "branch": branch,
+                         "default_branch": default_branch,
+                         "committed": False, "pushed": False}
+    return {"status": "ok", "repo": repo, "branch": branch,
+            "default_branch": default_branch,
+            "files": file_list[:200],
+            "file_count": len(file_list)}
+
+
+def run_in_workspace(repo, command, timeout=None):
+    ws = _workspace(repo)
+    timeout = min(int(timeout or FIXER_COMMAND_TIMEOUT), 600)
+    # No .pyc files in the clone: stale bytecode can mask a just-written fix
+    # (same size + same mtime second reuses the old pyc), and __pycache__ would
+    # otherwise be swept into the fix commit by `git add -A`. And never let git
+    # prompt for credentials — there is no terminal, it would hang until timeout.
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1", "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        proc = subprocess.run(command, shell=True, cwd=ws["dir"], env=env,
+                              capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"status": "timeout",
+                "detail": f"Command killed after {timeout}s: {_oneline(command)}"}
+    out = _scrub_secrets((proc.stdout or "") + (proc.stderr or ""))
+    truncated = len(out) > _FIXER_OUTPUT_LIMIT
+    if truncated:
+        out = out[:_FIXER_OUTPUT_LIMIT] + "\n… (output truncated)"
+    return {"status": "ok", "exit_code": proc.returncode,
+            "output": out, "truncated": truncated}
+
+
+def read_workspace_file(repo, path):
+    ws = _workspace(repo)
+    try:
+        full = _ws_file(ws, path)
+    except ValueError as exc:
+        return {"status": "error", "detail": str(exc)}
+    if not os.path.isfile(full):
+        return {"status": "error", "detail": f"No such file in workspace: {path}"}
+    with open(full, encoding="utf-8", errors="replace") as f:
+        content = f.read(_WORKSPACE_FILE_LIMIT + 1)
+    truncated = len(content) > _WORKSPACE_FILE_LIMIT
+    if truncated:
+        content = content[:_WORKSPACE_FILE_LIMIT]
+    return {"status": "ok", "path": path, "content": content, "truncated": truncated}
+
+
+def write_workspace_file(repo, path, content):
+    ws = _workspace(repo)
+    try:
+        full = _ws_file(ws, path)
+    except ValueError as exc:
+        return {"status": "error", "detail": str(exc)}
+    os.makedirs(os.path.dirname(full) or ws["dir"], exist_ok=True)
+    with open(full, "w", encoding="utf-8") as f:
+        f.write(content)
+    return {"status": "ok", "path": path, "bytes": len(content.encode("utf-8"))}
+
+
+def commit_and_push(repo, message):
+    ws = _workspace(repo)
+    code, current = _git(ws["dir"], "rev-parse", "--abbrev-ref", "HEAD")
+    if code != 0:
+        return {"status": "error", "detail": f"could not read current branch: {current}"}
+    # Hard guarantee: never commit to (let alone push) the default branch. Even
+    # if the agent checked out another branch via run_in_workspace, only the
+    # overseer/fix-* branch this workspace was created with is accepted.
+    if current == ws["default_branch"] or not current.startswith(FIX_BRANCH_PREFIX):
+        return {"status": "refused",
+                "detail": f"On branch '{current}' — commits are only allowed on the "
+                          f"'{ws['branch']}' fix branch, never '{ws['default_branch']}'."}
+    _git(ws["dir"], "add", "-A")
+    code, out = _git(ws["dir"], "commit", "-m", message)
+    if code != 0:
+        return {"status": "error", "detail": f"git commit failed: {out}"}
+    ws["committed"] = True
+    if DRY_RUN:
+        print("\n[DRY-RUN] commit_and_push committed locally but would push:")
+        print(f"          repo   : {repo}")
+        print(f"          branch : {current}")
+        print(f"          message: {_oneline(message, 200)}\n")
+        return {"status": "dry_run", "branch": current,
+                "detail": "Committed locally; push to origin skipped (dry run)."}
+    # The remote is kept credential-free (see setup_fix_workspace); attach the
+    # token just for this push, then strip it again.
+    _git(ws["dir"], "remote", "set-url", "origin", _clone_url(repo))
+    try:
+        code, out = _git(ws["dir"], "push", "-u", "origin", current, timeout=120)
+    finally:
+        _git(ws["dir"], "remote", "set-url", "origin", f"https://github.com/{repo}.git")
+    if code != 0:
+        return {"status": "error", "detail": f"git push failed: {out}"}
+    ws["pushed"] = True
+    return {"status": "pushed", "repo": repo, "branch": current}
+
+
+def open_pull_request(repo, title, body, issue_number):
+    global _fix_prs_opened
+    ws = _workspace(repo)
+    # The per-run budget is enforced here, not just in the prompt — a run with
+    # FIXER_MAX_FIXES=1 opens at most one PR no matter what the agent decides.
+    if _fix_prs_opened >= FIXER_MAX_FIXES:
+        return {"status": "refused",
+                "detail": f"Fix budget spent: {FIXER_MAX_FIXES} PR(s) already opened "
+                          "this run (FIXER_MAX_FIXES). Escalate remaining issues "
+                          "with comment_on_issue instead."}
+    body = f"{body}\n\nFixes #{issue_number}\n\n_PR opened by Project Overseer._"
+    if DRY_RUN:
+        if not ws["committed"]:
+            return {"status": "error",
+                    "detail": "Nothing committed yet — call commit_and_push first."}
+        print("\n[DRY-RUN] open_pull_request would open a PR:")
+        print(f"          repo : {repo}")
+        print(f"          head : {ws['branch']} -> {ws['default_branch']}")
+        print(f"          title: {title}")
+        print(f"          body : {_oneline(body, 300)}\n")
+        _fix_prs_opened += 1
+        return {"status": "dry_run", "repo": repo, "title": title,
+                "branch": ws["branch"], "issue_number": issue_number}
+    if not ws["pushed"]:
+        return {"status": "error",
+                "detail": "Branch not pushed yet — call commit_and_push first."}
+    pr = _github().get_repo(repo).create_pull(
+        title=title, body=body, head=ws["branch"], base=ws["default_branch"])
+    _fix_prs_opened += 1
+    return {"status": "opened", "number": pr.number, "url": pr.html_url,
+            "branch": ws["branch"]}
+
+
+def comment_on_issue(repo, issue_number, comment):
+    if repo not in configured_repos():
+        return {"status": "error",
+                "detail": f"'{repo}' is not a configured project repo — refusing."}
+    if DRY_RUN:
+        print("\n[DRY-RUN] comment_on_issue would comment:")
+        print(f"          repo : {repo} issue #{issue_number}")
+        print(f"          text : {_oneline(comment, 300)}\n")
+        return {"status": "dry_run", "repo": repo, "issue_number": issue_number}
+    issue = _github().get_repo(repo).get_issue(issue_number)
+    c = issue.create_comment(comment)
+    return {"status": "commented", "issue_number": issue_number, "url": c.html_url}
+
+
+def close_issue(repo, issue_number, comment):
+    """Comment-then-close, atomically from the agent's point of view: every
+    close carries its evidence. Reopening is one click, so this is the mildest
+    mutating tool — but it still respects the repo allowlist and dry-run."""
+    if repo not in configured_repos():
+        return {"status": "error",
+                "detail": f"'{repo}' is not a configured project repo — refusing."}
+    if DRY_RUN:
+        print("\n[DRY-RUN] close_issue would close an issue as completed:")
+        print(f"          repo : {repo} issue #{issue_number}")
+        print(f"          why  : {_oneline(comment, 300)}\n")
+        return {"status": "dry_run", "repo": repo, "issue_number": issue_number}
+    issue = _github().get_repo(repo).get_issue(issue_number)
+    issue.create_comment(comment)
+    issue.edit(state="closed", state_reason="completed")
+    return {"status": "closed", "issue_number": issue_number, "url": issue.html_url}
+
+
+def cleanup_workspaces():
+    """Remove all fixer clones and reset the per-run PR budget. Called by the
+    orchestrator after the run (and by tests between cases)."""
+    for repo in list(_workspaces):
+        shutil.rmtree(_workspaces.pop(repo)["dir"], ignore_errors=True)
+    reset_fix_run()
+
+
 TOOL_FUNCTIONS = {
     "read_trading_bot_log": read_trading_bot_log,
     "read_volleyball_results": read_volleyball_results,
@@ -490,6 +951,15 @@ TOOL_FUNCTIONS = {
     "search_existing_issues": search_existing_issues,
     "file_issue": file_issue,
     "propose_enhancement": propose_enhancement,
+    "list_open_issues": list_open_issues,
+    "setup_fix_workspace": setup_fix_workspace,
+    "run_in_workspace": run_in_workspace,
+    "read_workspace_file": read_workspace_file,
+    "write_workspace_file": write_workspace_file,
+    "commit_and_push": commit_and_push,
+    "open_pull_request": open_pull_request,
+    "comment_on_issue": comment_on_issue,
+    "close_issue": close_issue,
     "send_telegram_summary": send_telegram_summary,
 }
 
@@ -515,7 +985,8 @@ def _oneline(text, limit=160):
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
 
 
-def run_agent(client, *, agent, system, tool_names, user_message, tracer):
+def run_agent(client, *, agent, system, tool_names, user_message, tracer,
+              max_iterations=MAX_ITERATIONS, model=None):
     """Run one agent's client.messages.create tool-use loop to completion.
 
     Reuses the TOOL_FUNCTIONS dispatch pattern: the model may only call the
@@ -528,16 +999,17 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
     orchestrator can pass it on to the next agent.
     """
     tracer.set_agent(agent)
+    model = model or MODEL
     specs = tool_specs(tool_names)
     messages = [{"role": "user", "content": user_message}]
     final_text = ""
 
-    for iteration in range(MAX_ITERATIONS):
-        last_iteration = iteration == MAX_ITERATIONS - 1
+    for iteration in range(max_iterations):
+        last_iteration = iteration == max_iterations - 1
 
         response = client.messages.create(
-            model=MODEL,
-            max_tokens=4096,
+            model=model,
+            max_tokens=MAX_TOKENS,
             # Adaptive thinking with summarized display: judgment-heavy work
             # (bug vs. enhancement, effort/impact ranking, dedupe), and the
             # summaries are what the visual trace shows.
@@ -562,13 +1034,25 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
         # Preserve full content (incl. thinking + tool_use) for the next turn.
         messages.append({"role": "assistant", "content": response.content})
 
-        if response.stop_reason != "tool_use":
+        tool_uses = [b for b in response.content if b.type == "tool_use"]
+
+        if response.stop_reason == "max_tokens" and not tool_uses:
+            # Truncated mid-thought with nothing runnable. Breaking here would
+            # silently end the agent mid-task — live validation caught the
+            # Janitor verifying issues and then "completing" without acting.
+            # Nudge it to pick up where it left off instead.
+            tracer.assistant_text(iteration, "(response hit the output token limit — asking the agent to continue)")
+            messages.append({"role": "user", "content": (
+                "Your previous response was cut off by the output token limit. "
+                "Continue exactly where you left off; if you were about to call "
+                "a tool, issue that tool call now.")})
+            continue
+
+        if not tool_uses:
             break
 
         tool_results = []
-        for block in response.content:
-            if block.type != "tool_use":
-                continue
+        for block in tool_uses:
             # Isolate tool failures: a raising tool becomes an error result the
             # agent can route around, not a crash that aborts the whole run.
             try:
@@ -592,7 +1076,7 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
 
         messages.append({"role": "user", "content": tool_results})
     else:
-        tracer.assistant_text(MAX_ITERATIONS, f"(agent '{agent}' stopped: max iterations)")
+        tracer.assistant_text(max_iterations, f"(agent '{agent}' stopped: max iterations)")
 
     return final_text
 

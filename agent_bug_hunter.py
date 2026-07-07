@@ -75,4 +75,5 @@ def run(client, tracer):
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,
+        model=tools.LIGHT_MODEL,  # investigate + file: light tier is enough
     )

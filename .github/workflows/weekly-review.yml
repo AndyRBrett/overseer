@@ -4,7 +4,16 @@ on:
   schedule:
     # 14:00 UTC every Monday. Adjust to taste (cron is in UTC).
     - cron: "0 14 * * 1"
-  workflow_dispatch: {}   # allow manual runs from the Actions tab
+  workflow_dispatch:      # allow manual runs from the Actions tab
+    inputs:
+      dry_run:
+        description: "Dry run: intercept every mutating tool (issues, PRs, pushes, Telegram) and print what WOULD happen. Skips digest publish + push notification."
+        type: boolean
+        default: false
+      max_fixes:
+        description: "Max PRs the Fixer may open this run (FIXER_MAX_FIXES). Enforced in code by open_pull_request."
+        type: string
+        default: "2"
 
 # Needed so the run can commit the updated digest back into docs/ (GitHub Pages).
 permissions:
@@ -13,7 +22,10 @@ permissions:
 jobs:
   overseer:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The Fixer stage clones project repos and runs their test suites, so a
+    # run that attempts a couple of fixes takes meaningfully longer than a
+    # review-only run.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -38,9 +50,13 @@ jobs:
           # tool reports "not_configured" and the run still succeeds if unset).
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python orchestrator.py
+          # Manual runs can dial the Fixer's PR budget (e.g. 1 for a supervised
+          # first run); scheduled runs use the default.
+          FIXER_MAX_FIXES: ${{ inputs.max_fixes || '2' }}
+        run: python orchestrator.py ${{ inputs.dry_run == true && '--dry-run' || '' }}
 
       - name: Publish digest to the web app
+        if: ${{ inputs.dry_run != true }}   # a dry run must publish nothing
         run: |
           if git diff --quiet -- docs/digest.json docs/history.json; then
             echo "No digest change to publish."
@@ -53,6 +69,7 @@ jobs:
           fi
 
       - name: Send push notification
+        if: ${{ inputs.dry_run != true }}   # a dry run must notify nothing
         env:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}

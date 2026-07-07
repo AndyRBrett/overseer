@@ -84,9 +84,10 @@ function sparkline(values, { width = 96, height = 22, stroke = "#60a5fa", lo = n
 // Health-score line colour matches the project's current state.
 const SCORE_STROKE = { ok: "#34d399", idle: "#fbbf24", error: "#f87171", blind: "#fb923c" };
 
-// The three pipeline agents, used to colour-code and group the timeline.
+// The four pipeline agents, used to colour-code and group the timeline.
 const AGENTS = {
   "Bug-Hunter": { slug: "bug-hunter", label: "🐛 Bug-Hunter" },
+  "Fixer":      { slug: "fixer",      label: "🔧 Fixer" },
   "Idea-Agent": { slug: "idea-agent", label: "💡 Idea Agent" },
   "Reviewer":   { slug: "reviewer",   label: "📋 Reviewer" },
 };
