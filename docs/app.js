@@ -548,15 +548,22 @@ $("refresh").addEventListener("click", async () => {
 });
 
 // Push setup is a one-time action — once done (or dismissed), stop giving it
-// space. localStorage can throw in some private-browsing modes; ignore that.
+// space. Hiding swaps in a quiet footer link so it's always recoverable.
+// localStorage can throw in some private-browsing modes; ignore that.
 const PUSH_HIDDEN_KEY = "overseer-push-card-hidden";
+function setPushCardHidden(hidden) {
+  try {
+    if (hidden) localStorage.setItem(PUSH_HIDDEN_KEY, "1");
+    else localStorage.removeItem(PUSH_HIDDEN_KEY);
+  } catch (e) { /* private mode */ }
+  $("push-card").style.display = hidden ? "none" : "";
+  $("push-restore").classList.toggle("hidden", !hidden);
+}
 try {
-  if (localStorage.getItem(PUSH_HIDDEN_KEY)) $("push-card").style.display = "none";
+  if (localStorage.getItem(PUSH_HIDDEN_KEY)) setPushCardHidden(true);
 } catch (e) { /* private mode */ }
-$("push-hide").addEventListener("click", () => {
-  try { localStorage.setItem(PUSH_HIDDEN_KEY, "1"); } catch (e) { /* private mode */ }
-  $("push-card").style.display = "none";
-});
+$("push-hide").addEventListener("click", () => setPushCardHidden(true));
+$("push-restore").addEventListener("click", () => setPushCardHidden(false));
 
 registerSW();
 loadDigest();
