@@ -41,18 +41,24 @@ def main() -> int:
         f"{', ' + str(counts['errors']) + ' error(s)' if counts.get('errors') else ''}."
         " Tap to read the digest."
     )
-    # Blind-spot / idle alerts (overseer self-review #1 + #4).
+    # Blind-spot / stale / idle alerts (overseer self-review #1 + #4).
     projects = digest.get("projects") or {}
     blind = [n for n, p in projects.items() if p.get("blind_cycles", 0) >= 2]
+    # A stale feed is past-due the moment we detect it (a scheduled job has
+    # stopped), so it alerts on the first cycle — unlike idle, which waits out
+    # the threshold before it's worth a nudge.
+    stale = [n for n, p in projects.items() if p.get("status") == "stale"]
     idle = [n for n, p in projects.items()
             if p.get("status") == "idle" and p.get("idle_cycles", 0) >= 2]
     prefix = ""
     if blind:
         prefix += f"⚠️ Blind on {', '.join(blind)} (>1 cycle). "
+    if stale:
+        prefix += f"🕒 Stale data on {', '.join(stale)} (past-due). "
     if idle:
         prefix += f"💤 Idle (no activity) on {', '.join(idle)}. "
     body = prefix + body
-    title = "⚠️ Weekly review — needs attention" if (blind or idle) else "Weekly review ready"
+    title = "⚠️ Weekly review — needs attention" if (blind or stale or idle) else "Weekly review ready"
     payload = json.dumps({"title": title, "body": body, "url": DASHBOARD_URL})
 
     subs = json.loads(raw_sub)

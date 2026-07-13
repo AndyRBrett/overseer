@@ -153,8 +153,10 @@ class RunTracer:
                 rs = obj.get("status", "ok")
                 if rs != "ok":
                     status, reason = "blind", ("not configured" if rs == "not_configured" else rs)
+                elif _is_stale(obj):
+                    status, reason = "stale", "read OK but the project's data is past-due / stale"
                 elif _is_idle(obj):
-                    status, reason = "idle", "read OK but no recent activity / stale data"
+                    status, reason = "idle", "read OK but no recent activity"
                 else:
                     status, reason = "ok", None
             # Prefer the project's self-reported `app` name from its status file;
@@ -164,6 +166,12 @@ class RunTracer:
             prev = self.prev_projects.get(name, {})
             if status == "ok":
                 projects[name] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+            elif status == "stale":
+                # Data past-due, but the read itself worked so last_ok updates;
+                # track how many cycles it's been stale so a chronically dark feed
+                # escalates week over week instead of resetting.
+                projects[name] = {"status": "stale", "reason": reason, "last_ok": now_iso,
+                                  "blind_cycles": 0, "stale_cycles": prev.get("stale_cycles", 0) + 1}
             elif status == "idle":
                 # Idle read fine, so last_ok updates; track how long it's been quiet.
                 projects[name] = {"status": "idle", "reason": reason, "last_ok": now_iso,
@@ -189,17 +197,27 @@ class RunTracer:
             status = p.get("status")
             if status == "ok":
                 continue
-            cycles = p.get("idle_cycles", 0) if status == "idle" else p.get("blind_cycles", 0)
+            if status == "stale":
+                cycles = p.get("stale_cycles", 0)
+            elif status == "idle":
+                cycles = p.get("idle_cycles", 0)
+            else:
+                cycles = p.get("blind_cycles", 0)
+            # A stale feed is a freshness violation the moment we see it — a
+            # scheduled job has stopped — so it nudges immediately rather than
+            # waiting out the idle/blind cycle threshold (overseer #1).
+            nudge = True if status == "stale" else cycles >= NUDGE_CYCLES
             attention.append({
                 "name": name,
                 "status": status,
                 "detail": _attention_detail(status, p),
                 "cycles": cycles,
-                "nudge": cycles >= NUDGE_CYCLES,
+                "nudge": nudge,
             })
-        # Nudged projects first, then the rest, each alphabetical — the things
-        # that need action surface at the top of the list.
-        attention.sort(key=lambda a: (not a["nudge"], a["name"]))
+        # Nudged projects first; within each group most-severe status first
+        # (can't-see-it before past-due before merely-quiet), then alphabetical —
+        # so a dead daily feed never sits below a harmlessly-idle project.
+        attention.sort(key=lambda a: (not a["nudge"], _ATTENTION_SEVERITY.get(a["status"], 0), a["name"]))
         return {
             "ok": sum(1 for p in health.values() if p.get("status") == "ok"),
             "total": len(health),
@@ -303,9 +321,17 @@ _ACTIVITY_KEYS = ("trades", "signals_evaluated", "footage_processed", "frames_pr
                   "clips_processed", "events_tracked", "runs_7d")
 
 
+# Attention-row ordering: lower sorts first (more urgent). "Can't see it"
+# (blind/error) outranks a past-due feed (stale), which outranks a quiet-but-fresh
+# project (idle). Keeps the dead-daily-feed inversion from ever recurring.
+_ATTENTION_SEVERITY = {"error": 0, "blind": 0, "stale": 1, "idle": 2}
+
+
 # Per-project health collapsed to a 0..1 score the dashboard plots as a sparkline
-# (overseer #6): a drop from 1.0 to 0.5/0.0 is a visible week-over-week regression.
-_STATUS_SCORE = {"ok": 1.0, "idle": 0.5, "error": 0.0, "blind": 0.0}
+# (overseer #6): a drop from 1.0 to 0.5/0.25/0.0 is a visible week-over-week
+# regression. `stale` (a past-due feed) sits below `idle` (quiet but fresh)
+# because a scheduled job that has stopped is a real problem, not just a quiet week.
+_STATUS_SCORE = {"ok": 1.0, "idle": 0.5, "stale": 0.25, "error": 0.0, "blind": 0.0}
 
 
 def _status_score(status) -> float:
@@ -338,12 +364,25 @@ def _app_name(obj: dict):
     return None
 
 
-def _is_idle(obj: dict) -> bool:
-    """A read succeeded but the project shows no recent activity (overseer #4):
-    explicit stale/idle flags, or every known activity counter at zero. Lets us
-    distinguish 'quiet' from 'dead' instead of rendering zero-activity as green.
+def _is_stale(obj: dict) -> bool:
+    """A read succeeded but the project's own status file declares its data
+    past-due — an explicit `stale`/`data_stale` flag. This is a freshness
+    violation (a scheduled job that has stopped producing), distinct from a
+    genuinely quiet-but-fresh project: a daily bot dark for days is a problem
+    *now*, not merely 'no recent activity'. Callers check this before `_is_idle`
+    so staleness never gets flattened into the softer idle bucket (overseer #1).
     """
-    if obj.get("stale") or obj.get("data_stale") or obj.get("idle") is True:
+    return bool(obj.get("stale") or obj.get("data_stale"))
+
+
+def _is_idle(obj: dict) -> bool:
+    """A read succeeded and the data is fresh but the project shows no recent
+    activity (overseer #4): an explicit `idle` flag, or every known activity
+    counter at zero. Distinct from `_is_stale` — this is 'quiet', not 'dead'.
+    Lets us render zero-activity as amber instead of green without conflating it
+    with a past-due feed.
+    """
+    if obj.get("idle") is True:
         return True
     data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
     return activity_idle(data)
@@ -355,6 +394,8 @@ def _plural(n: int, word: str) -> str:
 
 def _attention_detail(status: str, p: dict) -> str:
     """One-line reason a project needs attention, built from its health flags."""
+    if status == "stale":
+        return "data past-due · stale " + _plural(p.get("stale_cycles", 0), "cycle")
     if status == "idle":
         return "no recent activity · idle " + _plural(p.get("idle_cycles", 0), "cycle")
     if status == "blind":

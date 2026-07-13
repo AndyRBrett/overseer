@@ -82,7 +82,7 @@ function sparkline(values, { width = 96, height = 22, stroke = "#60a5fa", lo = n
 }
 
 // Health-score line colour matches the project's current state.
-const SCORE_STROKE = { ok: "#34d399", idle: "#fbbf24", error: "#f87171", blind: "#fb923c" };
+const SCORE_STROKE = { ok: "#34d399", idle: "#fbbf24", stale: "#fb7185", error: "#f87171", blind: "#fb923c" };
 
 // The three pipeline agents, used to colour-code and group the timeline.
 const AGENTS = {
@@ -329,7 +329,10 @@ async function loadDigest() {
     $("stats").innerHTML = [
       ["tools", "tool calls"],
       ["issues", "issues filed"],
-      ["enhancements", "enhancements"],
+      // Raw count of propose_enhancement calls this run — the Reviewer curates
+      // a subset into the digest, so label it "ideas proposed" (not just
+      // "enhancements") so the tile never reads as contradicting the digest.
+      ["enhancements", "ideas proposed"],
       ["errors", "errors"],
     ].map(([k, label]) =>
       `<div class="stat"><div class="n">${c[k] ?? 0}</div><div class="l">${label}</div></div>`
@@ -346,12 +349,12 @@ async function loadDigest() {
         `<span class="rc ok">${rollup.ok}/${rollup.total} healthy</span>`,
         att.length ? `<span class="rc warn">${att.length} need${att.length === 1 ? "s" : ""} attention</span>` : "",
         `<span class="rc">${rollup.issues} issue${rollup.issues === 1 ? "" : "s"} filed</span>`,
-        `<span class="rc">${rollup.enhancements} idea${rollup.enhancements === 1 ? "" : "s"}</span>`,
+        `<span class="rc">${rollup.enhancements} idea${rollup.enhancements === 1 ? "" : "s"} proposed</span>`,
       ].filter(Boolean).join("");
       // Only projects past the nudge threshold get an explicit call-out row.
       const nudges = att.filter((a) => a.nudge).map((a) => {
-        const st = ["idle", "blind", "error"].includes(a.status) ? a.status : "blind";
-        const badge = { idle: "IDLE", blind: "BLIND", error: "ERROR" }[st];
+        const st = ["idle", "stale", "blind", "error"].includes(a.status) ? a.status : "blind";
+        const badge = { idle: "IDLE", stale: "STALE", blind: "BLIND", error: "ERROR" }[st];
         return `<div class="nudge ${st}"><span class="pbadge ${st}">${badge}</span>
           <span class="ntext"><b>${escapeHtml(a.name)}</b> — ${escapeHtml(a.detail)}</span></div>`;
       }).join("");
@@ -367,12 +370,16 @@ async function loadDigest() {
       $("projects-card").style.display = "";
       $("projects").innerHTML = names.map((name) => {
         const p = projects[name];
-        const st = ["ok", "idle", "error", "blind"].includes(p.status) ? p.status : "blind";
-        const badge = { ok: "OK", idle: "IDLE", error: "ERROR", blind: "BLIND" }[st];
+        const st = ["ok", "idle", "stale", "error", "blind"].includes(p.status) ? p.status : "blind";
+        const badge = { ok: "OK", idle: "IDLE", stale: "STALE", error: "ERROR", blind: "BLIND" }[st];
         const lastOk = p.last_ok ? " · last ok " + new Date(p.last_ok).toLocaleDateString() : " · never read";
         let meta, alert = "";
         if (st === "ok") {
           meta = "healthy";
+        } else if (st === "stale") {
+          // Past-due data is actionable now, so it always reads as an alert.
+          meta = `data past-due · stale ${p.stale_cycles || 0} cycle${(p.stale_cycles === 1) ? "" : "s"}`;
+          alert = " alert";
         } else if (st === "idle") {
           meta = "no recent activity" + ((p.idle_cycles || 0) >= nudgeAt ? ` · idle ${p.idle_cycles} cycles` : "");
           if ((p.idle_cycles || 0) >= nudgeAt) alert = " alert";
