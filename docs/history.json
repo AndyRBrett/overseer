@@ -115,6 +115,36 @@
           "score": 0.5
         }
       }
+    },
+    {
+      "date": "2026-07-13",
+      "generated": "2026-07-13T16:22:52Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- crypto-trading \u2014 Daily runs halted; overseer-status.json stale ~6.4 days (no runs since 2026-07-07, failing silently). #34\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-project freshness SLA + staleness alerts in digest (effort: low, impact: high): the crypto feed sat 153h stale while overseer stayed quiet \u2014 surface silent staleness at top of digest. (Directly prevents repeats of issue #34.)\n2. crypto-trading \u2014 Signal reject-funnel report from existing thresholds (effort: low, impact: high): 10 signals evaluated, 0 acted \u2014 show the binding constraint to tell mis-tuned from structurally idle.\n3. ufc-dashboard \u2014 Detect fighter-swap/bout-replacement to suppress phantom alerts (effort: medium, impact: high): impossible magnitudes (983, -245) are substitutions diffed as odds moves \u2014 restore alert trust.\n4. coachvision \u2014 Per-technique coaching feedback w/ confidence scores (effort: medium, impact: high): segmentation works but nothing consumes it \u2014 build the layer that gives users a reason to upload clips.\n5. ufc-dashboard \u2014 Rank/badge alerts by main-event weight + time-to-event (effort: low, impact: medium): main events are buried under raw magnitude.\n6. crypto-trading \u2014 Buy-and-hold benchmark + rolling alpha on equity curve (effort: low, impact: medium): scalars already exist (-10.7% alpha) \u2014 make underperformance visually obvious.",
+      "counts": {
+        "tools": 18,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 7
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      }
     }
   ]
 }

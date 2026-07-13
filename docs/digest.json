@@ -1,30 +1,30 @@
 {
-  "generated": "2026-07-06T16:50:21Z",
+  "generated": "2026-07-13T16:22:52Z",
   "status": "completed",
-  "summary": "\ud83d\udccb Weekly Review \u2014 2026-07-06\n\nIssues Found\n- ufc-dashboard (#25): \"pages build and deployment\" workflow failing intermittently \u2014 7d success rate down to 86% (~7/50 runs). Data pipeline itself is healthy; it's the publish/deploy step. Other 3 projects (crypto-trading, coachvision, overseer) healthy \u2014 crypto is underperforming but that's strategy, not a defect; coachvision is idle-not-broken (no footage, self-test passes).\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Dead-man's-switch heartbeat alert for missed weekly runs (effort: low, impact: high): independent heartbeat ping catches silent monitoring failures if overseer itself stops running.\n2. ufc-dashboard \u2014 Pin main-event line moves + convert odds to implied probability (effort: low, impact: high): surface main events instead of burying them among magnitude-sorted alerts.\n3. crypto-trading \u2014 What-if threshold replay/tuner from logged reject codes (effort: medium, impact: high): bot traded 0/10 signals at \u221210.8% alpha; sweep logged thresholds to find params that would beat buy-hold.\n4. coachvision \u2014 Demo/sample-output mode from the passing self-test fixture (effort: low, impact: medium): render the 77-frame self-test as a labelled sample to show value and drive activation.\n5. crypto-trading \u2014 Benchmark-aware regime filter (effort: medium, impact: medium): scale toward buy-hold in strong uptrends using existing MA-slope/ADX signals to cut chronic underperformance.",
+  "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- crypto-trading \u2014 Daily runs halted; overseer-status.json stale ~6.4 days (no runs since 2026-07-07, failing silently). #34\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-project freshness SLA + staleness alerts in digest (effort: low, impact: high): the crypto feed sat 153h stale while overseer stayed quiet \u2014 surface silent staleness at top of digest. (Directly prevents repeats of issue #34.)\n2. crypto-trading \u2014 Signal reject-funnel report from existing thresholds (effort: low, impact: high): 10 signals evaluated, 0 acted \u2014 show the binding constraint to tell mis-tuned from structurally idle.\n3. ufc-dashboard \u2014 Detect fighter-swap/bout-replacement to suppress phantom alerts (effort: medium, impact: high): impossible magnitudes (983, -245) are substitutions diffed as odds moves \u2014 restore alert trust.\n4. coachvision \u2014 Per-technique coaching feedback w/ confidence scores (effort: medium, impact: high): segmentation works but nothing consumes it \u2014 build the layer that gives users a reason to upload clips.\n5. ufc-dashboard \u2014 Rank/badge alerts by main-event weight + time-to-event (effort: low, impact: medium): main events are buried under raw magnitude.\n6. crypto-trading \u2014 Buy-and-hold benchmark + rolling alpha on equity curve (effort: low, impact: medium): scalars already exist (-10.7% alpha) \u2014 make underperformance visually obvious.",
   "counts": {
-    "tools": 17,
+    "tools": 18,
     "errors": 0,
     "issues": 1,
-    "enhancements": 6
+    "enhancements": 7
   },
   "rollup": {
     "ok": 2,
     "total": 4,
     "issues": 1,
-    "enhancements": 6,
+    "enhancements": 7,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "coachvision",
         "status": "idle",
-        "detail": "no recent activity \u00b7 idle 5 cycles",
-        "cycles": 5,
+        "detail": "no recent activity \u00b7 idle 6 cycles",
+        "cycles": 6,
         "nudge": true
       },
       {
-        "name": "Overseer",
+        "name": "Trading bot",
         "status": "idle",
         "detail": "no recent activity \u00b7 idle 1 cycle",
         "cycles": 1,
@@ -34,168 +34,183 @@
   },
   "projects": {
     "Trading bot": {
-      "status": "ok",
-      "last_ok": "2026-07-06T16:50:21Z",
-      "blind_cycles": 0
+      "status": "idle",
+      "reason": "read OK but no recent activity / stale data",
+      "last_ok": "2026-07-13T16:22:52Z",
+      "blind_cycles": 0,
+      "idle_cycles": 1
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-07-06T16:50:21Z",
+      "last_ok": "2026-07-13T16:22:52Z",
       "blind_cycles": 0,
-      "idle_cycles": 5
+      "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-07-06T16:50:21Z",
+      "last_ok": "2026-07-13T16:22:52Z",
       "blind_cycles": 0
     },
     "Overseer": {
-      "status": "idle",
-      "reason": "read OK but no recent activity / stale data",
-      "last_ok": "2026-07-06T16:50:21Z",
-      "blind_cycles": 0,
-      "idle_cycles": 1
+      "status": "ok",
+      "last_ok": "2026-07-13T16:22:52Z",
+      "blind_cycles": 0
     }
   },
   "timeline": [
     {
-      "ts": "16:47:07",
+      "ts": "16:19:48",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I'll start by reading through all the logs in parallel to get a complete picture."
+      "text": "I need to read through all the data first since these are independent operations."
     },
     {
-      "ts": "16:47:08",
+      "ts": "16:19:49",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:47:10",
+      "ts": "16:19:50",
       "agent": "Bug-Hunter",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:47:13",
+      "ts": "16:19:54",
       "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok \u2014 {'workflow': 'pages build and deployment', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/28793814994', 'at': '2026-07-06T13:07:57+00:00\u2026"
+      "text": "ok"
     },
     {
-      "ts": "16:47:15",
+      "ts": "16:19:55",
       "agent": "Bug-Hunter",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:48:02",
+      "ts": "16:20:22",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "Looking at the trading bot metrics, the status shows it's active with about 10 hours of runtime, but there's a major red flag in the equity curve \u2014 it jumps from 10,000 to nearly 50,000 in just four hours, which doesn't align with the smal\u2026"
+      "text": "Looking at the trading bot's status, it's marked as stale with an age of 153.7 hours \u2014 the last update was from July 7th while other systems are current as of July 13th. This indicates the daily scheduled runs have stopped working, which i\u2026",
+      "text_full": "Looking at the trading bot's status, it's marked as stale with an age of 153.7 hours \u2014 the last update was from July 7th while other systems are current as of July 13th. This indicates the daily scheduled runs have stopped working, which is a clear issue that needs investigation. For the volleyball system, it's just idle waiting for footage to be ingested, but the pipeline selftest passes, so there's no actual bug there. The UFC system is running healthily with a 1.0 success rate and recent activity, though there are some stale events that are just awaiting updates rather than indicating a failure. The overseer itself runs weekly and is slightly overdue based on the 167.6-hour gap since its last run, which aligns with the stale status flag I noted earlier. The trading bot is definitely stale at 153.7 hours old \u2014 that's 6.4 days without running when it should be on a daily schedule, so this is a real issue. Let me search the existing issues in the crypto-trading repo to see if this has already been reported."
     },
     {
-      "ts": "16:48:02",
+      "ts": "16:20:22",
       "agent": "Bug-Hunter",
       "label": "search_existing_issues (search)",
-      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
+      "text": "searched AndyRBrett/crypto-trading: 0 match(es)"
     },
     {
-      "ts": "16:48:12",
+      "ts": "16:20:35",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I should file a bug report for the UFC pages deployment issue."
+      "text": "No existing issues, so I should go ahead and file the bug."
     },
     {
-      "ts": "16:48:12",
+      "ts": "16:20:36",
       "agent": "Bug-Hunter",
       "label": "file_issue (bug)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 \"pages build and deployment\" workflow failing intermittently \u2014 7d success rate down to 86% (#25)"
+      "text": "AndyRBrett/crypto-trading \u2014 Daily runs halted: overseer-status.json stale for ~6.4 days (no runs since 2026-07-07) (#34)"
     },
     {
-      "ts": "16:48:32",
+      "ts": "16:20:50",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'll start by reading through all the statuses concurrently."
+      "text": "I'll start by reviewing all the statuses."
     },
     {
-      "ts": "16:48:33",
+      "ts": "16:20:51",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:48:34",
+      "ts": "16:20:52",
       "agent": "Idea-Agent",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:48:38",
+      "ts": "16:20:55",
       "agent": "Idea-Agent",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok \u2014 {'workflow': 'pages build and deployment', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/28793814994', 'at': '2026-07-06T13:07:57+00:00\u2026"
+      "text": "ok"
     },
     {
-      "ts": "16:48:39",
+      "ts": "16:20:56",
       "agent": "Idea-Agent",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "16:49:30",
+      "ts": "16:21:52",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "Looking at the trading bot's performance, I notice it's generating signals but not acting on them\u2014mostly staying in \"in_position\" or \"no_position\" states while underperforming buy-hold by 10.8%. I'm thinking about ways to improve this: add\u2026"
+      "text": "Looking at the crypto trading bot's performance, the strategy is lagging behind a simple buy-and-hold approach by about 10.7%, and while it's generating signals, it's not actually executing on them. I'm considering a few approaches to fix \u2026",
+      "text_full": "Looking at the crypto trading bot's performance, the strategy is lagging behind a simple buy-and-hold approach by about 10.7%, and while it's generating signals, it's not actually executing on them. I'm considering a few approaches to fix this: implementing a walk-forward backtest framework to optimize parameters, adding a regime filter that switches to buy-and-hold when alpha turns negative, or investigating why the signal execution rate is zero. The most practical starting point seems to be an alpha-based throttle that automatically adjusts trading activity based on performance. For immediate visibility, I could add a visualization showing why signals were rejected and how close they came to triggering\u2014this would help diagnose the execution gap without major refactoring. On the coachvision side, the pipeline works fine in testing but no actual footage has been ingested yet. The quickest wins would be setting up folder monitoring with notifications when the system sits idle, or adding a sample onboarding clip to guide users through the upload process. A more complete enhancement would generate per-technique confidence scores and coaching feedback summaries once footage starts flowing in. The UFC dashboard is performing well overall, but the line movement alerts are picking up a lot of noise\u2014some movements of 983 points are clearly data artifacts from fighter swaps rather than genuine market shifts. I should add a sanity filter to detect bout replacements and focus alerts on main-event movements that actually matter. For Overseer, the real issue is staleness. It only runs weekly and the crypto feed is over 150 hours old, which defeats the purpose of monitoring. I could add freshness SLA checks per project with staleness alerting, or set up a weekly digest that surfaces stale feeds via email or Slack. Either approach would catch these gaps without much effort. Now I'm thinking through which improvements to prioritize based on impact versus effort. I've got the bench\u2026"
     },
     {
-      "ts": "16:49:33",
+      "ts": "16:21:55",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add a dead-man's-switch heartbeat alert if the overseer misses its weekly run (effort low, impact high)"
+      "text": "AndyRBrett/overseer \u2014 Add per-project freshness SLA checks with staleness alerting in the weekly digest (effort low, impact high)"
     },
     {
-      "ts": "16:49:36",
+      "ts": "16:21:58",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Surface main-event line moves in a pinned section and convert odds to implied win probability (effort low, impact high)"
+      "text": "AndyRBrett/crypto-trading \u2014 Build a signal near-miss / reject-funnel report from the existing decision thresholds (effort low, impact high)"
     },
     {
-      "ts": "16:49:39",
+      "ts": "16:22:01",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Build a what-if threshold replay that backtests breakout/exit params against logged reject codes and buy-hold alpha (effort medium, impact high)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Detect bout-replacement/fighter-swap events to suppress phantom line-movement alerts (effort medium, impact high)"
     },
     {
-      "ts": "16:49:42",
+      "ts": "16:22:04",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/volleyball \u2014 Add a demo/sample-output mode so the coachvision dashboard is meaningful before any footage is ingested (effort low, impact medium)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Rank and badge line-movement alerts by main-event weighting and time-to-event (effort low, impact medium)"
     },
     {
-      "ts": "16:49:45",
+      "ts": "16:22:08",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add a benchmark-aware regime filter that scales exposure toward buy-hold in strong uptrends (effort medium, impact medium)"
+      "text": "AndyRBrett/volleyball \u2014 Generate a per-technique coaching-feedback report with confidence scores from processed clips (effort medium, impact high)"
     },
     {
-      "ts": "16:49:48",
+      "ts": "16:22:11",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add schema validation + a smoke-test suite for each project's overseer-status.json read path (effort medium, impact medium)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add a buy-and-hold benchmark overlay and rolling alpha chart to the equity curve (effort low, impact medium)"
     },
     {
-      "ts": "16:50:14",
+      "ts": "16:22:14",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Add unit tests + a synthetic-fixture smoke test for each read tool and the tracer (effort medium, impact medium)"
+    },
+    {
+      "ts": "16:22:40",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "Looking at the bug reports and ideas, I see bug-hunter found one deployment issue with the ufc-dashboard. The idea agent has six proposals, though the first one about overseer heartbeat monitoring is based on slightly outdated data\u2014bug-hun\u2026"
+      "text": "I'm reviewing the findings from the bug hunter and noting that the staleness issue in crypto-trading #34 relates to the overseer freshness SLA idea, though they're distinct \u2014 one's the bug itself, the other's an enhancement to detect it. I\u2026",
+      "text_full": "I'm reviewing the findings from the bug hunter and noting that the staleness issue in crypto-trading #34 relates to the overseer freshness SLA idea, though they're distinct \u2014 one's the bug itself, the other's an enhancement to detect it. I'll keep both and document their connection, then compile the digest with the identified issue showing the daily runs have stalled with status data from over six days ago. Now I'm ranking the ideas by effort and impact, leading with the overseer freshness SLA since it's directly motivated by this week's crypto bug. I'm considering what to keep \u2014 seven ideas is too many for a focused digest, so I'm trimming down to the strongest six, dropping the overseer unit tests since it's medium effort and medium impact, even though it relates to the staleness problem."
     },
     {
-      "ts": "16:50:14",
+      "ts": "16:22:40",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
+    },
+    {
+      "ts": "16:22:52",
+      "agent": "Reviewer",
+      "label": "reasoning",
+      "text": "The tool came back with a not_configured status after my first call, so the delivery failed due to missing configuration. Since I'm limited to one attempt, I'll report this result."
     }
   ]
 }
