@@ -42,7 +42,12 @@ Your job:
 
 Keep it tight and scannable — this goes to a phone. Then call
 send_telegram_summary EXACTLY ONCE with that digest as the text. Do not call it
-more than once, and do not end your turn without calling it."""
+more than once, and do not end your turn without calling it.
+
+Note: when a project's data feed is past its freshness SLA, a machine-generated
+"STALENESS ALERTS" block is prepended to your digest automatically — you don't
+need to reproduce it, though you should still surface any bug that was filed
+about the halted feed under Issues Found."""
 
 
 def _build_user_message(bug_output, idea_output):

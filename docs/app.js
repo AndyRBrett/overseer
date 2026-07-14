@@ -378,7 +378,11 @@ async function loadDigest() {
           meta = "healthy";
         } else if (st === "stale") {
           // Past-due data is actionable now, so it always reads as an alert.
-          meta = `data past-due · stale ${p.stale_cycles || 0} cycle${(p.stale_cycles === 1) ? "" : "s"}`;
+          // Show how far past its freshness SLA the feed is when we know it.
+          const fmtH = (h) => (Number.isFinite(h) ? `${+(+h).toFixed(1)}h` : null);
+          const age = fmtH(p.age_hours), sla = fmtH(p.sla_hours);
+          const past = age ? `data ${age} old${sla ? ` · SLA ${sla}` : ""}` : "data past-due";
+          meta = `${past} · stale ${p.stale_cycles || 0} cycle${(p.stale_cycles === 1) ? "" : "s"}`;
           alert = " alert";
         } else if (st === "idle") {
           meta = "no recent activity" + ((p.idle_cycles || 0) >= nudgeAt ? ` · idle ${p.idle_cycles} cycles` : "");

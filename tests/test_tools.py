@@ -6,7 +6,7 @@ and against the dry-run flag failing to intercept a mutating tool.
 """
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import tools as o
 
@@ -30,6 +30,51 @@ def test_schedule_stale_threshold():
     assert o._schedule_stale(50) is False
     assert o._schedule_stale(None) is False
     assert o._schedule_stale(o.SCHEDULE_STALE_HOURS) is False  # exactly at threshold isn't stale
+
+
+def test_freshness_flags_past_sla():
+    # A status file older than the project's freshness SLA is stale; a recent one
+    # isn't. Age is returned regardless so the digest can cite it (overseer #1).
+    now = datetime.now(timezone.utc)
+    old = (now - timedelta(hours=153)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    fresh = (now - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    age, stale = o._freshness(old, 48)
+    assert stale is True and age > 150
+    age, stale = o._freshness(fresh, 48)
+    assert stale is False and 5 < age < 8
+
+
+def test_freshness_sla_is_per_project():
+    # The SAME 60h-old feed is stale under a 48h SLA but fresh under a 72h one —
+    # the whole point of a per-project SLA (a daily bot vs. a slower pipeline).
+    ts = (datetime.now(timezone.utc) - timedelta(hours=60)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    assert o._freshness(ts, 48)[1] is True
+    assert o._freshness(ts, 72)[1] is False
+
+
+def test_freshness_missing_or_bad_timestamp_is_not_stale():
+    # Can't prove staleness without a parseable timestamp → don't assert it.
+    assert o._freshness(None, 48) == (None, False)
+    assert o._freshness("", 48) == (None, False)
+    assert o._freshness("not-a-date", 48) == (None, False)
+
+
+def test_sla_hours_reads_env_with_fallback(monkeypatch):
+    monkeypatch.setenv("X_SLA", "12")
+    assert o._sla_hours("X_SLA") == 12
+    monkeypatch.setenv("X_SLA", "  24  ")            # trimmed like any env value
+    assert o._sla_hours("X_SLA") == 24
+    monkeypatch.delenv("X_SLA", raising=False)       # unset → shared default
+    assert o._sla_hours("X_SLA") == o.FRESHNESS_SLA_DEFAULT_HOURS
+    monkeypatch.setenv("X_SLA", "not-a-number")      # garbage → default, no crash
+    assert o._sla_hours("X_SLA") == o.FRESHNESS_SLA_DEFAULT_HOURS
+
+
+def test_every_cloud_project_has_an_sla():
+    # Each externally-read project must carry a freshness SLA so its feed can be
+    # held past-due; a missing key would silently disable staleness for it.
+    for key in ("trading_bot", "volleyball", "ufc"):
+        assert isinstance(o.PROJECTS[key]["sla_hours"], int)
 
 
 def test_read_tools_all_registered():

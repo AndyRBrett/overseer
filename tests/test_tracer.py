@@ -130,6 +130,57 @@ def test_project_health_stale_is_distinct_from_idle(tmp_path):
     assert _status_score(ph["status"]) == 0.25
 
 
+def test_project_health_captures_age_and_sla_when_stale(tmp_path):
+    # A stale read carries the age + freshness SLA through to project health so
+    # the alert can say how past-due the feed is (overseer #1).
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153.2, "sla_hours": 48, "data": {"trades": 0}}', False)
+    p = t.project_health()["Trading bot"]
+    assert p["status"] == "stale" and p["age_hours"] == 153.2 and p["sla_hours"] == 48
+
+
+def test_project_health_captures_ufc_nested_age_and_sla(tmp_path):
+    # UFC nests freshness under data_age_hours/data_sla_hours (the read tool wraps
+    # workflow health around the status file) — those must still be captured.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {},
+                '{"status": "ok", "runs_7d": 5, "data_stale": true, "data_age_hours": 90, "data_sla_hours": 48}', False)
+    p = t.project_health()["UFC dashboard"]
+    assert p["status"] == "stale" and p["age_hours"] == 90 and p["sla_hours"] == 48
+
+
+def test_attention_detail_stale_cites_age_and_sla(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153, "sla_hours": 48, "data": {"trades": 0}}', False)
+    detail = t.rollup()["attention"][0]["detail"]
+    assert "153h old" in detail and "SLA 48h" in detail
+
+
+def test_freshness_banner_empty_when_nothing_stale(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 9}', False)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "data": {"trades": 3}}', False)
+    assert t.freshness_banner() == ""
+    assert t.freshness_alerts() == []
+
+
+def test_freshness_banner_leads_with_stale_feeds(tmp_path):
+    # The deterministic banner that gets prepended to the digest so a halted feed
+    # can't hide behind a quiet summary (overseer #1 / issue #34).
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "Crypto"}
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153, "sla_hours": 48, "data": {"trades": 0}}', False)
+    banner = t.freshness_banner()
+    assert banner.startswith("STALENESS ALERTS")
+    assert "Crypto" in banner and "153h old" in banner and "SLA 48h" in banner
+    alerts = t.freshness_alerts()
+    assert len(alerts) == 1 and alerts[0]["name"] == "Crypto" and alerts[0]["age_hours"] == 153
+
+
 def test_write_history_appends_and_scores(tmp_path):
     t = _tracer(tmp_path)
     t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)

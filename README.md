@@ -120,6 +120,20 @@ top, so a project quietly going dark (e.g. volleyball idle for several cycles)
 can't hide in the timeline. The threshold is reused by the per-project health
 card; set the `OVERSEER_NUDGE_CYCLES` variable to tune it without code changes.
 
+**Per-project freshness SLA + staleness alerts.** Every project that publishes an
+`overseer-status.json` is held to a **freshness SLA** — how old that file's
+`generated_at` may get before the feed is flagged **STALE** (a scheduled job that
+has silently stopped, e.g. issue #34: a crypto feed that sat ~153h stale while the
+digest stayed quiet). Each project sets its own SLA, since a daily bot's data goes
+stale far sooner than a slower pipeline's; the default is **48h** (two missed daily
+runs). Tune per project with the `TRADING_SLA_HOURS`, `VOLLEYBALL_SLA_HOURS`, and
+`UFC_SLA_HOURS` variables (or change the shared default with `FRESHNESS_SLA_HOURS`).
+When any feed is past-due, a machine-generated **`STALENESS ALERTS`** block —
+listing each feed with how far past its SLA it is (`data 153h old, SLA 48h`) — is
+prepended to the top of the digest **before it's sent**, so it leads both the
+Telegram message and the dashboard, independent of what the review agents wrote. A
+halted feed can no longer hide behind a quiet summary.
+
 **Trends (week over week).** Each run also appends a small record to
 `docs/history.json` (per-project health score + issue/enhancement counts, capped
 to the last ~26 runs). The dashboard turns it into inline sparklines — one per

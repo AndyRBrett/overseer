@@ -169,9 +169,18 @@ class RunTracer:
             elif status == "stale":
                 # Data past-due, but the read itself worked so last_ok updates;
                 # track how many cycles it's been stale so a chronically dark feed
-                # escalates week over week instead of resetting.
-                projects[name] = {"status": "stale", "reason": reason, "last_ok": now_iso,
-                                  "blind_cycles": 0, "stale_cycles": prev.get("stale_cycles", 0) + 1}
+                # escalates week over week instead of resetting. Carry the age +
+                # freshness SLA through so the alert can say *how* past-due it is
+                # (overseer #1). UFC nests these under data_* (see read tool).
+                rec = {"status": "stale", "reason": reason, "last_ok": now_iso,
+                       "blind_cycles": 0, "stale_cycles": prev.get("stale_cycles", 0) + 1}
+                age = obj.get("age_hours", obj.get("data_age_hours"))
+                sla = obj.get("sla_hours", obj.get("data_sla_hours"))
+                if age is not None:
+                    rec["age_hours"] = age
+                if sla is not None:
+                    rec["sla_hours"] = sla
+                projects[name] = rec
             elif status == "idle":
                 # Idle read fine, so last_ok updates; track how long it's been quiet.
                 projects[name] = {"status": "idle", "reason": reason, "last_ok": now_iso,
@@ -227,6 +236,41 @@ class RunTracer:
             "nudge_threshold": NUDGE_CYCLES,
             "attention": attention,
         }
+
+    def freshness_alerts(self) -> list[dict]:
+        """Every project whose published data has breached its freshness SLA this
+        run — computed straight from project health, independent of what the
+        digest author chose to mention (overseer #1). Issue #34 (a crypto feed
+        silently ~153h stale) slipped through because the digest stayed quiet
+        about it; deriving the alerts here means a halted feed can't hide behind
+        an LLM omission. Sorted by name for a stable order."""
+        alerts = []
+        for name, p in self.project_health().items():
+            if p.get("status") != "stale":
+                continue
+            alerts.append({
+                "name": name,
+                "detail": _attention_detail("stale", p),
+                "age_hours": p.get("age_hours"),
+                "sla_hours": p.get("sla_hours"),
+                "stale_cycles": p.get("stale_cycles", 0),
+            })
+        alerts.sort(key=lambda a: a["name"])
+        return alerts
+
+    def freshness_banner(self) -> str:
+        """A short plain-text STALENESS ALERTS block to lead the digest with when
+        a feed is past-due — prepended to the Telegram digest and the dashboard
+        summary so silent staleness is impossible (overseer #1). Returns "" when
+        nothing is stale, so a healthy week's digest is left untouched. The header
+        is all-caps so the dashboard's formatDigest renders it as a section
+        heading like the digest's own sections."""
+        alerts = self.freshness_alerts()
+        if not alerts:
+            return ""
+        lines = ["STALENESS ALERTS"]
+        lines += [f"- {a['name']} — {a['detail']}" for a in alerts]
+        return "\n".join(lines)
 
     def write_digest(self, path: str) -> None:
         """Emit docs/digest.json — what the installable web app reads."""
@@ -392,10 +436,21 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
+def _fmt_hours(h) -> str:
+    """Compact hour formatting: 48 not 48.0, 6.4 not 6.40."""
+    return f"{h:g}h" if isinstance(h, (int, float)) else str(h)
+
+
 def _attention_detail(status: str, p: dict) -> str:
     """One-line reason a project needs attention, built from its health flags."""
     if status == "stale":
-        return "data past-due · stale " + _plural(p.get("stale_cycles", 0), "cycle")
+        # Say how past-due it is against its SLA when we know the numbers
+        # ("data 153h old, SLA 48h"); fall back to "past-due" when a status file
+        # flagged itself stale without a parseable timestamp (overseer #1).
+        age, sla = p.get("age_hours"), p.get("sla_hours")
+        when = f"data {_fmt_hours(age)} old" if age is not None else "data past-due"
+        sla_txt = f", SLA {_fmt_hours(sla)}" if sla is not None else ""
+        return f"{when}{sla_txt} · stale " + _plural(p.get("stale_cycles", 0), "cycle")
     if status == "idle":
         return "no recent activity · idle " + _plural(p.get("idle_cycles", 0), "cycle")
     if status == "blind":

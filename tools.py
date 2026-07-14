@@ -80,12 +80,34 @@ def _env(name, default=None):
     return v.strip() if isinstance(v, str) else v
 
 
+# ── PER-PROJECT FRESHNESS SLA (overseer #1) ──────────────────────────────
+# How old a project's published status file may get before it's flagged STALE.
+# A silently-halted feed must trip an alert, not read as healthy: issue #34 was
+# the crypto status file sitting ~153h stale while the digest stayed quiet.
+# Each project sets its OWN SLA (a daily bot's data goes stale far sooner than a
+# weekly pipeline's) via env, defaulting to 48h — two missed daily runs. The
+# shared default is itself tunable via FRESHNESS_SLA_HOURS.
+FRESHNESS_SLA_DEFAULT_HOURS = int(os.getenv("FRESHNESS_SLA_HOURS", "48"))
+
+
+def _sla_hours(env_name):
+    """A project's freshness SLA in hours, from its own env var, falling back to
+    the shared default. A blank or non-numeric value falls back rather than
+    erroring, so a fat-fingered GitHub Variable can't break the whole run."""
+    raw = _env(env_name)
+    try:
+        return int(raw) if raw else FRESHNESS_SLA_DEFAULT_HOURS
+    except ValueError:
+        return FRESHNESS_SLA_DEFAULT_HOURS
+
+
 PROJECTS = {
     "trading_bot": {
         "label": "Crypto trading bot (Coinbase Advanced Trade via CCXT, daily cloud runs)",
         "repo": _env("TRADING_REPO"),
         "db_path": _env("TRADING_DB_PATH"),              # local deployments
         "status_path": _env("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
+        "sla_hours": _sla_hours("TRADING_SLA_HOURS"),    # daily bot → 48h default
     },
     # Internal key + env vars stay "volleyball"/VOLLEYBALL_* (the deployment's
     # GitHub Variables are wired to them); only the human-facing name changed
@@ -95,11 +117,13 @@ PROJECTS = {
         "repo": _env("VOLLEYBALL_REPO"),
         "results_path": _env("VOLLEYBALL_RESULTS_PATH"),                       # local
         "status_path": _env("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
+        "sla_hours": _sla_hours("VOLLEYBALL_SLA_HOURS"),
     },
     "ufc": {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
         "repo": _env("UFC_REPO"),  # repo whose Actions runs + status file we read
         "status_path": _env("UFC_STATUS_PATH", "overseer-status.json"),
+        "sla_hours": _sla_hours("UFC_SLA_HOURS"),
     },
     "overseer": {
         "label": "Project Overseer itself — this agent: the weekly-review runner, "
@@ -263,10 +287,28 @@ def tool_specs(names):
 # ── TOOL IMPLEMENTATIONS ─────────────────────────────────────────────────
 
 
-def _read_status_file(repo_slug, path):
+def _freshness(generated_at, sla_hours):
+    """Age of a status file (hours) and whether it breaches its freshness SLA.
+
+    Returns (age_hours, is_stale). A missing or unparseable 'generated_at' yields
+    (None, False): we can't prove the feed is stale, so we don't assert it — the
+    project just reads as fresh/idle rather than falsely past-due (overseer #1)."""
+    if not generated_at:
+        return None, False
+    try:
+        ts = datetime.fromisoformat(str(generated_at).replace("Z", "+00:00"))
+    except ValueError:
+        return None, False
+    age_h = round((datetime.now(timezone.utc) - ts).total_seconds() / 3600, 1)
+    return age_h, age_h > sla_hours
+
+
+def _read_status_file(repo_slug, path, sla_hours=FRESHNESS_SLA_DEFAULT_HOURS):
     """Read a JSON status file the project publishes to its own repo.
     Cloud-native: the overseer runs anywhere and just reads the file via the API.
-    Flags staleness from the file's own 'generated_at' if present."""
+    Flags staleness when the file's own 'generated_at' is older than the
+    project's freshness SLA, and echoes both the age and the SLA so the digest
+    can say *how* past-due it is (overseer #1)."""
     repo = _github().get_repo(repo_slug)
     try:
         content = repo.get_contents(path)
@@ -276,17 +318,14 @@ def _read_status_file(repo_slug, path):
     data = json.loads(content.decoded_content.decode("utf-8"))
     result = {"status": "ok", "source": f"{repo_slug}/{path}", "data": data,
               # Explicit idle signal so the agent doesn't have to infer it (overseer #5).
-              "idle": activity_idle(data)}
-    generated = data.get("generated_at")
-    if generated:
-        try:
-            ts = datetime.fromisoformat(generated.replace("Z", "+00:00"))
-            age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
-            result["age_hours"] = round(age_h, 1)
-            if age_h > 48:  # daily bot → anything older than 2 days is stale
-                result["stale"] = True
-        except ValueError:
-            pass
+              "idle": activity_idle(data),
+              # The SLA this feed is held to, echoed so the digest can cite it.
+              "sla_hours": sla_hours}
+    age_h, stale = _freshness(data.get("generated_at"), sla_hours)
+    if age_h is not None:
+        result["age_hours"] = age_h
+        if stale:
+            result["stale"] = True
     return result
 
 
@@ -308,7 +347,7 @@ def read_trading_bot_log(days=7):
                 "pnl": round(row["pnl"], 2), "win_rate": round(row["win_rate"], 3)}
     # Cloud deployment: read the status file the bot publishes to its repo.
     if cfg["repo"]:
-        return _read_status_file(cfg["repo"], cfg["status_path"])
+        return _read_status_file(cfg["repo"], cfg["status_path"], cfg["sla_hours"])
     return {"status": "not_configured",
             "detail": "Set TRADING_DB_PATH (local) or have the bot publish "
                       f"{cfg['status_path']} to TRADING_REPO (cloud)."}
@@ -324,7 +363,7 @@ def read_volleyball_results(days=7):
             return {"status": "ok", "days": days, "results": json.load(f)}
     # Cloud: read the status file the pipeline publishes to its repo.
     if cfg["repo"]:
-        return _read_status_file(cfg["repo"], cfg["status_path"])
+        return _read_status_file(cfg["repo"], cfg["status_path"], cfg["sla_hours"])
     return {"status": "not_configured",
             "detail": "Set VOLLEYBALL_RESULTS_PATH (local) or have the pipeline publish "
                       f"{cfg['status_path']} to VOLLEYBALL_REPO (cloud)."}
@@ -376,11 +415,13 @@ def read_ufc_scraper_status():
     # Data freshness — distinct from run success (ufc-dashboard #10): if the
     # scraper publishes a status file with a data timestamp, surface its age so
     # silently-frozen upstream data is caught even when runs keep "succeeding".
-    status = _read_status_file(repo_slug, cfg["status_path"])
+    status = _read_status_file(repo_slug, cfg["status_path"], cfg["sla_hours"])
     if status.get("status") == "ok":
         health["data"] = status["data"]
         if "age_hours" in status:
             health["data_age_hours"] = status["age_hours"]
+        if "sla_hours" in status:
+            health["data_sla_hours"] = status["sla_hours"]
         if status.get("stale"):
             health["data_stale"] = True
     return health
@@ -572,12 +613,21 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
             # Isolate tool failures: a raising tool becomes an error result the
             # agent can route around, not a crash that aborts the whole run.
             try:
+                if block.name == "send_telegram_summary":
+                    # Lead the digest with any deterministic staleness alert so a
+                    # halted feed can't hide behind a quiet LLM summary (overseer
+                    # #1 / issue #34). Prepending BEFORE the send means Telegram
+                    # and the dashboard summary both carry it.
+                    banner = tracer.freshness_banner()
+                    if banner:
+                        base = block.input.get("text", "")
+                        block.input["text"] = f"{banner}\n\n{base}" if base else banner
                 func = TOOL_FUNCTIONS[block.name]
                 result = func(**block.input)
                 content = json.dumps(result)
                 is_error = False
                 if block.name == "send_telegram_summary":
-                    # Capture the digest text for the dashboard / push notification.
+                    # Capture the (banner-prefixed) digest for the dashboard / push.
                     tracer.set_digest(block.input.get("text", ""))
             except Exception as exc:  # noqa: BLE001
                 content = f"Tool '{block.name}' failed: {exc}"
