@@ -145,6 +145,36 @@
           "score": 1.0
         }
       }
+    },
+    {
+      "date": "2026-07-20",
+      "generated": "2026-07-20T15:45:39Z",
+      "status": "completed",
+      "summary": "Weekly Digest\n\nIssues Found\n- Overseer \u2014 CONFIRMED: total GitHub API auth failure. Every tool (all reads, search, file_issue) returns 401 \"Bad credentials\". Overseer is fully blind: can't read any of the 3 projects, can't check its own health, can't dedupe or file issues. Root cause: dead/expired/misconfigured GitHub token shared by all tools.\n- \u26a0\ufe0f Self-file failed \u2014 the write path is broken by the same 401, so this ticket could NOT be auto-created. Manual action needed: rotate the overseer's GitHub PAT and verify scopes (repo read on all 4 repos + issues write).\n- crypto-trading / coachvision / ufc-dashboard \u2014 no project bugs confirmed; all data reads were blocked by the same 401, so nothing could be verified this cycle.\n\nTop Enhancement Ideas (ranked)\n1. Overseer \u2014 Startup auth health-check (effort: low, impact: high): validate the GitHub credential at startup and fail loudly / alert on a dead token, instead of silently blinding every review and project check like it did this week.",
+      "counts": {
+        "tools": 11,
+        "errors": 10,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
     }
   ]
 }

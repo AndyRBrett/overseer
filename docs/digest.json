@@ -1,32 +1,46 @@
 {
-  "generated": "2026-07-13T16:22:52Z",
+  "generated": "2026-07-20T15:45:39Z",
   "status": "completed",
-  "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- crypto-trading \u2014 Daily runs halted; overseer-status.json stale ~6.4 days (no runs since 2026-07-07, failing silently). #34\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-project freshness SLA + staleness alerts in digest (effort: low, impact: high): the crypto feed sat 153h stale while overseer stayed quiet \u2014 surface silent staleness at top of digest. (Directly prevents repeats of issue #34.)\n2. crypto-trading \u2014 Signal reject-funnel report from existing thresholds (effort: low, impact: high): 10 signals evaluated, 0 acted \u2014 show the binding constraint to tell mis-tuned from structurally idle.\n3. ufc-dashboard \u2014 Detect fighter-swap/bout-replacement to suppress phantom alerts (effort: medium, impact: high): impossible magnitudes (983, -245) are substitutions diffed as odds moves \u2014 restore alert trust.\n4. coachvision \u2014 Per-technique coaching feedback w/ confidence scores (effort: medium, impact: high): segmentation works but nothing consumes it \u2014 build the layer that gives users a reason to upload clips.\n5. ufc-dashboard \u2014 Rank/badge alerts by main-event weight + time-to-event (effort: low, impact: medium): main events are buried under raw magnitude.\n6. crypto-trading \u2014 Buy-and-hold benchmark + rolling alpha on equity curve (effort: low, impact: medium): scalars already exist (-10.7% alpha) \u2014 make underperformance visually obvious.",
+  "summary": "Weekly Digest\n\nIssues Found\n- Overseer \u2014 CONFIRMED: total GitHub API auth failure. Every tool (all reads, search, file_issue) returns 401 \"Bad credentials\". Overseer is fully blind: can't read any of the 3 projects, can't check its own health, can't dedupe or file issues. Root cause: dead/expired/misconfigured GitHub token shared by all tools.\n- \u26a0\ufe0f Self-file failed \u2014 the write path is broken by the same 401, so this ticket could NOT be auto-created. Manual action needed: rotate the overseer's GitHub PAT and verify scopes (repo read on all 4 repos + issues write).\n- crypto-trading / coachvision / ufc-dashboard \u2014 no project bugs confirmed; all data reads were blocked by the same 401, so nothing could be verified this cycle.\n\nTop Enhancement Ideas (ranked)\n1. Overseer \u2014 Startup auth health-check (effort: low, impact: high): validate the GitHub credential at startup and fail loudly / alert on a dead token, instead of silently blinding every review and project check like it did this week.",
   "counts": {
-    "tools": 18,
-    "errors": 0,
-    "issues": 1,
-    "enhancements": 7
+    "tools": 11,
+    "errors": 10,
+    "issues": 0,
+    "enhancements": 0
   },
   "rollup": {
-    "ok": 2,
+    "ok": 0,
     "total": 4,
-    "issues": 1,
-    "enhancements": 7,
-    "errors": 0,
+    "issues": 0,
+    "enhancements": 0,
+    "errors": 10,
     "nudge_threshold": 2,
     "attention": [
       {
-        "name": "coachvision",
-        "status": "idle",
-        "detail": "no recent activity \u00b7 idle 6 cycles",
-        "cycles": 6,
-        "nudge": true
+        "name": "Overseer",
+        "status": "error",
+        "detail": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
+        "cycles": 1,
+        "nudge": false
       },
       {
         "name": "Trading bot",
-        "status": "idle",
-        "detail": "no recent activity \u00b7 idle 1 cycle",
+        "status": "error",
+        "detail": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
+        "cycles": 1,
+        "nudge": false
+      },
+      {
+        "name": "UFC dashboard",
+        "status": "error",
+        "detail": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
+        "cycles": 1,
+        "nudge": false
+      },
+      {
+        "name": "coachvision",
+        "status": "error",
+        "detail": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
         "cycles": 1,
         "nudge": false
       }
@@ -34,183 +48,148 @@
   },
   "projects": {
     "Trading bot": {
-      "status": "idle",
-      "reason": "read OK but no recent activity / stale data",
+      "status": "error",
+      "reason": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 0,
-      "idle_cycles": 1
+      "blind_cycles": 1
     },
     "coachvision": {
-      "status": "idle",
-      "reason": "read OK but no recent activity / stale data",
+      "status": "error",
+      "reason": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 0,
-      "idle_cycles": 6
+      "blind_cycles": 1
     },
     "UFC dashboard": {
-      "status": "ok",
+      "status": "error",
+      "reason": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 0
+      "blind_cycles": 1
     },
     "Overseer": {
-      "status": "ok",
+      "status": "error",
+      "reason": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 0
+      "blind_cycles": 1
     }
   },
   "timeline": [
     {
-      "ts": "16:19:48",
+      "ts": "15:43:21",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I need to read through all the data first since these are independent operations."
+      "text": "I'll start by reading through all the logs in parallel to get a complete picture."
     },
     {
-      "ts": "16:19:49",
+      "ts": "15:43:22",
       "agent": "Bug-Hunter",
-      "label": "read_trading_bot_log (investigate)",
-      "text": "ok"
+      "label": "read_trading_bot_log (error)",
+      "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:19:50",
+      "ts": "15:43:22",
       "agent": "Bug-Hunter",
-      "label": "read_volleyball_results (investigate)",
-      "text": "ok"
+      "label": "read_volleyball_results (error)",
+      "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:19:54",
+      "ts": "15:43:22",
       "agent": "Bug-Hunter",
-      "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "label": "read_ufc_scraper_status (error)",
+      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:19:55",
+      "ts": "15:43:22",
       "agent": "Bug-Hunter",
-      "label": "read_overseer_status (investigate)",
-      "text": "ok"
+      "label": "read_overseer_status (error)",
+      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:20:22",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "Looking at the trading bot's status, it's marked as stale with an age of 153.7 hours \u2014 the last update was from July 7th while other systems are current as of July 13th. This indicates the daily scheduled runs have stopped working, which i\u2026",
-      "text_full": "Looking at the trading bot's status, it's marked as stale with an age of 153.7 hours \u2014 the last update was from July 7th while other systems are current as of July 13th. This indicates the daily scheduled runs have stopped working, which is a clear issue that needs investigation. For the volleyball system, it's just idle waiting for footage to be ingested, but the pipeline selftest passes, so there's no actual bug there. The UFC system is running healthily with a 1.0 success rate and recent activity, though there are some stale events that are just awaiting updates rather than indicating a failure. The overseer itself runs weekly and is slightly overdue based on the 167.6-hour gap since its last run, which aligns with the stale status flag I noted earlier. The trading bot is definitely stale at 153.7 hours old \u2014 that's 6.4 days without running when it should be on a daily schedule, so this is a real issue. Let me search the existing issues in the crypto-trading repo to see if this has already been reported."
-    },
-    {
-      "ts": "16:20:22",
-      "agent": "Bug-Hunter",
-      "label": "search_existing_issues (search)",
-      "text": "searched AndyRBrett/crypto-trading: 0 match(es)"
-    },
-    {
-      "ts": "16:20:35",
+      "ts": "15:43:30",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "No existing issues, so I should go ahead and file the bug."
+      "text": "All four read tools are returning 401 authentication errors, which means the overseer can't access anything through its read capabilities \u2014 a systemic failure worth reporting. Filing an issue might hit the same credential problem, but this\u2026",
+      "text_full": "All four read tools are returning 401 authentication errors, which means the overseer can't access anything through its read capabilities \u2014 a systemic failure worth reporting. Filing an issue might hit the same credential problem, but this is still a legitimate bug that needs to be documented, even if the tools for reporting it are also compromised."
     },
     {
-      "ts": "16:20:36",
+      "ts": "15:43:31",
       "agent": "Bug-Hunter",
-      "label": "file_issue (bug)",
-      "text": "AndyRBrett/crypto-trading \u2014 Daily runs halted: overseer-status.json stale for ~6.4 days (no runs since 2026-07-07) (#34)"
+      "label": "search_existing_issues (error)",
+      "text": "Tool 'search_existing_issues' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:20:50",
+      "ts": "15:43:54",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "The search is failing with a 401 error too, which means I can't check for duplicates before filing \u2014 but filing would also fail with the same authentication issue anyway. I'm considering attempting to file an issue against overseer itself \u2026",
+      "text_full": "The search is failing with a 401 error too, which means I can't check for duplicates before filing \u2014 but filing would also fail with the same authentication issue anyway. I'm considering attempting to file an issue against overseer itself to document the credential failure, since that's the most valuable action and would confirm whether the write operations are completely broken. I'm going to attempt filing the issue once to confirm the write path is also broken and document the situation, even though I couldn't search for duplicates first. The auth failure is so fundamental that writes almost certainly won't work either, and attempting this will give me a complete picture of what's broken."
+    },
+    {
+      "ts": "15:43:54",
+      "agent": "Bug-Hunter",
+      "label": "file_issue (error)",
+      "text": "Tool 'file_issue' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+    },
+    {
+      "ts": "15:44:10",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "The filing endpoint is also returning 401 errors, so the write functionality is completely blocked. I'll wrap up and document what I've found."
+    },
+    {
+      "ts": "15:44:13",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'll start by reviewing all the statuses."
+      "text": "I should start by reviewing all the project statuses before diving into ideas."
     },
     {
-      "ts": "16:20:51",
+      "ts": "15:44:13",
       "agent": "Idea-Agent",
-      "label": "read_trading_bot_log (investigate)",
-      "text": "ok"
+      "label": "read_trading_bot_log (error)",
+      "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:20:52",
+      "ts": "15:44:14",
       "agent": "Idea-Agent",
-      "label": "read_volleyball_results (investigate)",
-      "text": "ok"
+      "label": "read_volleyball_results (error)",
+      "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:20:55",
+      "ts": "15:44:14",
       "agent": "Idea-Agent",
-      "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "label": "read_ufc_scraper_status (error)",
+      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:20:56",
+      "ts": "15:44:14",
       "agent": "Idea-Agent",
-      "label": "read_overseer_status (investigate)",
-      "text": "ok"
+      "label": "read_overseer_status (error)",
+      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:21:52",
+      "ts": "15:45:13",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "Looking at the crypto trading bot's performance, the strategy is lagging behind a simple buy-and-hold approach by about 10.7%, and while it's generating signals, it's not actually executing on them. I'm considering a few approaches to fix \u2026",
-      "text_full": "Looking at the crypto trading bot's performance, the strategy is lagging behind a simple buy-and-hold approach by about 10.7%, and while it's generating signals, it's not actually executing on them. I'm considering a few approaches to fix this: implementing a walk-forward backtest framework to optimize parameters, adding a regime filter that switches to buy-and-hold when alpha turns negative, or investigating why the signal execution rate is zero. The most practical starting point seems to be an alpha-based throttle that automatically adjusts trading activity based on performance. For immediate visibility, I could add a visualization showing why signals were rejected and how close they came to triggering\u2014this would help diagnose the execution gap without major refactoring. On the coachvision side, the pipeline works fine in testing but no actual footage has been ingested yet. The quickest wins would be setting up folder monitoring with notifications when the system sits idle, or adding a sample onboarding clip to guide users through the upload process. A more complete enhancement would generate per-technique confidence scores and coaching feedback summaries once footage starts flowing in. The UFC dashboard is performing well overall, but the line movement alerts are picking up a lot of noise\u2014some movements of 983 points are clearly data artifacts from fighter swaps rather than genuine market shifts. I should add a sanity filter to detect bout replacements and focus alerts on main-event movements that actually matter. For Overseer, the real issue is staleness. It only runs weekly and the crypto feed is over 150 hours old, which defeats the purpose of monitoring. I could add freshness SLA checks per project with staleness alerting, or set up a weekly digest that surfaces stale feeds via email or Slack. Either approach would catch these gaps without much effort. Now I'm thinking through which improvements to prioritize based on impact versus effort. I've got the bench\u2026"
+      "text": "The read tools are all failing with authentication errors, which points to a configuration issue that another agent should handle. Even though I can't access the actual data, I can still work with the tool descriptions to brainstorm ideas.\u2026",
+      "text_full": "The read tools are all failing with authentication errors, which points to a configuration issue that another agent should handle. Even though I can't access the actual data, I can still work with the tool descriptions to brainstorm ideas. The fact that credential validation is failing upfront is actually worth flagging as an enhancement\u2014adding preflight checks would improve robustness. Now I'm moving through different projects to propose concrete enhancement ideas, starting with the crypto trading bot and a backtesting harness that replays historical price data. Across the other projects, I'm seeing opportunities like adding temporal segmentation and rep counting for coachvision, caching and change detection for the UFC scraper to reduce redundant processing, and several improvements to the overseer itself\u2014credential validation before reads, a triage board for visualizing enhancement ideas by effort and impact, and unit tests with mocked fixtures. I'm aiming for a good mix of low-effort, high-impact ideas spread across all four projects."
     },
     {
-      "ts": "16:21:55",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add per-project freshness SLA checks with staleness alerting in the weekly digest (effort low, impact high)"
-    },
-    {
-      "ts": "16:21:58",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Build a signal near-miss / reject-funnel report from the existing decision thresholds (effort low, impact high)"
-    },
-    {
-      "ts": "16:22:01",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Detect bout-replacement/fighter-swap events to suppress phantom line-movement alerts (effort medium, impact high)"
-    },
-    {
-      "ts": "16:22:04",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Rank and badge line-movement alerts by main-event weighting and time-to-event (effort low, impact medium)"
-    },
-    {
-      "ts": "16:22:08",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/volleyball \u2014 Generate a per-technique coaching-feedback report with confidence scores from processed clips (effort medium, impact high)"
-    },
-    {
-      "ts": "16:22:11",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add a buy-and-hold benchmark overlay and rolling alpha chart to the equity curve (effort low, impact medium)"
-    },
-    {
-      "ts": "16:22:14",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add unit tests + a synthetic-fixture smoke test for each read tool and the tracer (effort medium, impact medium)"
-    },
-    {
-      "ts": "16:22:40",
+      "ts": "15:45:28",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "I'm reviewing the findings from the bug hunter and noting that the staleness issue in crypto-trading #34 relates to the overseer freshness SLA idea, though they're distinct \u2014 one's the bug itself, the other's an enhancement to detect it. I\u2026",
-      "text_full": "I'm reviewing the findings from the bug hunter and noting that the staleness issue in crypto-trading #34 relates to the overseer freshness SLA idea, though they're distinct \u2014 one's the bug itself, the other's an enhancement to detect it. I'll keep both and document their connection, then compile the digest with the identified issue showing the daily runs have stalled with status data from over six days ago. Now I'm ranking the ideas by effort and impact, leading with the overseer freshness SLA since it's directly motivated by this week's crypto bug. I'm considering what to keep \u2014 seven ideas is too many for a focused digest, so I'm trimming down to the strongest six, dropping the overseer unit tests since it's medium effort and medium impact, even though it relates to the staleness problem."
+      "text": "Both reports point to the same root cause: a GitHub API authentication failure blocking all the tools. The bug-hunter couldn't even file the issue because the filing process itself is blocked by this credential problem. The idea agent's re\u2026",
+      "text_full": "Both reports point to the same root cause: a GitHub API authentication failure blocking all the tools. The bug-hunter couldn't even file the issue because the filing process itself is blocked by this credential problem. The idea agent's report got cut off before showing the actual ideas, but it was planning to ground them in project resilience, including specifically how the overseer should handle credential failures. The concrete recommendation emerging from both: the overseer needs a startup auth health-check that validates credentials and alerts on failure before attempting any operations. That's the actionable enhancement I can surface with confidence."
     },
     {
-      "ts": "16:22:40",
+      "ts": "15:45:28",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
     },
     {
-      "ts": "16:22:52",
+      "ts": "15:45:39",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "The tool came back with a not_configured status after my first call, so the delivery failed due to missing configuration. Since I'm limited to one attempt, I'll report this result."
+      "text": "The tool returned not_configured, which means the delivery failed due to a configuration issue I can't resolve. I've already made the required call, so I won't attempt it again\u2014I'll just report what happened to the user."
     }
   ]
 }
