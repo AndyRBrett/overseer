@@ -175,6 +175,36 @@
           "score": 0.0
         }
       }
+    },
+    {
+      "date": "2026-07-27",
+      "generated": "2026-07-27T16:08:43Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Overseer Digest\n\n\u26a0\ufe0f Both agents were blocked all cycle: the overseer's shared GitHub token returned 401 Bad credentials on every read/search/write call. crypto-trading, coachvision, and ufc-dashboard were NOT assessed \u2014 their true health is unknown until auth is fixed and the review is re-run.\n\nIssues Found\n- overseer \u2014 Shared GitHub token returns 401 \"Bad credentials\" on all tools (read, search, AND file_issue). Overseer is fully blind and cannot even file this bug via the normal path. Needs manual fix: rotate token, verify scopes (repo read + issues write), and add a startup auth pre-flight. (3 projects unreadable as a result.)\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-tool credential preflight + graceful degradation with status badges (effort: low, impact: high): validate creds at run start and show per-project \"available / auth failed / not configured\" \u2014 directly prevents this week's silent whole-cycle blindness.\n2. crypto-trading \u2014 Per-strategy risk-adjusted metrics (Sharpe, max drawdown, expectancy) in the daily log (effort: low, impact: high): compare strategies on risk, not just raw P&L; persist a JSON time series for trending.\n3. overseer \u2014 Weekly digest notification via email/Discord (effort: low, impact: high): push the summary automatically instead of relying on visiting the dashboard, closing the pipeline loop.\n4. ufc-dashboard \u2014 Odds-movement history with line-movement alerts (effort: medium, impact: high): persist timestamped odds snapshots, chart movement, flag notable movers past a probability threshold.\n5. coachvision \u2014 Auto-generated per-session coaching highlight reel from key-technique + low-confidence frames (effort: medium, impact: medium): reuse existing detection timestamps to stitch clips for coaching and to spot where the model needs training data.",
+      "counts": {
+        "tools": 16,
+        "errors": 15,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
     }
   ]
 }
