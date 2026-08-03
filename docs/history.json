@@ -205,6 +205,36 @@
           "score": 0.0
         }
       }
+    },
+    {
+      "date": "2026-08-03",
+      "generated": "2026-08-03T16:15:39Z",
+      "status": "completed",
+      "summary": "Weekly Overseer Digest\n\nIssues Found\n- overseer \u2014 GitHub token invalid: all read/search/file tools return `401 Bad credentials`. Overseer was fully blind this cycle and couldn't even file this bug itself. MANUAL FIX: rotate the PAT, verify scopes (repo read + issues write), then re-run to backfill the skipped crypto-trading / coachvision / ufc-dashboard checks. (The per-project \"couldn't read\" notes are all symptoms of this one root cause.)\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Credential preflight + graceful degradation (effort: low, impact: high): validate token at startup and normalize auth failures into structured \"not_configured\" payloads so one expired secret can't blind the whole pipeline \u2014 exactly today's failure.\n2. crypto-trading \u2014 Structured daily run summary as JSONL (effort: low, impact: high): P&L, fills, slippage, equity, errors as a queryable time series; unlocks dashboards + backtesting.\n3. overseer \u2014 Golden-file unit tests + CI for tracer/read-tool parsers (effort: low, impact: medium): catch schema drift before the weekly run.\n4. overseer \u2014 Cache last-successful read snapshots, serve stale-with-timestamp on failure (effort: medium, impact: high): keeps reviews useful during outages/expired creds.\n5. ufc-dashboard \u2014 Track odds movement with line-move / CLV alerts (effort: medium, impact: high): highest-value signal the scraper currently discards.\n6. crypto-trading \u2014 Regime filter + volatility-scaled position sizing (effort: medium, impact: high): constant risk budget, better risk-adjusted P&L; backtestable on existing logs.\n7. coachvision \u2014 Kalman/optical-flow ball-track interpolation + smoothing (effort: medium, impact: high): bridges detection gaps for cleaner trajectories, no retraining.",
+      "counts": {
+        "tools": 20,
+        "errors": 19,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
     }
   ]
 }
