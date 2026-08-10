@@ -235,6 +235,36 @@
           "score": 0.0
         }
       }
+    },
+    {
+      "date": "2026-08-10",
+      "generated": "2026-08-10T14:51:27Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Review Digest\n\n\u26a0\ufe0f Heads-up: The GitHub token behind ALL overseer tools returned 401 this run. Nothing could be read or filed \u2014 crypto-trading, coachvision, and ufc-dashboard went UNREVIEWED. Rotate the credential and re-run to get real project coverage.\n\nIssues Found\n- OVERSEER \u2014 All GitHub-authed tools (reads, search, file_issue) fail with persistent 401 \"Bad credentials\"; token is expired/revoked. Overseer is fully blind and could not even file this bug itself. Manual token rotation required out-of-band.\n\nTop Enhancement Ideas (ranked)\n1. OVERSEER \u2014 Credential preflight + graceful degradation (effort: low, impact: high): Validate token at startup and map 401/403 to a structured \"not_configured\" payload so a bad token can't silently kill the whole review \u2014 exactly what broke this week.\n2. OVERSEER \u2014 Weekly digest notifier via webhook (effort: low, impact: high): Config-gated end-of-pipeline notification so you get passive weekly awareness without opening the dashboard.\n3. UFC-DASHBOARD \u2014 Freshness badge + scraper self-heal/fallback (effort: low, impact: medium): Timestamp scrapes, show a staleness badge, and fall back to secondary source/last-good cache so stale data never looks fresh.\n4. CRYPTO-TRADING \u2014 Per-strategy risk guardrails (effort: medium, impact: high): Pre-trade drawdown circuit-breaker + position-size cap to protect capital regardless of signal quality.\n5. CRYPTO-TRADING \u2014 Backtest harness for the live signal function (effort: medium, impact: high): Replay cached OHLCV to measure win rate/Sharpe/drawdown before shipping changes \u2014 safe iteration + regression protection.\n6. UFC-DASHBOARD \u2014 Odds-movement tracking + line-movement alerts (effort: medium, impact: high): Snapshot and diff odds between runs to surface significant implied-probability shifts from data already scraped.\n7. COACHVISION \u2014 Auto-flag low-confidence frames into a review queue (effort: medium, impact: medium): Route uncertain frames to a labeling manifest to build a fine-tuning set and a self-improving accuracy loop.",
+      "counts": {
+        "tools": 21,
+        "errors": 20,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
     }
   ]
 }

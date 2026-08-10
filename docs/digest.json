@@ -1,10 +1,10 @@
 {
-  "generated": "2026-08-03T16:15:39Z",
+  "generated": "2026-08-10T14:51:27Z",
   "status": "completed",
-  "summary": "Weekly Overseer Digest\n\nIssues Found\n- overseer \u2014 GitHub token invalid: all read/search/file tools return `401 Bad credentials`. Overseer was fully blind this cycle and couldn't even file this bug itself. MANUAL FIX: rotate the PAT, verify scopes (repo read + issues write), then re-run to backfill the skipped crypto-trading / coachvision / ufc-dashboard checks. (The per-project \"couldn't read\" notes are all symptoms of this one root cause.)\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Credential preflight + graceful degradation (effort: low, impact: high): validate token at startup and normalize auth failures into structured \"not_configured\" payloads so one expired secret can't blind the whole pipeline \u2014 exactly today's failure.\n2. crypto-trading \u2014 Structured daily run summary as JSONL (effort: low, impact: high): P&L, fills, slippage, equity, errors as a queryable time series; unlocks dashboards + backtesting.\n3. overseer \u2014 Golden-file unit tests + CI for tracer/read-tool parsers (effort: low, impact: medium): catch schema drift before the weekly run.\n4. overseer \u2014 Cache last-successful read snapshots, serve stale-with-timestamp on failure (effort: medium, impact: high): keeps reviews useful during outages/expired creds.\n5. ufc-dashboard \u2014 Track odds movement with line-move / CLV alerts (effort: medium, impact: high): highest-value signal the scraper currently discards.\n6. crypto-trading \u2014 Regime filter + volatility-scaled position sizing (effort: medium, impact: high): constant risk budget, better risk-adjusted P&L; backtestable on existing logs.\n7. coachvision \u2014 Kalman/optical-flow ball-track interpolation + smoothing (effort: medium, impact: high): bridges detection gaps for cleaner trajectories, no retraining.",
+  "summary": "\ud83d\udccb Weekly Review Digest\n\n\u26a0\ufe0f Heads-up: The GitHub token behind ALL overseer tools returned 401 this run. Nothing could be read or filed \u2014 crypto-trading, coachvision, and ufc-dashboard went UNREVIEWED. Rotate the credential and re-run to get real project coverage.\n\nIssues Found\n- OVERSEER \u2014 All GitHub-authed tools (reads, search, file_issue) fail with persistent 401 \"Bad credentials\"; token is expired/revoked. Overseer is fully blind and could not even file this bug itself. Manual token rotation required out-of-band.\n\nTop Enhancement Ideas (ranked)\n1. OVERSEER \u2014 Credential preflight + graceful degradation (effort: low, impact: high): Validate token at startup and map 401/403 to a structured \"not_configured\" payload so a bad token can't silently kill the whole review \u2014 exactly what broke this week.\n2. OVERSEER \u2014 Weekly digest notifier via webhook (effort: low, impact: high): Config-gated end-of-pipeline notification so you get passive weekly awareness without opening the dashboard.\n3. UFC-DASHBOARD \u2014 Freshness badge + scraper self-heal/fallback (effort: low, impact: medium): Timestamp scrapes, show a staleness badge, and fall back to secondary source/last-good cache so stale data never looks fresh.\n4. CRYPTO-TRADING \u2014 Per-strategy risk guardrails (effort: medium, impact: high): Pre-trade drawdown circuit-breaker + position-size cap to protect capital regardless of signal quality.\n5. CRYPTO-TRADING \u2014 Backtest harness for the live signal function (effort: medium, impact: high): Replay cached OHLCV to measure win rate/Sharpe/drawdown before shipping changes \u2014 safe iteration + regression protection.\n6. UFC-DASHBOARD \u2014 Odds-movement tracking + line-movement alerts (effort: medium, impact: high): Snapshot and diff odds between runs to surface significant implied-probability shifts from data already scraped.\n7. COACHVISION \u2014 Auto-flag low-confidence frames into a review queue (effort: medium, impact: medium): Route uncertain frames to a labeling manifest to build a fine-tuning set and a self-improving accuracy loop.",
   "counts": {
-    "tools": 20,
-    "errors": 19,
+    "tools": 21,
+    "errors": 20,
     "issues": 0,
     "enhancements": 0
   },
@@ -13,35 +13,35 @@
     "total": 4,
     "issues": 0,
     "enhancements": 0,
-    "errors": 19,
+    "errors": 20,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "Overseer",
         "status": "error",
         "detail": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-        "cycles": 3,
+        "cycles": 4,
         "nudge": true
       },
       {
         "name": "Trading bot",
         "status": "error",
         "detail": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-        "cycles": 3,
+        "cycles": 4,
         "nudge": true
       },
       {
         "name": "UFC dashboard",
         "status": "error",
         "detail": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-        "cycles": 3,
+        "cycles": 4,
         "nudge": true
       },
       {
         "name": "coachvision",
         "status": "error",
         "detail": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-        "cycles": 3,
+        "cycles": 4,
         "nudge": true
       }
     ]
@@ -51,199 +51,173 @@
       "status": "error",
       "reason": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 3
+      "blind_cycles": 4
     },
     "coachvision": {
       "status": "error",
       "reason": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 3
+      "blind_cycles": 4
     },
     "UFC dashboard": {
       "status": "error",
       "reason": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 3
+      "blind_cycles": 4
     },
     "Overseer": {
       "status": "error",
       "reason": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
       "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 3
+      "blind_cycles": 4
     }
   },
   "timeline": [
     {
-      "ts": "16:13:13",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "I'll start by reading through all the logs in parallel to get a complete picture."
-    },
-    {
-      "ts": "16:13:13",
+      "ts": "14:49:02",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (error)",
       "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:13",
+      "ts": "14:49:03",
       "agent": "Bug-Hunter",
       "label": "read_volleyball_results (error)",
       "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:14",
+      "ts": "14:49:03",
       "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (error)",
       "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:14",
+      "ts": "14:49:03",
       "agent": "Bug-Hunter",
       "label": "read_overseer_status (error)",
       "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:22",
+      "ts": "14:49:08",
       "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "All four read tools are returning 401 authentication errors, which means the overseer's infrastructure itself is broken \u2014 its read capabilities are completely blind. This is a confirmed bug in the overseer pipeline. I can't verify issues i\u2026",
-      "text_full": "All four read tools are returning 401 authentication errors, which means the overseer's infrastructure itself is broken \u2014 its read capabilities are completely blind. This is a confirmed bug in the overseer pipeline. I can't verify issues in individual projects without being able to read their data, but the overseer's own tooling failure is definitely worth reporting. Let me check if the search function works, since it might use different authentication."
+      "label": "read_overseer_status (error)",
+      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:22",
+      "ts": "14:49:08",
+      "agent": "Bug-Hunter",
+      "label": "read_ufc_scraper_status (error)",
+      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+    },
+    {
+      "ts": "14:49:16",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "All the read tools are returning 401 errors because the GitHub token is invalid or expired \u2014 this is a systemic authentication failure that's blocking the entire pipeline from accessing any project data. The file_issue tool also depends on\u2026",
+      "text_full": "All the read tools are returning 401 errors because the GitHub token is invalid or expired \u2014 this is a systemic authentication failure that's blocking the entire pipeline from accessing any project data. The file_issue tool also depends on GitHub, so if the credentials are bad, that won't work either."
+    },
+    {
+      "ts": "14:49:16",
       "agent": "Bug-Hunter",
       "label": "search_existing_issues (error)",
       "text": "Tool 'search_existing_issues' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:39",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "The GitHub token is invalid across the board\u2014search_existing_issues failed with 401, so file_issue will too. There's no point attempting to file an issue when authentication is broken globally, especially since the workflow requires search\u2026",
-      "text_full": "The GitHub token is invalid across the board\u2014search_existing_issues failed with 401, so file_issue will too. There's no point attempting to file an issue when authentication is broken globally, especially since the workflow requires searching first to avoid duplicates anyway."
-    },
-    {
-      "ts": "16:13:39",
+      "ts": "14:49:31",
       "agent": "Bug-Hunter",
       "label": "file_issue (error)",
       "text": "Tool 'file_issue' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:55",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "The GitHub credentials are completely invalid\u2014even the file_issue function is returning 401 errors, so there's no way forward with filing anything. I'll move on to writing up the summary."
-    },
-    {
-      "ts": "16:13:57",
+      "ts": "14:49:51",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (error)",
       "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:58",
+      "ts": "14:49:52",
       "agent": "Idea-Agent",
       "label": "read_volleyball_results (error)",
       "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:58",
+      "ts": "14:49:52",
       "agent": "Idea-Agent",
       "label": "read_ufc_scraper_status (error)",
       "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:13:58",
+      "ts": "14:49:52",
       "agent": "Idea-Agent",
       "label": "read_overseer_status (error)",
       "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:46",
+      "ts": "14:50:33",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "All the read tools are returning 401 errors, which points to a credential or configuration problem rather than an actual issue with the tools themselves. Since I can't access them directly, I'll work from the project descriptions to genera\u2026",
-      "text_full": "All the read tools are returning 401 errors, which points to a credential or configuration problem rather than an actual issue with the tools themselves. Since I can't access them directly, I'll work from the project descriptions to generate enhancement ideas, spreading them across the different projects and ranking by effort versus impact. I'm aiming for at least three or four solid proposals, with one or two per project plus some overseer-level improvements."
+      "text": "The auth errors across all tools are a systemic issue I can't resolve right now, but I can still work with the project descriptions to suggest meaningful enhancements. The widespread 401s actually"
     },
     {
-      "ts": "16:14:46",
+      "ts": "14:50:33",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:47",
+      "ts": "14:50:34",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:47",
+      "ts": "14:50:34",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:47",
+      "ts": "14:50:34",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:48",
+      "ts": "14:50:35",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:48",
+      "ts": "14:50:35",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:48",
+      "ts": "14:50:35",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:49",
+      "ts": "14:50:36",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (error)",
       "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
     },
     {
-      "ts": "16:14:49",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "16:15:06",
-      "agent": "Idea-Agent",
-      "label": "reasoning",
-      "text": "The GitHub token is invalid, so all tool calls are failing with authentication errors. I'll skip further attempts and compile the ranked list directly in my response, making sure to highlight the credential problem upfront."
-    },
-    {
-      "ts": "16:15:32",
+      "ts": "14:51:18",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "The GitHub token being expired is the root cause blocking everything\u2014that's the critical bug to surface. The credential preflight idea and this bug are related but separate: one's about the immediate token failure, the other's about buildi\u2026",
-      "text_full": "The GitHub token being expired is the root cause blocking everything\u2014that's the critical bug to surface. The credential preflight idea and this bug are related but separate: one's about the immediate token failure, the other's about building resilience so the system doesn't completely break when credentials fail. I'll keep them distinct, with the bug as the top priority issue and the idea as an enhancement. For the enhancement ranking, I'm prioritizing by effort-to-impact ratio: credential preflight and the JSONL summary are quick wins with high payoff, followed by the golden-file tests, then the medium-effort items like caching snapshots and the other feature improvements. I'll drop the medium/medium fallback and high/high highlight reels since they're lower priority, keeping the list tight and scannable."
+      "text": "Looking at both reports, there's a clear pattern emerging around the 401 authentication failure in the overseer system. The bug-hunter identified this as the core issue, and idea #1 from the idea agent directly tackles the same problem wit\u2026",
+      "text_full": "Looking at both reports, there's a clear pattern emerging around the 401 authentication failure in the overseer system. The bug-hunter identified this as the core issue, and idea #1 from the idea agent directly tackles the same problem with a credential preflight and graceful degradation approach. Since they're describing the same underlying failure mode, I should keep the bug documented in the Issues Found section while noting how idea #1 provides a potential solution path. For the digest, I'll surface the overseer 401 failure as the primary issue, mention that three projects went unreviewed due to this blocker, and then rank the enhancement ideas by impact and effort \u2014 starting with idea #1 since it directly addresses this week's critical failure, followed by the weekly digest notifier, then the dashboard freshness badge and other medium-priority improvements."
     },
     {
-      "ts": "16:15:32",
+      "ts": "14:51:18",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
-    },
-    {
-      "ts": "16:15:39",
-      "agent": "Reviewer",
-      "label": "reasoning",
-      "text": "The send call returned not_configured, which means the delivery system isn't set up in this environment\u2014that's not something I can fix by retrying. I called it exactly once as instructed, so I've done what I needed to do."
     }
   ]
 }
