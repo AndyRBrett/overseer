@@ -34,6 +34,30 @@ def run_pipeline(dry_run=False):
               "send_telegram_summary are intercepted. Nothing will hit GitHub "
               "or Telegram. ***\n")
 
+    # Credential preflight — BEFORE the agents spend any API budget.
+    #
+    # A dead GitHub token used to produce a perfectly green run: every tool call
+    # 401'd, the agents worked around the errors, a digest was written, and the
+    # Action reported success. That happened four weeks running and nothing
+    # surfaced it. Now a credential that cannot reach a single repo stops the
+    # run loudly instead, and a partially-scoped one warns by name.
+    check = tools.preflight_github()
+    if check["status"] == "ok":
+        print(f"[preflight] {check['detail']}")
+    else:
+        print(f"[preflight] {check['status'].upper()}: {check['detail']}")
+        for slug, state in (check.get("repos") or {}).items():
+            if state != "ok":
+                print(f"[preflight]   - {slug}: {state}")
+    if check.get("fatal"):
+        raise SystemExit(
+            "\n*** ABORTED: the GitHub credential is unusable, so this review "
+            "would read nothing and file nothing.\n"
+            f"*** {check['detail']}\n"
+            "*** Fix: regenerate the PAT and update the OVERSEER_GITHUB_TOKEN "
+            "secret (Settings → Secrets and variables → Actions).\n"
+        )
+
     import anthropic
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 

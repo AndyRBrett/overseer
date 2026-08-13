@@ -186,6 +186,83 @@ def _github():
         _gh = Github(auth=Auth.Token(token))
     return _gh
 
+
+# ── CREDENTIAL PREFLIGHT ─────────────────────────────────────────────────
+# Why this exists: four consecutive weekly runs (2026-07-20 → 2026-08-10)
+# reported SUCCESS in the Actions tab while every GitHub tool call inside them
+# failed with 401 "Bad credentials" on an expired PAT. Each agent handled its
+# tool errors gracefully and still produced a digest, so the workflow never went
+# red and the outage stayed invisible for four weeks — the projects simply went
+# unreviewed. Checking the credential up front turns that silent failure into a
+# loud one, before an agent burns a run (and API spend) on a dead token.
+
+def _http_status(exc):
+    """HTTP status carried by a PyGithub exception, if any."""
+    return getattr(exc, "status", None)
+
+
+def preflight_github():
+    """Validate the GitHub credential and per-repo reach before the agents run.
+
+    Checks three things, cheapest first:
+      1. a token is configured at all
+      2. the token authenticates (401 ⇒ expired/revoked — the July failure)
+      3. each configured project repo is actually reachable with it (404/403 ⇒
+         the repo was left out when the token was regenerated, which fails only
+         for that project and is easy to miss)
+
+    Returns a structured report and never raises — the caller decides what is
+    fatal. `status` is one of:
+      "ok"             every configured repo is reachable
+      "not_configured" no token at all (local dev / partial setup)
+      "error"          the token is present but rejected, or some repo is
+                       unreachable; `fatal` is True when NO repo is reachable,
+                       which is the case where a run is worthless.
+    """
+    if not (os.getenv("OVERSEER_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN")):
+        return {"status": "not_configured",
+                "detail": "No OVERSEER_GITHUB_TOKEN — every GitHub-backed tool "
+                          "will report not_configured.",
+                "fatal": False}
+
+    try:
+        login = _github().get_user().login
+    except Exception as exc:  # noqa: BLE001 — auth failure surfaces as 401
+        status = _http_status(exc)
+        hint = ("token is expired or revoked — regenerate it and update the "
+                "OVERSEER_GITHUB_TOKEN repo secret") if status == 401 else str(exc)
+        return {"status": "error", "detail": f"GitHub auth failed ({status}): {hint}",
+                "fatal": True}
+
+    # Per-repo reach. A fine-grained PAT scoped to only some of the projects
+    # authenticates fine but 404s on the ones it was not granted.
+    repos, unreachable = {}, []
+    for key in REVIEW_PROJECTS:
+        slug = PROJECTS[key].get("repo")
+        if not slug:
+            continue
+        try:
+            _github().get_repo(slug)
+            repos[slug] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            code = _http_status(exc)
+            repos[slug] = f"unreachable ({code}): the token may not include this repo"
+            unreachable.append(slug)
+
+    if unreachable and len(unreachable) == len(repos):
+        return {"status": "error", "login": login, "repos": repos,
+                "detail": f"Token authenticates as {login} but reaches none of "
+                          f"its {len(repos)} configured repos: {', '.join(unreachable)}.",
+                "fatal": True}
+    if unreachable:
+        return {"status": "error", "login": login, "repos": repos,
+                "detail": f"Token cannot reach: {', '.join(unreachable)}. Those "
+                          "projects will go unreviewed; the rest still run.",
+                "fatal": False}
+    return {"status": "ok", "login": login, "repos": repos,
+            "detail": f"Authenticated as {login}; all {len(repos)} configured repos reachable.",
+            "fatal": False}
+
 # ── TOOL SCHEMAS ─────────────────────────────────────────────────────────
 # Keyed by name so each agent can request just the subset it's allowed to use
 # via tool_specs([...]). This enforces separation of concerns at the API level:

@@ -51,6 +51,42 @@ just like any other project. The repo defaults to `GITHUB_REPOSITORY` (override
 with an `OVERSEER_REPO` variable). For self-filing to work,
 `OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
 
+### Failing loudly (credential preflight + heartbeat)
+
+Between 2026-07-20 and 2026-08-10 the weekly Action reported **success** four
+times in a row while an expired PAT made every GitHub tool call return 401. The
+agents handled each tool error gracefully and still wrote a digest, so nothing
+went red and all four projects sat unreviewed for a month. Two independent
+guards now make that failure loud:
+
+**1. Credential preflight** (`tools.preflight_github`, run by the orchestrator
+before any agent starts). It checks that a token exists, that it authenticates,
+and that each configured repo is actually reachable with it:
+
+| Situation | Result |
+|---|---|
+| No token at all | warn, continue — every GitHub tool reports `not_configured` |
+| Token expired / revoked (401) | **abort with a non-zero exit** before spending API budget |
+| Token reaches *some* repos | warn by name, continue — those projects go unreviewed |
+| Token reaches *no* repos | **abort** — a review that reads nothing isn't a review |
+
+**2. Heartbeat** (`scripts/heartbeat.py`, its own daily workflow). A job cannot
+detect its own failure to start, so this runs separately and asks two things:
+*did the review run* (is `docs/digest.json` still advancing?) and *did it see
+anything* (did most tool calls fail?). The second is what catches a green-but-
+blind run. It exits non-zero on failure, which turns the Action red and triggers
+GitHub's own failure email, and optionally sends a Telegram alert.
+
+The heartbeat is **standard-library only** and uses no GitHub token by design —
+the outage it exists to catch is a broken credential, so it must not need one.
+
+Tune with `HEARTBEAT_MAX_AGE_HOURS` (default 192h — one missed weekly run plus a
+day of slack) and `HEARTBEAT_ERROR_RATIO` (default 0.5 of tool calls).
+
+> **Fine-grained PATs expire.** That is what caused the outage. Set a calendar
+> reminder for a week before yours lapses, or use a longer expiry — the heartbeat
+> will tell you within a day either way, but a reminder avoids the gap entirely.
+
 ## What you need to provide (and how to get each)
 
 Only the Anthropic key is required. Anything unset just makes that tool report
@@ -189,4 +225,7 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `docs/` — the installable web app (GitHub Pages): `index.html`, `app.js`,
   `sw.js` (service worker / push handler), `manifest.webmanifest`, icons
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
+- `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
+  happening, or completes while blind (stdlib only, no token)
 - `.github/workflows/weekly-review.yml` — cron, digest commit, push, report artifact
+- `.github/workflows/heartbeat.yml` — daily heartbeat, independent of the above
