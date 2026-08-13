@@ -67,10 +67,30 @@ def run_pipeline(dry_run=False):
     tracer.start()
     status = "completed"
 
+    # Delivery ledger: read back the issues this pipeline has already filed and
+    # what became of them. Fetched ONCE and shared, since both agents need the
+    # same view and it costs a handful of API calls.
+    #
+    # It does two jobs. It feeds the dashboard's record of what the overseer has
+    # actually delivered, and — more importantly — it goes into both agents'
+    # prompts so they stop re-proposing finished work. Without it the pipeline
+    # filed the same schema-validation idea four times across seven weeks and
+    # once proposed a feature that was already running in production.
+    try:
+        ledger = tools.delivery_ledger()
+        known_work = tools.known_work_block(ledger)
+        t = ledger["totals"]
+        print(f"[ledger] {t['proposed']} filed · {t['shipped']} shipped · "
+              f"{t['in_flight']} in flight · {t['open']} open · "
+              f"{t['duplicate']} duplicate")
+    except Exception as exc:  # noqa: BLE001 — a missing ledger must not stop a review
+        print(f"[ledger] unavailable ({exc}) — agents run without dedupe context")
+        ledger, known_work = None, None
+
     try:
         # 1 → 2 → 3, strictly sequential; each agent finishes before the next.
-        bug_output = agent_bug_hunter.run(client, tracer)
-        idea_output = agent_idea.run(client, tracer)
+        bug_output = agent_bug_hunter.run(client, tracer, known_work=known_work)
+        idea_output = agent_idea.run(client, tracer, known_work=known_work)
         agent_reviewer.run(client, tracer, bug_output, idea_output)
     except Exception as exc:  # noqa: BLE001 — record, render, then re-raise
         status = f"crashed: {exc}"
@@ -78,12 +98,14 @@ def run_pipeline(dry_run=False):
         tracer.write()
         tracer.write_digest(tools.DIGEST_PATH)
         tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
+        tools.write_ledger(ledger)
         raise
 
     tracer.finish(status)
     tracer.write()
     tracer.write_digest(tools.DIGEST_PATH)
     tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
+    tools.write_ledger(ledger)
 
 
 def main():

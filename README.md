@@ -51,6 +51,38 @@ just like any other project. The repo defaults to `GITHUB_REPOSITORY` (override
 with an `OVERSEER_REPO` variable). For self-filing to work,
 `OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
 
+### Closing the loop (the delivery ledger)
+
+The pipeline proposed work every week and never learned what came of it. That
+cost two things, and one ledger fixes both.
+
+Every issue the agents file is stamped `_Filed by Project Overseer._`, so the
+overseer can read its own issues back and see what happened to them. That
+becomes `docs/shipped.json` and the dashboard's **Shipped** panel — what the
+overseer has actually *delivered*, not merely suggested.
+
+**Shipped means merged.** A closed issue whose fix sits on an unreviewed branch
+is `in_flight`, not delivered — otherwise the panel flatters itself. Duplicates
+are excluded from the delivery-rate denominator (one dedupe failure shouldn't be
+punished twice) and reported separately as their own rate.
+
+The same ledger is injected into the Bug-Hunter's and Idea agent's prompts as an
+**ALREADY ON RECORD** list. That is the more valuable half. Without it the
+pipeline re-proposed its own ideas constantly:
+
+| Cluster | Filings |
+|---|---|
+| overseer — schema validation | #9, #12, #14, #16 (4×, over 7 weeks) |
+| crypto-trading — signal near-miss telemetry | #27, #35, #38 (3×, all still open) |
+| ufc-dashboard — line-movement alerts | #17 (shipped), #21, #26, #52, #67 |
+| ufc-dashboard — CLV / odds time-series | #19 (shipped), #22, #68 |
+| overseer — dead-man's switch | #13, #17 |
+| overseer — staleness alerting | #11, #15 |
+| coachvision — demo/sample output | #19, #21 |
+
+`ufc-dashboard#68` is the sharpest case: it proposed a per-bout CLV tracker that
+was already built, running, and computing CLV for 95 bouts in production.
+
 ### Failing loudly (credential preflight + heartbeat)
 
 Between 2026-07-20 and 2026-08-10 the weekly Action reported **success** four

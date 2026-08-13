@@ -303,6 +303,63 @@ function renderGenerated(d) {
   el.classList.toggle("stale", overdue);
 }
 
+// Shipped ledger — what became of the proposals the pipeline filed.
+//
+// A month of digests otherwise reads as a pile of suggestions with no evidence
+// any of them mattered. This is the other half of the record: proposed vs.
+// actually delivered. "Shipped" deliberately means a MERGED fix, not just a
+// closed issue — a fix sitting on an unreviewed branch is in flight, and
+// claiming it as delivered would make this panel flattering instead of useful.
+const SHIPPED_STATES = {
+  shipped:     { label: "shipped",    cls: "ok" },
+  in_flight:   { label: "in flight",  cls: "idle" },
+  open:        { label: "open",       cls: "" },
+  duplicate:   { label: "duplicate",  cls: "stale" },
+  not_planned: { label: "not planned", cls: "" },
+};
+
+function renderShipped(ledger) {
+  if (!ledger || !ledger.entries || !ledger.entries.length) return;
+  const t = ledger.totals || {};
+  $("shipped-card").style.display = "";
+
+  const pct = (v) => `${Math.round((v || 0) * 100)}%`;
+  const head =
+    `<div class="stats">` +
+    [["shipped", t.shipped], ["in flight", t.in_flight], ["open", t.open],
+     ["filed", t.proposed]]
+      .map(([k, v]) => `<div class="stat"><b>${v ?? 0}</b><span>${k}</span></div>`)
+      .join("") +
+    `</div>` +
+    `<div class="sub">${pct(t.delivery_rate)} of non-duplicate proposals delivered` +
+    (t.duplicate ? ` · <span class="warn">${t.duplicate} filed as duplicates (${pct(t.duplicate_rate)})</span>` : "") +
+    `</div>`;
+
+  // Newest first, and shipped work first within that — the panel exists to show
+  // delivery, so delivery leads.
+  const order = { shipped: 0, in_flight: 1, open: 2, duplicate: 3, not_planned: 4 };
+  const rows = ledger.entries
+    .slice()
+    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
+    .slice(0, 25)
+    .map((e) => {
+      const st = SHIPPED_STATES[e.status] || { label: e.status, cls: "" };
+      const repo = escapeHtml((e.repo || "").split("/").pop());
+      const when = e.closed_at || e.created_at;
+      const ago = when ? relativeTime(when) : "";
+      return `<div class="proj">
+        <div class="proj-main">
+          <span class="badge ${st.cls}">${st.label}</span>
+          <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>
+          <span class="meta">${repo} #${e.number}${ago ? " · " + escapeHtml(ago) : ""}</span>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  $("shipped").innerHTML = head + rows;
+}
+
 async function loadDigest() {
   try {
     const res = await fetch("digest.json?" + Date.now()); // bust cache
@@ -318,11 +375,19 @@ async function loadDigest() {
       const hres = await fetch("history.json?" + Date.now());
       if (hres.ok) history = await hres.json();
     } catch (e) { /* no history yet */ }
+
+    // Delivery ledger (optional — absent until the first run after it shipped).
+    let ledger = null;
+    try {
+      const lres = await fetch("shipped.json?" + Date.now());
+      if (lres.ok) ledger = await lres.json();
+    } catch (e) { /* no ledger yet */ }
     const runs = (history && history.runs) || [];
     const scoreSeries = (name) =>
       runs.map((r) => (r.projects && r.projects[name] ? r.projects[name].score : null));
 
     renderGenerated(d);
+    renderShipped(ledger);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};

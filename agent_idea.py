@@ -20,9 +20,9 @@ TOOL_NAMES = [
     "propose_enhancement",
 ]
 
-SYSTEM_PROMPT = f"""You are the IDEA AGENT. You brainstorm improvements for three
+SYSTEM_PROMPT_TEMPLATE = """You are the IDEA AGENT. You brainstorm improvements for three
 personal automation projects AND Project Overseer itself (this very agent pipeline):
-{tools.project_block()}
+{project_block}
 
 Use the exact repo slugs above when calling propose_enhancement.
 
@@ -47,6 +47,18 @@ Process:
 - If a read tool returns "not_configured" or "error", you can still propose
   ideas for that project from its description above — just don't invent fake data.
 
+ALREADY ON RECORD — do not re-propose these:
+{known_work}
+
+Treat that list as binding. An idea already SHIPPED or IN FLIGHT is done: do not
+propose it again in any rewording. One already STILL OPEN is filed: do not file a
+second copy. This pipeline has re-proposed the same idea four times over seven
+weeks (#9/#12/#14/#16), twice more in two other pairs, and once proposed a
+feature that was already built and running in production. Every duplicate costs
+the owner triage time and makes the whole digest less worth reading. If your best
+idea is already on the list, propose your NEXT best one instead. Genuinely
+extending a shipped feature is fine — say explicitly what is new about it.
+
 When you've proposed your ideas, STOP calling tools and write a concise
 structured list as your final message: each idea as
   PROJECT — title (effort: X, impact: Y): one-line rationale
@@ -56,12 +68,28 @@ USER_MESSAGE = ("Brainstorm at least three ranked enhancement ideas across the "
                 "three projects and the overseer itself.")
 
 
-def run(client, tracer):
-    """Run the Idea Agent to completion; return its structured idea list text."""
+def build_system_prompt(known_work=None):
+    """System prompt with the already-filed ledger injected.
+
+    Falls back to a clear 'no record' note rather than an empty string, so the
+    agent is never left guessing whether the list is empty or simply missing.
+    """
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        project_block=tools.project_block(),
+        known_work=known_work or "(no previously filed issues on record)",
+    )
+
+
+def run(client, tracer, known_work=None):
+    """Run the Idea Agent to completion; return its structured idea list text.
+
+    `known_work` is the delivery ledger's compact summary of what has already
+    been proposed and shipped — the dedupe input (see tools.known_work_block).
+    """
     return tools.run_agent(
         client,
         agent="Idea-Agent",
-        system=SYSTEM_PROMPT,
+        system=build_system_prompt(known_work),
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,

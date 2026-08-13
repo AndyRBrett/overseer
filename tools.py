@@ -55,6 +55,11 @@ DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 # so the overseer is a trend monitor and not just a point-in-time board
 # (overseer #6). Capped so the file (and the sparklines) stay small.
 HISTORY_PATH = os.getenv("HISTORY_PATH", "docs/history.json")
+
+# What the pipeline has actually DELIVERED, not just proposed — read back from
+# the issues it filed. Feeds the dashboard's "Shipped" panel and the agents'
+# dedupe context.
+LEDGER_PATH = os.getenv("LEDGER_PATH", "docs/shipped.json")
 HISTORY_MAX_RUNS = int(os.getenv("HISTORY_MAX_RUNS", "26"))  # ~6 months of weekly runs
 
 # ── DRY-RUN SWITCH ───────────────────────────────────────────────────────
@@ -185,6 +190,194 @@ def _github():
         from github import Auth, Github  # PyGithub
         _gh = Github(auth=Auth.Token(token))
     return _gh
+
+
+# ── DELIVERY LEDGER ──────────────────────────────────────────────────────
+# Closing the loop: the overseer proposes work every week and never learns what
+# came of it. Two costs follow from that, and this fixes both from one source.
+#
+#   1. Nothing shows what the pipeline has actually DELIVERED — only what it
+#      suggested. A month of digests reads as a pile of ideas with no evidence
+#      any of them mattered.
+#   2. With no memory of what it already proposed, the Idea agent re-proposes it.
+#      That is not hypothetical: #13/#17 are the same dead-man's switch five
+#      weeks apart, #11/#15 the same staleness alerting, #9/#12/#14/#16 the same
+#      schema validation four times over seven weeks, and ufc-dashboard#68
+#      proposed a per-bout CLV tracker that was already fully built and running.
+#
+# Every issue the agents file is stamped with OVERSEER_MARKER, so the ledger is
+# just "read back our own issues and see what happened to them".
+
+# Stamped into every filed issue body. Changing this orphans older issues from
+# the ledger, so treat it as a stable identifier, not a message.
+OVERSEER_MARKER = "_Filed by Project Overseer._"
+
+
+def _ledger_entry(issue, merged_only=True):
+    """One ledger row from a GitHub issue, or None if it isn't ours.
+
+    `merged_only` decides what counts as SHIPPED. A closed issue whose fix sits
+    on an unmerged branch is 'in flight', not delivered — claiming otherwise
+    would let the dashboard take credit for unreviewed code. GitHub only reports
+    a linked PR as merged once it lands on the default branch, so that flag is
+    the honest signal and we key off it rather than off the close alone.
+    """
+    body = issue.body or ""
+    labels = {l.name for l in issue.labels}
+    # Legacy fallback: bugs filed before file_issue stamped the marker, and
+    # enhancements are still recognisable by their title prefix + effort labels.
+    ours = (OVERSEER_MARKER in body
+            or issue.title.startswith("[enhancement]")
+            or any(l.startswith("effort:") for l in labels))
+    if not ours:
+        return None
+
+    kind = "enhancement" if ("enhancement" in labels
+                             or issue.title.startswith("[enhancement]")) else "bug"
+    entry = {
+        "repo": issue.repository.full_name,
+        "number": issue.number,
+        "title": issue.title.removeprefix("[enhancement]").strip(),
+        "kind": kind,
+        "url": issue.html_url,
+        "state": issue.state,
+        "created_at": issue.created_at.isoformat() if issue.created_at else None,
+        "closed_at": issue.closed_at.isoformat() if issue.closed_at else None,
+    }
+    for axis in ("effort", "impact"):
+        match = next((l.split(":", 1)[1] for l in labels if l.startswith(f"{axis}:")), None)
+        if match:
+            entry[axis] = match
+
+    if issue.state != "closed":
+        # An open issue with work already on a branch is IN FLIGHT, not merely
+        # open — otherwise the panel shows nothing happening right up until the
+        # moment a PR merges, which is the least useful time to learn about it.
+        entry["status"] = "in_flight" if _has_open_fix(issue) else "open"
+        return entry
+
+    reason = getattr(issue, "state_reason", None)
+    if reason in ("duplicate", "not_planned"):
+        # Explicitly NOT shipped, and worth keeping: a duplicate is evidence the
+        # dedupe is failing, which is half the reason this ledger exists.
+        entry["status"] = reason
+        return entry
+
+    if merged_only:
+        entry["status"] = "shipped" if _has_merged_fix(issue) else "in_flight"
+    else:
+        entry["status"] = "shipped"
+    return entry
+
+
+def _linked_prs(issue):
+    """Pull requests cross-referenced from this issue's timeline.
+
+    Best-effort by design: the timeline API is the only place the link is
+    recorded, and a repo where we lack permission to read it yields nothing
+    rather than failing the run.
+    """
+    out = []
+    try:
+        for event in issue.get_timeline():
+            if event.event not in ("cross-referenced", "connected", "closed"):
+                continue
+            source = getattr(event, "source", None)
+            pr = getattr(source, "issue", None) if source else None
+            if pr is not None and getattr(pr, "pull_request", None):
+                out.append(pr.as_pull_request())
+    except Exception:  # noqa: BLE001 — ledger enrichment must never break a run
+        return []
+    return out
+
+
+def _has_open_fix(issue):
+    """True when an unmerged PR references this still-open issue."""
+    return any(not pr.merged and pr.state == "open" for pr in _linked_prs(issue))
+
+
+def _has_merged_fix(issue):
+    """True when a merged PR closed this issue — the signal that work landed."""
+    return any(pr.merged for pr in _linked_prs(issue))
+
+
+def delivery_ledger(merged_only=True, limit_per_repo=100):
+    """Every overseer-filed issue across the reviewed repos, with its outcome.
+
+    Returns {"entries": [...], "totals": {...}, "repos": {...}}. Never raises:
+    an unreachable repo contributes an error note instead of killing the run,
+    because a partial ledger is still worth showing.
+    """
+    entries, repo_errors = [], {}
+    for key in REVIEW_PROJECTS:
+        slug = PROJECTS[key].get("repo")
+        if not slug:
+            continue
+        try:
+            repo = _github().get_repo(slug)
+            for issue in repo.get_issues(state="all")[:limit_per_repo]:
+                if issue.pull_request is not None:
+                    continue  # get_issues returns PRs too
+                entry = _ledger_entry(issue, merged_only=merged_only)
+                if entry:
+                    entries.append(entry)
+        except Exception as exc:  # noqa: BLE001
+            repo_errors[slug] = str(exc)[:120]
+
+    entries.sort(key=lambda e: e.get("closed_at") or e.get("created_at") or "", reverse=True)
+    totals = {"proposed": len(entries)}
+    for status in ("shipped", "in_flight", "open", "duplicate", "not_planned"):
+        totals[status] = sum(1 for e in entries if e["status"] == status)
+    # The number the dashboard leads with. Duplicates are excluded from the
+    # denominator: re-proposing the same idea shouldn't dilute the delivery rate,
+    # it's tracked separately as a dedupe failure.
+    considered = totals["proposed"] - totals["duplicate"]
+    totals["delivery_rate"] = round(totals["shipped"] / considered, 3) if considered else 0.0
+    totals["duplicate_rate"] = round(totals["duplicate"] / totals["proposed"], 3) if entries else 0.0
+    return {"entries": entries, "totals": totals, "errors": repo_errors}
+
+
+def write_ledger(ledger, path=None):
+    """Persist the ledger for the dashboard. No-op when there's nothing to write.
+
+    A None ledger means the fetch failed this run; the previously published file
+    is left alone rather than being replaced with an empty one, so a transient
+    GitHub error doesn't blank the panel.
+    """
+    if not ledger:
+        return None
+    path = path or LEDGER_PATH
+    payload = dict(ledger)
+    payload["generated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
+    return path
+
+
+def known_work_block(ledger, per_repo=12):
+    """Compact 'already proposed / already shipped' list for the agent prompts.
+
+    This is the half of the ledger that changes agent BEHAVIOUR rather than the
+    dashboard. Given the pipeline re-proposed the same idea four times over seven
+    weeks, showing each agent what it has already asked for is the cheapest
+    available fix — far cheaper than hoping it remembers to search first.
+    """
+    by_repo = {}
+    for entry in ledger.get("entries", []):
+        by_repo.setdefault(entry["repo"], []).append(entry)
+    if not by_repo:
+        return "(no previously filed issues on record)"
+
+    lines = []
+    for repo, items in sorted(by_repo.items()):
+        lines.append(f"{repo}:")
+        for e in items[:per_repo]:
+            state = {"shipped": "SHIPPED", "in_flight": "IN FLIGHT",
+                     "open": "STILL OPEN", "duplicate": "closed as duplicate",
+                     "not_planned": "closed, not planned"}.get(e["status"], e["status"])
+            lines.append(f"  - #{e['number']} [{state}] {e['title']}")
+    return "\n".join(lines)
 
 
 # ── CREDENTIAL PREFLIGHT ─────────────────────────────────────────────────
@@ -539,7 +732,11 @@ def file_issue(repo, title, body):
         print(f"          title: {title}")
         print(f"          body : {_oneline(body, 200)}\n")
         return {"status": "dry_run", "repo": repo, "title": title}
-    issue = _github().get_repo(repo).create_issue(title=title, body=body)
+    # Stamp bugs with the same marker enhancements carry, so the delivery ledger
+    # can attribute BOTH kinds back to the overseer. Without it a filed bug was
+    # indistinguishable from a hand-written issue and never counted as shipped.
+    issue = _github().get_repo(repo).create_issue(
+        title=title, body=f"{body}\n\n---\n{OVERSEER_MARKER}")
     return {"status": "filed", "number": issue.number, "url": issue.html_url}
 
 
@@ -552,7 +749,7 @@ def propose_enhancement(repo, title, rationale, effort, impact):
         print(f"          why   : {_oneline(rationale, 200)}\n")
         return {"status": "dry_run", "repo": repo, "title": title,
                 "effort": effort, "impact": impact}
-    body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n_Filed by Project Overseer._"
+    body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n{OVERSEER_MARKER}"
     issue = _github().get_repo(repo).create_issue(title=f"[enhancement] {title}", body=body)
     # Labels may not exist in the repo; best-effort, don't fail the call over it.
     try:
