@@ -265,6 +265,36 @@
           "score": 0.0
         }
       }
+    },
+    {
+      "date": "2026-08-13",
+      "generated": "2026-08-13T20:53:26Z",
+      "status": "completed",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 85.1h old, SLA 48h \u00b7 stale 1 cycle\n\n\ud83d\udccb Weekly Review \u2014 2026-08-13\n\nIssues Found\n- ufc-dashboard (#66): Scraper parse-failure on 2026-08-22 Hernandez vs Rodrigues \u2014 page fetches but 0 bouts extracted (bout_count 8), so event carries no odds; masked by 100% run success. Watch: UFC 330 line flagged stale <2 days out (not filed).\n- Note: coachvision is idle/stale (no footage ever ingested) but self-test passes \u2014 monitoring gap, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Signal-proximity telemetry panel (effort: low, impact: high): 0/10 signals acted; chart distance-to-trigger to see if market's quiet vs thresholds miscalibrated. No capital at risk. (#38)\n2. ufc-dashboard \u2014 Push line-movement alerts to Telegram/Discord (effort: low, impact: high): movement data already computed but stuck in JSON; add webhook sink w/ dedup for real-time odds tracking. (#67)\n3. overseer \u2014 Dead-man's-switch heartbeat alert (effort: low, impact: high): overseer ran 1\u00d7/7d (78h stale); independent freshness ping removes the SPOF that would silently blind all monitoring. (#17)\n4. crypto-trading \u2014 Walk-forward backtest + param-sweep harness (effort: high, impact: high): 90d P&L -793, Sharpe -2.71 is systematic; offline replay quantifies whether an edge exists before risking changes. (#39)\n5. coachvision \u2014 Bundled demo clip + auto report (effort: medium, impact: medium): reuse passing 77-frame fixture to auto-produce a sample report, lowering activation barrier and exercising the report path. (#21)\n6. ufc-dashboard \u2014 Per-bout CLV history + steam-move flags (effort: medium, impact: medium): persist timestamped odds to compute closing-line value and detect sharp moves. (#68)",
+      "counts": {
+        "tools": 19,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 7
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "stale",
+          "score": 0.25
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      }
     }
   ]
 }

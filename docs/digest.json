@@ -1,223 +1,215 @@
 {
-  "generated": "2026-08-10T14:51:27Z",
+  "generated": "2026-08-13T20:53:26Z",
   "status": "completed",
-  "summary": "\ud83d\udccb Weekly Review Digest\n\n\u26a0\ufe0f Heads-up: The GitHub token behind ALL overseer tools returned 401 this run. Nothing could be read or filed \u2014 crypto-trading, coachvision, and ufc-dashboard went UNREVIEWED. Rotate the credential and re-run to get real project coverage.\n\nIssues Found\n- OVERSEER \u2014 All GitHub-authed tools (reads, search, file_issue) fail with persistent 401 \"Bad credentials\"; token is expired/revoked. Overseer is fully blind and could not even file this bug itself. Manual token rotation required out-of-band.\n\nTop Enhancement Ideas (ranked)\n1. OVERSEER \u2014 Credential preflight + graceful degradation (effort: low, impact: high): Validate token at startup and map 401/403 to a structured \"not_configured\" payload so a bad token can't silently kill the whole review \u2014 exactly what broke this week.\n2. OVERSEER \u2014 Weekly digest notifier via webhook (effort: low, impact: high): Config-gated end-of-pipeline notification so you get passive weekly awareness without opening the dashboard.\n3. UFC-DASHBOARD \u2014 Freshness badge + scraper self-heal/fallback (effort: low, impact: medium): Timestamp scrapes, show a staleness badge, and fall back to secondary source/last-good cache so stale data never looks fresh.\n4. CRYPTO-TRADING \u2014 Per-strategy risk guardrails (effort: medium, impact: high): Pre-trade drawdown circuit-breaker + position-size cap to protect capital regardless of signal quality.\n5. CRYPTO-TRADING \u2014 Backtest harness for the live signal function (effort: medium, impact: high): Replay cached OHLCV to measure win rate/Sharpe/drawdown before shipping changes \u2014 safe iteration + regression protection.\n6. UFC-DASHBOARD \u2014 Odds-movement tracking + line-movement alerts (effort: medium, impact: high): Snapshot and diff odds between runs to surface significant implied-probability shifts from data already scraped.\n7. COACHVISION \u2014 Auto-flag low-confidence frames into a review queue (effort: medium, impact: medium): Route uncertain frames to a labeling manifest to build a fine-tuning set and a self-improving accuracy loop.",
+  "summary": "STALENESS ALERTS\n- coachvision \u2014 data 85.1h old, SLA 48h \u00b7 stale 1 cycle\n\n\ud83d\udccb Weekly Review \u2014 2026-08-13\n\nIssues Found\n- ufc-dashboard (#66): Scraper parse-failure on 2026-08-22 Hernandez vs Rodrigues \u2014 page fetches but 0 bouts extracted (bout_count 8), so event carries no odds; masked by 100% run success. Watch: UFC 330 line flagged stale <2 days out (not filed).\n- Note: coachvision is idle/stale (no footage ever ingested) but self-test passes \u2014 monitoring gap, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Signal-proximity telemetry panel (effort: low, impact: high): 0/10 signals acted; chart distance-to-trigger to see if market's quiet vs thresholds miscalibrated. No capital at risk. (#38)\n2. ufc-dashboard \u2014 Push line-movement alerts to Telegram/Discord (effort: low, impact: high): movement data already computed but stuck in JSON; add webhook sink w/ dedup for real-time odds tracking. (#67)\n3. overseer \u2014 Dead-man's-switch heartbeat alert (effort: low, impact: high): overseer ran 1\u00d7/7d (78h stale); independent freshness ping removes the SPOF that would silently blind all monitoring. (#17)\n4. crypto-trading \u2014 Walk-forward backtest + param-sweep harness (effort: high, impact: high): 90d P&L -793, Sharpe -2.71 is systematic; offline replay quantifies whether an edge exists before risking changes. (#39)\n5. coachvision \u2014 Bundled demo clip + auto report (effort: medium, impact: medium): reuse passing 77-frame fixture to auto-produce a sample report, lowering activation barrier and exercising the report path. (#21)\n6. ufc-dashboard \u2014 Per-bout CLV history + steam-move flags (effort: medium, impact: medium): persist timestamped odds to compute closing-line value and detect sharp moves. (#68)",
   "counts": {
-    "tools": 21,
-    "errors": 20,
-    "issues": 0,
-    "enhancements": 0
+    "tools": 19,
+    "errors": 0,
+    "issues": 1,
+    "enhancements": 7
   },
   "rollup": {
-    "ok": 0,
+    "ok": 3,
     "total": 4,
-    "issues": 0,
-    "enhancements": 0,
-    "errors": 20,
+    "issues": 1,
+    "enhancements": 7,
+    "errors": 0,
     "nudge_threshold": 2,
     "attention": [
       {
-        "name": "Overseer",
-        "status": "error",
-        "detail": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-        "cycles": 4,
-        "nudge": true
-      },
-      {
-        "name": "Trading bot",
-        "status": "error",
-        "detail": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-        "cycles": 4,
-        "nudge": true
-      },
-      {
-        "name": "UFC dashboard",
-        "status": "error",
-        "detail": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-        "cycles": 4,
-        "nudge": true
-      },
-      {
         "name": "coachvision",
-        "status": "error",
-        "detail": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-        "cycles": 4,
+        "status": "stale",
+        "detail": "data 85.1h old, SLA 48h \u00b7 stale 1 cycle",
+        "cycles": 1,
         "nudge": true
       }
     ]
   },
   "projects": {
     "Trading bot": {
-      "status": "error",
-      "reason": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-      "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 4
+      "status": "ok",
+      "last_ok": "2026-08-13T20:53:26Z",
+      "blind_cycles": 0
     },
     "coachvision": {
-      "status": "error",
-      "reason": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-      "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 4
+      "status": "stale",
+      "reason": "read OK but the project's data is past-due / stale",
+      "last_ok": "2026-08-13T20:53:26Z",
+      "blind_cycles": 0,
+      "stale_cycles": 1,
+      "age_hours": 85.1,
+      "sla_hours": 48
     },
     "UFC dashboard": {
-      "status": "error",
-      "reason": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com\u2026",
-      "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 4
+      "status": "ok",
+      "last_ok": "2026-08-13T20:53:26Z",
+      "blind_cycles": 0
     },
     "Overseer": {
-      "status": "error",
-      "reason": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/re\u2026",
-      "last_ok": "2026-07-13T16:22:52Z",
-      "blind_cycles": 4
+      "status": "ok",
+      "last_ok": "2026-08-13T20:53:26Z",
+      "blind_cycles": 0
     }
   },
   "timeline": [
     {
-      "ts": "14:49:02",
-      "agent": "Bug-Hunter",
-      "label": "read_trading_bot_log (error)",
-      "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:03",
-      "agent": "Bug-Hunter",
-      "label": "read_volleyball_results (error)",
-      "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:03",
-      "agent": "Bug-Hunter",
-      "label": "read_ufc_scraper_status (error)",
-      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:03",
-      "agent": "Bug-Hunter",
-      "label": "read_overseer_status (error)",
-      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:08",
-      "agent": "Bug-Hunter",
-      "label": "read_overseer_status (error)",
-      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:08",
-      "agent": "Bug-Hunter",
-      "label": "read_ufc_scraper_status (error)",
-      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
-    },
-    {
-      "ts": "14:49:16",
+      "ts": "20:50:21",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "All the read tools are returning 401 errors because the GitHub token is invalid or expired \u2014 this is a systemic authentication failure that's blocking the entire pipeline from accessing any project data. The file_issue tool also depends on\u2026",
-      "text_full": "All the read tools are returning 401 errors because the GitHub token is invalid or expired \u2014 this is a systemic authentication failure that's blocking the entire pipeline from accessing any project data. The file_issue tool also depends on GitHub, so if the credentials are bad, that won't work either."
+      "text": "I'm checking the status across all four projects simultaneously."
     },
     {
-      "ts": "14:49:16",
+      "ts": "20:50:22",
       "agent": "Bug-Hunter",
-      "label": "search_existing_issues (error)",
-      "text": "Tool 'search_existing_issues' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_trading_bot_log (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:49:31",
+      "ts": "20:50:24",
       "agent": "Bug-Hunter",
-      "label": "file_issue (error)",
-      "text": "Tool 'file_issue' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_volleyball_results (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:49:51",
-      "agent": "Idea-Agent",
-      "label": "read_trading_bot_log (error)",
-      "text": "Tool 'read_trading_bot_log' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "ts": "20:50:27",
+      "agent": "Bug-Hunter",
+      "label": "read_ufc_scraper_status (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:49:52",
-      "agent": "Idea-Agent",
-      "label": "read_volleyball_results (error)",
-      "text": "Tool 'read_volleyball_results' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "ts": "20:50:29",
+      "agent": "Bug-Hunter",
+      "label": "read_overseer_status (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:49:52",
-      "agent": "Idea-Agent",
-      "label": "read_ufc_scraper_status (error)",
-      "text": "Tool 'read_ufc_scraper_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "ts": "20:50:56",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "Looking at the trading bot first\u2014it's running fine with no errors despite the negative P&L, which is just a reflection of the strategy's performance rather than a technical issue. Now checking the volleyball coaching app, which shows as id\u2026",
+      "text_full": "Looking at the trading bot first\u2014it's running fine with no errors despite the negative P&L, which is just a reflection of the strategy's performance rather than a technical issue. Now checking the volleyball coaching app, which shows as idle and stale despite being marked as okay. The coachvision pipeline hasn't generated a status update in 85 hours, exceeding the 48-hour SLA, but this appears to be expected idle behavior since no footage has ever been ingested and the self-test passes. The staleness is a consequence of inactivity rather than a failure. Moving on to the UFC scraper, which has been running consistently over the past week with a perfect success rate and no recent errors. However, there's a confirmed parse failure for a specific event on August 22nd where the scraper expected bout data but found none, causing the event to be marked as a parse failure despite the overall run-level success rate being 100%. Additionally, there are two stale events in the data \u2014 UFC 330 and the Nurmagomedov fight \u2014 where odds haven't been updated since August 11th despite the events being upcoming. The parse failure is the clearest bug to report, though the stale event data might indicate the scraper isn't refreshing certain events properly. Looking at the Overseer tool itself, it's running weekly with a 100% success rate and no errors, though the last run was about 78 hours ago. The tool appears to be functioning normally without any stale flags or issues reported. For the CoachVision staleness concern, the status file hasn't been updated in 85 hours against a 48-hour SLA, but this might be a monitoring gap rather than an actual problem since there's no footage to process. The main bug I need to file is the UFC parse failure, so let me check if there are existing issues for that first."
     },
     {
-      "ts": "14:49:52",
-      "agent": "Idea-Agent",
-      "label": "read_overseer_status (error)",
-      "text": "Tool 'read_overseer_status' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "ts": "20:50:56",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
     },
     {
-      "ts": "14:50:33",
+      "ts": "20:50:56",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
+    },
+    {
+      "ts": "20:51:07",
+      "agent": "Bug-Hunter",
+      "label": "file_issue (bug)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 Scraper parse failure for 2026-08-22 Hernandez vs Rodrigues: expected bouts, got none (#66)"
+    },
+    {
+      "ts": "20:51:27",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "I've filed the bug report and now I'm putting together the summary. The stale UFC events caught my attention, but the line movement stayed consistent so they're not clear indicators. I'll note them anyway and wrap up the investigation."
+    },
+    {
+      "ts": "20:51:30",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "The auth errors across all tools are a systemic issue I can't resolve right now, but I can still work with the project descriptions to suggest meaningful enhancements. The widespread 401s actually"
+      "text": "I should check the current state of the projects to inform my approach."
     },
     {
-      "ts": "14:50:33",
+      "ts": "20:51:30",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_trading_bot_log (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:50:34",
+      "ts": "20:51:31",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_volleyball_results (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:50:34",
+      "ts": "20:51:35",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_ufc_scraper_status (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:50:34",
+      "ts": "20:51:36",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "read_overseer_status (investigate)",
+      "text": "ok"
     },
     {
-      "ts": "14:50:35",
+      "ts": "20:52:28",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "reasoning",
+      "text": "Looking at the trading bot's performance metrics, the strategy is clearly broken\u2014negative returns, poor risk-adjusted metrics, and zero executed signals despite evaluating ten opportunities. I'm thinking through what's causing this: the co\u2026",
+      "text_full": "Looking at the trading bot's performance metrics, the strategy is clearly broken\u2014negative returns, poor risk-adjusted metrics, and zero executed signals despite evaluating ten opportunities. I'm thinking through what's causing this: the core strategy logic needs validation through backtesting, but there's also potential value in tracking near-miss signals to understand how close we're getting to execution thresholds. Building a sensitivity dashboard could reveal whether we're just slightly off on parameters or if the regime has fundamentally shifted. For the volleyball coaching tool, the real blocker is that no footage has ever been uploaded\u2014the pipeline works but there's no data flowing through it. I should focus on lowering friction: either add an onboarding demo with sample footage so users see the dashboard in action, or implement a watched folder that auto-ingests videos. Once that's solved, I could layer in rep counting and technique scoring to make the tool more valuable. The UFC alerts system is performing well, so I'm looking at enhancements like Discord notifications for significant line movements on main events, tracking historical closing-line value for sharp-money detection, and auto-detecting when new fight cards post. For the overseer itself, it's running infrequently and aging\u2014I should add a heartbeat monitor that alerts if it stops running, plus integrate notifications across Discord or Slack with a consolidated digest of all project statuses. Now I'm ranking these ideas by effort versus impact to pick the strongest ones to tackle first."
     },
     {
-      "ts": "14:50:35",
+      "ts": "20:52:31",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/crypto-trading \u2014 Add \"signal proximity\" telemetry + dashboard panel showing how close each dormant signal came to firing (effort low, impact high)"
     },
     {
-      "ts": "14:50:35",
+      "ts": "20:52:35",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/crypto-trading \u2014 Build a walk-forward backtest + parameter-sweep harness to diagnose the negative Sharpe/Sortino (effort high, impact high)"
     },
     {
-      "ts": "14:50:36",
+      "ts": "20:52:38",
       "agent": "Idea-Agent",
-      "label": "propose_enhancement (error)",
-      "text": "Tool 'propose_enhancement' failed: 401 {\"message\": \"Bad credentials\", \"documentation_url\": \"https://docs.github.com/rest\", \"status\": \"401\"}"
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 Push main-event line-movement alerts to a notification channel (Discord/Telegram) with CLV context (effort low, impact high)"
     },
     {
-      "ts": "14:51:18",
+      "ts": "20:52:41",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/ufc-dashboard \u2014 Track closing-line-value (CLV) history per bout and flag \"sharp\" vs \"square\" movement patterns (effort medium, impact medium)"
+    },
+    {
+      "ts": "20:52:44",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/volleyball \u2014 Ship a bundled demo clip + auto-generated coaching report so the pipeline shows value before real footage is added (effort medium, impact medium)"
+    },
+    {
+      "ts": "20:52:47",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Add a dead-man's-switch heartbeat alert when the overseer itself misses its weekly run (effort low, impact high)"
+    },
+    {
+      "ts": "20:52:50",
+      "agent": "Idea-Agent",
+      "label": "propose_enhancement (idea)",
+      "text": "AndyRBrett/overseer \u2014 Generate a unified weekly cross-project digest (Markdown + dashboard header) summarizing all four projects (effort medium, impact medium)"
+    },
+    {
+      "ts": "20:53:18",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "Looking at both reports, there's a clear pattern emerging around the 401 authentication failure in the overseer system. The bug-hunter identified this as the core issue, and idea #1 from the idea agent directly tackles the same problem wit\u2026",
-      "text_full": "Looking at both reports, there's a clear pattern emerging around the 401 authentication failure in the overseer system. The bug-hunter identified this as the core issue, and idea #1 from the idea agent directly tackles the same problem with a credential preflight and graceful degradation approach. Since they're describing the same underlying failure mode, I should keep the bug documented in the Issues Found section while noting how idea #1 provides a potential solution path. For the digest, I'll surface the overseer 401 failure as the primary issue, mention that three projects went unreviewed due to this blocker, and then rank the enhancement ideas by impact and effort \u2014 starting with idea #1 since it directly addresses this week's critical failure, followed by the weekly digest notifier, then the dashboard freshness badge and other medium-priority improvements."
+      "text": "Looking at the issues and ideas, there's only one bug filed so far\u2014the UFC dashboard parse failure\u2014while the CoachVision staleness is more of a monitoring gap. For the ideas, I'm considering whether to keep the unified weekly cross-project\u2026",
+      "text_full": "Looking at the issues and ideas, there's only one bug filed so far\u2014the UFC dashboard parse failure\u2014while the CoachVision staleness is more of a monitoring gap. For the ideas, I'm considering whether to keep the unified weekly cross-project digest proposal since it overlaps with what the reviewer already does, but it's still a valid enhancement. The UFC parse bug and the line-movement alerts idea are separate concerns, so no need to consolidate them. Now I'm working through ranking the ideas. I'll focus on the strongest ones\u2014keeping the low-effort, high-impact ideas at the top, then the high-impact backtest work, and a few medium-priority items. The CoachVision demo clip makes sense given the pipeline visibility gap, and the CLV history tracking is medium priority. The overseer digest is somewhat meta but worth keeping. Let me finalize this into a clean digest."
     },
     {
-      "ts": "14:51:18",
+      "ts": "20:53:18",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
+    },
+    {
+      "ts": "20:53:26",
+      "agent": "Reviewer",
+      "label": "reasoning",
+      "text": "The tool came back as not_configured, but I've already called it once as instructed, so I won't retry it. The failure is environmental rather than something I can fix, so I'll just record what happened."
     }
   ]
 }
