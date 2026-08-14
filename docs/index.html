@@ -119,6 +119,17 @@
           background: #334155; color: #cbd5e1; white-space: nowrap; }
     .rc.ok { background: #064e3b; color: #6ee7b7; }
     .rc.warn { background: #713f12; color: #fde68a; }
+    /* Shipped panel (delivery ledger). Non-shipped rows are dimmed so the
+       delivered work reads first, and the decision line is set apart so a
+       "why we didn't" is visible without opening the issue. */
+    .prow.dim { opacity: .72; }
+    .pmeta.why { margin-top: 3px; font-style: italic; color: var(--muted); }
+    .pmeta a.fix { color: var(--link); text-decoration: none; }
+    .pmeta a.fix:hover { text-decoration: underline; }
+    details.repo-group { margin-top: 10px; }
+    details.repo-group > summary { cursor: pointer; padding: 6px 0; display: flex;
+      gap: 10px; align-items: baseline; }
+    details.repo-group[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 4px; }
     .nudges { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
     .nudge { display: flex; align-items: center; gap: 10px; padding: 9px 11px;
              background: var(--nudge-bg); border: 1px solid var(--nudge-border); border-radius: 9px; }
@@ -226,6 +237,11 @@
     <div class="card" id="trends-card" style="display:none">
       <div class="section-label">Trends (week over week)</div>
       <div id="trends"></div>
+    </div>
+
+    <div class="card" id="shipped-card" style="display:none">
+      <div class="section-label">Shipped (what came of the proposals)</div>
+      <div id="shipped"></div>
     </div>
 
     <div class="card">
