@@ -208,3 +208,88 @@ def test_write_ledger_persists_and_timestamps(tmp_path):
     written = json.loads(target.read_text(encoding="utf-8"))
     assert written["totals"]["shipped"] == 1
     assert written["generated"].endswith("Z")
+
+
+# --- incremental refresh (keeping the panel live between weekly runs) --------
+
+class _ListRepo:
+    def __init__(self, full_name, issues):
+        self.full_name, self._issues = full_name, issues
+
+    def get_issues(self, state="all"):
+        return self._issues
+
+
+def _single_repo(monkeypatch, issues, slug="A/overseer"):
+    """Configure exactly one reviewed project, served from `issues`."""
+    for key in ("trading_bot", "volleyball", "ufc"):
+        monkeypatch.setitem(o.PROJECTS[key], "repo", None)
+    monkeypatch.setitem(o.PROJECTS["overseer"], "repo", slug)
+    for i in issues:
+        i.repository = _Repo(slug)
+
+    class _GH:
+        def get_repo(self, s):
+            return _ListRepo(s, issues)
+    monkeypatch.setattr(o, "_github", lambda: _GH())
+
+
+def test_settled_outcomes_are_carried_forward_without_a_timeline_call(monkeypatch):
+    # The optimisation that makes an hourly refresh cheap: the per-issue PR
+    # lookup is the expensive call, and a shipped fix cannot un-ship.
+    issue = _Issue(1, "Done", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    _single_repo(monkeypatch, [issue])
+    calls = []
+    monkeypatch.setattr(o, "_linked_prs", lambda i: calls.append(i) or [])
+
+    known = {"entries": [{"repo": "A/overseer", "number": 1, "title": "Done",
+                          "status": "shipped", "kind": "bug", "url": "",
+                          "created_at": "2026-07-01", "closed_at": "2026-08-01"}]}
+    led = o.delivery_ledger(known=known)
+    assert led["totals"]["shipped"] == 1
+    assert calls == [], "a settled entry must not trigger a timeline lookup"
+
+
+def test_live_entries_are_always_rechecked(monkeypatch):
+    # in_flight is NOT terminal — it is precisely the state that should flip to
+    # shipped the moment a PR merges, which is the whole point of refreshing.
+    issue = _Issue(2, "Pending", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    _single_repo(monkeypatch, [issue])
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [_PR(True, "closed", 7)])
+
+    known = {"entries": [{"repo": "A/overseer", "number": 2, "title": "Pending",
+                          "status": "in_flight", "kind": "bug", "url": "",
+                          "created_at": "2026-07-01", "closed_at": None}]}
+    led = o.delivery_ledger(known=known)
+    assert led["entries"][0]["status"] == "shipped"
+    assert led["entries"][0]["fix_ref"] == "PR #7"
+
+
+def test_a_reopened_issue_loses_its_settled_status(monkeypatch):
+    # Carrying a terminal status forward on a reopened issue would leave the
+    # panel asserting an outcome that no longer holds.
+    issue = _Issue(3, "[enhancement] Back again", body=o.OVERSEER_MARKER, state="open")
+    _single_repo(monkeypatch, [issue])
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [])
+
+    known = {"entries": [{"repo": "A/overseer", "number": 3, "title": "Back again",
+                          "status": "shipped", "kind": "enhancement", "url": "",
+                          "created_at": "2026-07-01", "closed_at": "2026-08-01"}]}
+    led = o.delivery_ledger(known=known)
+    assert led["entries"][0]["status"] == "open"
+
+
+def test_full_rebuild_ignores_the_published_ledger(monkeypatch):
+    issue = _Issue(4, "Done", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    _single_repo(monkeypatch, [issue])
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [])
+    known = {"entries": [{"repo": "A/overseer", "number": 4, "title": "Done",
+                          "status": "shipped", "kind": "bug", "url": "",
+                          "created_at": "2026-07-01", "closed_at": "2026-08-01"}]}
+    # known=None is what --full passes: no carry-forward, so the unmerged
+    # reality (in_flight) replaces the stale "shipped".
+    assert o.delivery_ledger(known=None)["entries"][0]["status"] == "in_flight"
+    assert o.delivery_ledger(known=known)["entries"][0]["status"] == "shipped"
