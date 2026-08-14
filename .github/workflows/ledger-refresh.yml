@@ -1,0 +1,91 @@
+name: Refresh Delivery Ledger
+
+# Keeps the Shipped panel live instead of weekly.
+#
+# The ledger is pure GitHub reads — no Anthropic key, no agents, no model calls
+# — so it is cheap enough to run constantly, unlike the weekly review it used to
+# be bolted to. Before this, a PR merged on Tuesday still read "in flight" until
+# the following Monday.
+#
+# THE CROSS-REPO PROBLEM: three of the four projects are separate repositories,
+# and GitHub only fires pull_request/issues events in the repo where they
+# happen. So local events give instant updates for the overseer's own work, and
+# a short cron covers the other three. The alternative — repository_dispatch
+# from each project repo — would be instant everywhere but needs a PAT with
+# actions:write stored in three more places, which is exactly the credential
+# sprawl that caused the July outage. The dispatch trigger is wired up anyway so
+# it can be opted into per-repo (see README) without another workflow change.
+
+on:
+  # Instant for the overseer's own work.
+  pull_request:
+    types: [closed]
+  issues:
+    types: [closed, reopened]
+  # Covers the other three repos. Hourly at :20 to stay clear of the weekly
+  # review at :00 and the heartbeat at :00.
+  schedule:
+    - cron: "20 * * * *"
+  # Opt-in instant path for project repos that choose to notify us.
+  repository_dispatch:
+    types: [ledger-refresh]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Re-walk every issue instead of carrying settled outcomes forward"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# One refresh at a time. Without this a merge event and the cron can land
+# together and race to commit the same file. Not cancel-in-progress: a refresh
+# that is already writing should finish rather than leave a half-written file.
+concurrency:
+  group: ledger-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # PyGithub only — the agent dependencies aren't needed for a read.
+      - run: pip install "PyGithub>=2.1"
+
+      - name: Rebuild the ledger
+        env:
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+        run: |
+          python scripts/refresh_ledger.py ${{ inputs.full && '--full' || '' }}
+
+      - name: Publish if anything moved
+        run: |
+          if git diff --quiet -- docs/shipped.json; then
+            echo "Ledger unchanged — nothing to publish."
+            exit 0
+          fi
+          git config user.name  "overseer-bot"
+          git config user.email "overseer-bot@users.noreply.github.com"
+          git add docs/shipped.json
+          git commit -m "Refresh delivery ledger"
+          # The weekly review commits to the same branch, and on a busy repo the
+          # remote can move between checkout and push. Rebase and retry rather
+          # than failing a run whose only job is to publish one small file.
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "push failed (attempt $i) — retrying"
+            sleep $((i * 5))
+          done
+          exit 1

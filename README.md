@@ -83,6 +83,48 @@ pipeline re-proposed its own ideas constantly:
 `ufc-dashboard#68` is the sharpest case: it proposed a per-bout CLV tracker that
 was already built, running, and computing CLV for 95 bouts in production.
 
+#### Keeping the ledger live
+
+The ledger used to be written only by the weekly review, so a PR merged on
+Tuesday still read "in flight" until the following Monday. `ledger-refresh.yml`
+decouples it: the refresh is **pure GitHub reads** — no Anthropic key, no agents,
+no model calls — so it can run constantly for effectively nothing.
+
+| Trigger | Covers | Latency |
+|---|---|---|
+| `pull_request: closed`, `issues: closed/reopened` | the overseer's own work | seconds |
+| `schedule` hourly at :20 | the other three repos | ≤ 1 hour |
+| `repository_dispatch: ledger-refresh` | opt-in, any repo | seconds |
+| `workflow_dispatch` (`full: true`) | manual, full re-walk | on demand |
+
+**Why the other three repos poll instead of pushing:** GitHub fires
+`pull_request` events only in the repo where the PR lives, so instant cross-repo
+updates need a `repository_dispatch` call *from* each project repo — which means
+a PAT with `actions: write` stored in three more places. That is the credential
+sprawl that caused the July outage, traded for 59 minutes of latency. The
+dispatch trigger is wired up regardless, so you can opt any repo in by adding a
+step to its own workflow:
+
+```yaml
+      - name: Tell the overseer something shipped
+        if: github.event.pull_request.merged == true
+        run: |
+          curl -sS -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.OVERSEER_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/<you>/overseer/dispatches \
+            -d '{"event_type":"ledger-refresh"}'
+```
+
+The refresh is **incremental**: outcomes that can't change again (shipped,
+duplicate, not planned) are carried forward from the published ledger, so the
+expensive per-issue timeline lookup only runs for entries still in motion — 9 of
+65 today. A reopened issue drops its settled status and is recomputed. Run with
+`--full` to re-walk everything.
+
+It refuses to publish a ledger emptier than the live one: entries don't vanish,
+so a collapse to zero means a bad credential or an unconfigured environment, and
+blanking the panel would destroy the record it exists to keep.
+
 ### Failing loudly (credential preflight + heartbeat)
 
 Between 2026-07-20 and 2026-08-10 the weekly Action reported **success** four

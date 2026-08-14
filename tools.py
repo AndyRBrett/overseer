@@ -316,13 +316,30 @@ def _has_merged_fix(issue):
     return any(pr.merged for pr in _linked_prs(issue))
 
 
-def delivery_ledger(merged_only=True, limit_per_repo=100):
+# Outcomes that cannot change again. A shipped fix does not un-ship, and a
+# duplicate does not stop being one — so a refresh can carry these forward
+# instead of re-walking each issue's timeline. That is what makes a frequent
+# refresh cheap: the per-issue PR lookup is the expensive call, and it only has
+# to run for the handful of entries still in motion.
+TERMINAL_STATUSES = ("shipped", "duplicate", "not_planned")
+
+
+def delivery_ledger(merged_only=True, limit_per_repo=100, known=None):
     """Every overseer-filed issue across the reviewed repos, with its outcome.
 
-    Returns {"entries": [...], "totals": {...}, "repos": {...}}. Never raises:
+    `known`: a previously published ledger (as returned by this function or read
+    back from LEDGER_PATH). Entries in it with a terminal status are reused
+    as-is, skipping their timeline lookup. Pass None for a full rebuild.
+
+    Returns {"entries": [...], "totals": {...}, "errors": {...}}. Never raises:
     an unreachable repo contributes an error note instead of killing the run,
     because a partial ledger is still worth showing.
     """
+    settled = {}
+    for entry in (known or {}).get("entries", []):
+        if entry.get("status") in TERMINAL_STATUSES:
+            settled[(entry.get("repo"), entry.get("number"))] = entry
+
     entries, repo_errors = [], {}
     for key in REVIEW_PROJECTS:
         slug = PROJECTS[key].get("repo")
@@ -333,6 +350,13 @@ def delivery_ledger(merged_only=True, limit_per_repo=100):
             for issue in repo.get_issues(state="all")[:limit_per_repo]:
                 if issue.pull_request is not None:
                     continue  # get_issues returns PRs too
+                prior = settled.get((slug, issue.number))
+                # Reuse only while the issue is still closed. If it was reopened
+                # its outcome is live again and has to be recomputed, or the
+                # ledger would keep reporting a settled state that no longer holds.
+                if prior and issue.state == "closed":
+                    entries.append(prior)
+                    continue
                 entry = _ledger_entry(issue, merged_only=merged_only)
                 if entry:
                     entries.append(entry)
