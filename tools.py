@@ -269,20 +269,61 @@ def _ledger_entry(issue, merged_only=True):
         entry["status"] = reason
         return entry
 
-    merged = [pr for pr in _linked_prs(issue) if pr.merged]
+    # A closed-as-completed issue is DELIVERED unless there is positive evidence
+    # the work is still pending. The first cut had this backwards: it treated the
+    # absence of a merged PR as proof of non-delivery, so anything shipped by a
+    # direct commit to main could never read as shipped. These repos land most
+    # work that way — the first refresh duly reported six coachvision features
+    # from June, long live in production, as "in flight". Absence of a PR link is
+    # absence of evidence, not evidence of absence.
+    prs = _linked_prs(issue)
+    merged = [pr for pr in prs if pr.merged]
+    pending = [pr for pr in prs if not pr.merged and pr.state == "open"]
+
+    # WHERE it landed, best source first. Without this the panel can say
+    # "shipped" and still leave you hunting through commit history for it.
     if merged:
-        # WHERE it was implemented, not just that it was. Without this the panel
-        # can say "shipped" and still leave you hunting through commit history
-        # for the change it is talking about.
         entry["fix_url"] = merged[0].html_url
         entry["fix_ref"] = f"PR #{merged[0].number}"
         if merged[0].merge_commit_sha:
             entry["fix_sha"] = merged[0].merge_commit_sha[:7]
-    if merged_only:
-        entry["status"] = "shipped" if merged else "in_flight"
+    elif pending:
+        entry["fix_url"] = pending[0].html_url
+        entry["fix_ref"] = f"PR #{pending[0].number} (open)"
+    else:
+        sha = _closing_commit(issue)
+        if sha:
+            entry["fix_url"] = f"https://github.com/{entry['repo']}/commit/{sha}"
+            entry["fix_ref"] = sha[:7]
+            entry["fix_sha"] = sha[:7]
+
+    if not merged_only:
+        entry["status"] = "shipped"
+    elif merged:
+        entry["status"] = "shipped"
+    elif pending:
+        # The one case that genuinely is not delivered yet: a fix exists but is
+        # sitting in review. This is what keeps the panel from taking credit for
+        # unmerged code.
+        entry["status"] = "in_flight"
     else:
         entry["status"] = "shipped"
     return entry
+
+
+def _closing_commit(issue):
+    """SHA of the commit that closed this issue, if it was closed by one.
+
+    Covers the direct-commit workflow these repos actually use, so "where did
+    this land" has an answer even when no pull request was involved.
+    """
+    try:
+        for event in issue.get_timeline():
+            if event.event == "closed" and getattr(event, "commit_id", None):
+                return event.commit_id
+    except Exception:  # noqa: BLE001 — enrichment must never break a run
+        return None
+    return None
 
 
 def _linked_prs(issue):
