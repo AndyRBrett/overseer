@@ -337,7 +337,13 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
   happening, or completes while blind (stdlib only, no token)
 - `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
-- `scripts/delete-merged-branches.sh` — one-off cleanup of branches already
-  merged into `main`; dry-run by default, `--go` to apply
+- `scripts/delete-merged-branches.sh` — cleanup of branches already merged into
+  `main` across all four repos; dry-run by default, `--go` to apply. Runnable
+  from a phone via the **Clean up merged branches** Action (Actions tab → Run
+  workflow → mode). A delete run needs `OVERSEER_GITHUB_TOKEN` to carry
+  **Contents: write** on all four repos; a dry run needs no token at all.
 - `.github/workflows/weekly-review.yml` — cron, digest commit, push, report artifact
 - `.github/workflows/heartbeat.yml` — daily heartbeat, independent of the above
+- `.github/workflows/cleanup-branches.yml` — manual branch cleanup (never
+  scheduled); writes the result to the run's job summary so it's readable on a
+  phone without opening the log
