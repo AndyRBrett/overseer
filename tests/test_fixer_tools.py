@@ -170,21 +170,46 @@ def test_open_pull_request_links_the_issue(fake_remote, monkeypatch):
     assert "Fixes #7" in pull["body"]  # closes the issue on merge
 
 
-def test_shell_git_push_cannot_use_credentials(fake_remote, monkeypatch):
-    # run_in_workspace lets the agent run arbitrary git, so the clone's remote
-    # must hold no credentials — otherwise a shell `git push origin main` would
-    # bypass commit_and_push's default-branch guard.
+def test_shell_git_push_is_blocked_at_the_pushurl(fake_remote, monkeypatch):
+    # run_in_workspace lets the agent run arbitrary git, so a shell
+    # `git push origin main` must not bypass commit_and_push's default-branch
+    # guard.
+    #
+    # This asserts the GUARD, not the absence of credentials. The earlier version
+    # only checked that the remote URL carried no token, which holds the line
+    # solely when nothing else authenticates github.com. That assumption broke
+    # for real: run inside a sandbox whose git proxy authenticates github.com,
+    # this very test pushed a live branch to AndyRBrett/ufc-dashboard and then
+    # reported failure because the push had SUCCEEDED. A safety test that passes
+    # only in environments without ambient credentials gives false assurance
+    # exactly where you need real assurance.
     repo, origin = fake_remote
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_sekret12345")
     o.setup_fix_workspace(repo, 7)
-    # The stored URL (git may rewrite the effective one via insteadOf rules):
+
     url = o.run_in_workspace(repo, "git config remote.origin.url")["output"].strip()
     assert url == f"https://github.com/{repo}.git"       # not the clone source, no token
+    pushurl = o.run_in_workspace(repo, "git config remote.origin.pushurl")["output"].strip()
+    assert pushurl == o.BLOCKED_PUSH_URL, "pushes must be blocked at the URL itself"
+
     o.write_workspace_file(repo, "calc.py", FIXED_CALC)
     o.run_in_workspace(repo, "git add -A && git commit -m sneaky")
     r = o.run_in_workspace(repo, "git push origin HEAD", timeout=30)
     assert r["status"] == "timeout" or r["exit_code"] != 0
     assert remote_branches(origin) == ["main"]           # nothing reached the remote
+
+
+def test_guarded_push_reblocks_the_pushurl_afterwards(fake_remote):
+    # commit_and_push opens the gate for its own push. If a failure left it open,
+    # the next shell command could push freely — so it closes in a finally.
+    repo, origin = fake_remote
+    o.setup_fix_workspace(repo, 7)
+    o.write_workspace_file(repo, "calc.py", FIXED_CALC)
+    o.commit_and_push(repo, "fix add()")
+    pushurl = o.run_in_workspace(repo, "git config remote.origin.pushurl")["output"].strip()
+    assert pushurl == o.BLOCKED_PUSH_URL, "gate left open after a guarded push"
+    # And the guarded push itself still worked.
+    assert "main" in remote_branches(origin) and len(remote_branches(origin)) == 2
 
 
 def test_open_pull_request_enforces_fix_budget(fake_remote, monkeypatch):

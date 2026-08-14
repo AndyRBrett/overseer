@@ -21,9 +21,9 @@ TOOL_NAMES = [
     "file_issue",
 ]
 
-SYSTEM_PROMPT = f"""You are the BUG-HUNTER. You review three personal automation
+SYSTEM_PROMPT_TEMPLATE = """You are the BUG-HUNTER. You review three personal automation
 projects AND Project Overseer itself (this very agent pipeline):
-{tools.project_block()}
+{project_block}
 
 Use the exact repo slugs above when calling file_issue.
 
@@ -45,7 +45,11 @@ Process:
   flags this as stale), or read tools that have been blind for multiple cycles
   are real bugs worth filing against the overseer repo.
 - Before filing, call search_existing_issues on that repo to avoid duplicates.
-  Do not file if a matching open issue already exists.
+  Do not file if a matching open issue already exists. The ALREADY ON RECORD
+  list below is the fast path: check it FIRST, and only search when the list
+  doesn't settle it. A bug already SHIPPED is fixed — if you believe it has
+  regressed, say so explicitly with fresh evidence rather than re-filing it as
+  though it were new.
 - Only then call file_issue with a specific, technical title and a body that
   states the evidence (what you read, why it's a bug, where it surfaced).
 - If a read tool returns status "not_configured" or "error", note it briefly and
@@ -60,18 +64,34 @@ overseer):
   - what you filed (title + issue number/url, or "none")
 
 Be specific and technical. This summary is read by a downstream reviewer, so
-make it self-contained — it will not see the raw logs."""
+make it self-contained — it will not see the raw logs.
+
+ALREADY ON RECORD — issues this pipeline has already filed:
+{known_work}
+"""
+
+
+def build_system_prompt(known_work=None):
+    """System prompt with the already-filed ledger injected (see tools.known_work_block)."""
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        project_block=tools.project_block(),
+        known_work=known_work or "(no previously filed issues on record)",
+    )
 
 USER_MESSAGE = ("Investigate this week's data for all three projects and the "
                 "overseer itself, and file any confirmed bugs.")
 
 
-def run(client, tracer):
-    """Run the Bug-Hunter to completion; return its structured summary text."""
+def run(client, tracer, known_work=None):
+    """Run the Bug-Hunter to completion; return its structured summary text.
+
+    `known_work` is the delivery ledger's summary of already-filed issues, so a
+    fixed bug isn't re-filed as though it were new.
+    """
     return tools.run_agent(
         client,
         agent="Bug-Hunter",
-        system=SYSTEM_PROMPT,
+        system=build_system_prompt(known_work),
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,

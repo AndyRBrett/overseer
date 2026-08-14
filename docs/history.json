@@ -15,10 +15,6 @@
           "status": "ok",
           "score": 1.0
         },
-        "Volleyball": {
-          "status": "idle",
-          "score": 0.5
-        },
         "UFC dashboard": {
           "status": "ok",
           "score": 1.0
@@ -26,6 +22,10 @@
         "Overseer": {
           "status": "ok",
           "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
         }
       }
     },
@@ -44,10 +44,6 @@
           "status": "ok",
           "score": 1.0
         },
-        "Volleyball": {
-          "status": "idle",
-          "score": 0.5
-        },
         "UFC dashboard": {
           "status": "ok",
           "score": 1.0
@@ -55,6 +51,10 @@
         "Overseer": {
           "status": "ok",
           "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
         }
       }
     },
@@ -73,9 +73,218 @@
           "status": "ok",
           "score": 1.0
         },
-        "Volleyball": {
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
           "status": "idle",
           "score": 0.5
+        }
+      }
+    },
+    {
+      "date": "2026-07-06",
+      "generated": "2026-07-06T16:50:21Z",
+      "status": "completed",
+      "counts": {
+        "tools": 17,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 6
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "idle",
+          "score": 0.5
+        }
+      }
+    },
+    {
+      "date": "2026-07-13",
+      "generated": "2026-07-13T16:22:52Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Review Digest\n\nIssues Found\n- crypto-trading \u2014 Daily runs halted; overseer-status.json stale ~6.4 days (no runs since 2026-07-07, failing silently). #34\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-project freshness SLA + staleness alerts in digest (effort: low, impact: high): the crypto feed sat 153h stale while overseer stayed quiet \u2014 surface silent staleness at top of digest. (Directly prevents repeats of issue #34.)\n2. crypto-trading \u2014 Signal reject-funnel report from existing thresholds (effort: low, impact: high): 10 signals evaluated, 0 acted \u2014 show the binding constraint to tell mis-tuned from structurally idle.\n3. ufc-dashboard \u2014 Detect fighter-swap/bout-replacement to suppress phantom alerts (effort: medium, impact: high): impossible magnitudes (983, -245) are substitutions diffed as odds moves \u2014 restore alert trust.\n4. coachvision \u2014 Per-technique coaching feedback w/ confidence scores (effort: medium, impact: high): segmentation works but nothing consumes it \u2014 build the layer that gives users a reason to upload clips.\n5. ufc-dashboard \u2014 Rank/badge alerts by main-event weight + time-to-event (effort: low, impact: medium): main events are buried under raw magnitude.\n6. crypto-trading \u2014 Buy-and-hold benchmark + rolling alpha on equity curve (effort: low, impact: medium): scalars already exist (-10.7% alpha) \u2014 make underperformance visually obvious.",
+      "counts": {
+        "tools": 18,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 7
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      }
+    },
+    {
+      "date": "2026-07-20",
+      "generated": "2026-07-20T15:45:39Z",
+      "status": "completed",
+      "summary": "Weekly Digest\n\nIssues Found\n- Overseer \u2014 CONFIRMED: total GitHub API auth failure. Every tool (all reads, search, file_issue) returns 401 \"Bad credentials\". Overseer is fully blind: can't read any of the 3 projects, can't check its own health, can't dedupe or file issues. Root cause: dead/expired/misconfigured GitHub token shared by all tools.\n- \u26a0\ufe0f Self-file failed \u2014 the write path is broken by the same 401, so this ticket could NOT be auto-created. Manual action needed: rotate the overseer's GitHub PAT and verify scopes (repo read on all 4 repos + issues write).\n- crypto-trading / coachvision / ufc-dashboard \u2014 no project bugs confirmed; all data reads were blocked by the same 401, so nothing could be verified this cycle.\n\nTop Enhancement Ideas (ranked)\n1. Overseer \u2014 Startup auth health-check (effort: low, impact: high): validate the GitHub credential at startup and fail loudly / alert on a dead token, instead of silently blinding every review and project check like it did this week.",
+      "counts": {
+        "tools": 11,
+        "errors": 10,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "date": "2026-07-27",
+      "generated": "2026-07-27T16:08:43Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Overseer Digest\n\n\u26a0\ufe0f Both agents were blocked all cycle: the overseer's shared GitHub token returned 401 Bad credentials on every read/search/write call. crypto-trading, coachvision, and ufc-dashboard were NOT assessed \u2014 their true health is unknown until auth is fixed and the review is re-run.\n\nIssues Found\n- overseer \u2014 Shared GitHub token returns 401 \"Bad credentials\" on all tools (read, search, AND file_issue). Overseer is fully blind and cannot even file this bug via the normal path. Needs manual fix: rotate token, verify scopes (repo read + issues write), and add a startup auth pre-flight. (3 projects unreadable as a result.)\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Per-tool credential preflight + graceful degradation with status badges (effort: low, impact: high): validate creds at run start and show per-project \"available / auth failed / not configured\" \u2014 directly prevents this week's silent whole-cycle blindness.\n2. crypto-trading \u2014 Per-strategy risk-adjusted metrics (Sharpe, max drawdown, expectancy) in the daily log (effort: low, impact: high): compare strategies on risk, not just raw P&L; persist a JSON time series for trending.\n3. overseer \u2014 Weekly digest notification via email/Discord (effort: low, impact: high): push the summary automatically instead of relying on visiting the dashboard, closing the pipeline loop.\n4. ufc-dashboard \u2014 Odds-movement history with line-movement alerts (effort: medium, impact: high): persist timestamped odds snapshots, chart movement, flag notable movers past a probability threshold.\n5. coachvision \u2014 Auto-generated per-session coaching highlight reel from key-technique + low-confidence frames (effort: medium, impact: medium): reuse existing detection timestamps to stitch clips for coaching and to spot where the model needs training data.",
+      "counts": {
+        "tools": 16,
+        "errors": 15,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "date": "2026-08-03",
+      "generated": "2026-08-03T16:15:39Z",
+      "status": "completed",
+      "summary": "Weekly Overseer Digest\n\nIssues Found\n- overseer \u2014 GitHub token invalid: all read/search/file tools return `401 Bad credentials`. Overseer was fully blind this cycle and couldn't even file this bug itself. MANUAL FIX: rotate the PAT, verify scopes (repo read + issues write), then re-run to backfill the skipped crypto-trading / coachvision / ufc-dashboard checks. (The per-project \"couldn't read\" notes are all symptoms of this one root cause.)\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Credential preflight + graceful degradation (effort: low, impact: high): validate token at startup and normalize auth failures into structured \"not_configured\" payloads so one expired secret can't blind the whole pipeline \u2014 exactly today's failure.\n2. crypto-trading \u2014 Structured daily run summary as JSONL (effort: low, impact: high): P&L, fills, slippage, equity, errors as a queryable time series; unlocks dashboards + backtesting.\n3. overseer \u2014 Golden-file unit tests + CI for tracer/read-tool parsers (effort: low, impact: medium): catch schema drift before the weekly run.\n4. overseer \u2014 Cache last-successful read snapshots, serve stale-with-timestamp on failure (effort: medium, impact: high): keeps reviews useful during outages/expired creds.\n5. ufc-dashboard \u2014 Track odds movement with line-move / CLV alerts (effort: medium, impact: high): highest-value signal the scraper currently discards.\n6. crypto-trading \u2014 Regime filter + volatility-scaled position sizing (effort: medium, impact: high): constant risk budget, better risk-adjusted P&L; backtestable on existing logs.\n7. coachvision \u2014 Kalman/optical-flow ball-track interpolation + smoothing (effort: medium, impact: high): bridges detection gaps for cleaner trajectories, no retraining.",
+      "counts": {
+        "tools": 20,
+        "errors": 19,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "date": "2026-08-10",
+      "generated": "2026-08-10T14:51:27Z",
+      "status": "completed",
+      "summary": "\ud83d\udccb Weekly Review Digest\n\n\u26a0\ufe0f Heads-up: The GitHub token behind ALL overseer tools returned 401 this run. Nothing could be read or filed \u2014 crypto-trading, coachvision, and ufc-dashboard went UNREVIEWED. Rotate the credential and re-run to get real project coverage.\n\nIssues Found\n- OVERSEER \u2014 All GitHub-authed tools (reads, search, file_issue) fail with persistent 401 \"Bad credentials\"; token is expired/revoked. Overseer is fully blind and could not even file this bug itself. Manual token rotation required out-of-band.\n\nTop Enhancement Ideas (ranked)\n1. OVERSEER \u2014 Credential preflight + graceful degradation (effort: low, impact: high): Validate token at startup and map 401/403 to a structured \"not_configured\" payload so a bad token can't silently kill the whole review \u2014 exactly what broke this week.\n2. OVERSEER \u2014 Weekly digest notifier via webhook (effort: low, impact: high): Config-gated end-of-pipeline notification so you get passive weekly awareness without opening the dashboard.\n3. UFC-DASHBOARD \u2014 Freshness badge + scraper self-heal/fallback (effort: low, impact: medium): Timestamp scrapes, show a staleness badge, and fall back to secondary source/last-good cache so stale data never looks fresh.\n4. CRYPTO-TRADING \u2014 Per-strategy risk guardrails (effort: medium, impact: high): Pre-trade drawdown circuit-breaker + position-size cap to protect capital regardless of signal quality.\n5. CRYPTO-TRADING \u2014 Backtest harness for the live signal function (effort: medium, impact: high): Replay cached OHLCV to measure win rate/Sharpe/drawdown before shipping changes \u2014 safe iteration + regression protection.\n6. UFC-DASHBOARD \u2014 Odds-movement tracking + line-movement alerts (effort: medium, impact: high): Snapshot and diff odds between runs to surface significant implied-probability shifts from data already scraped.\n7. COACHVISION \u2014 Auto-flag low-confidence frames into a review queue (effort: medium, impact: medium): Route uncertain frames to a labeling manifest to build a fine-tuning set and a self-improving accuracy loop.",
+      "counts": {
+        "tools": 21,
+        "errors": 20,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "error",
+          "score": 0.0
+        },
+        "coachvision": {
+          "status": "error",
+          "score": 0.0
+        },
+        "UFC dashboard": {
+          "status": "error",
+          "score": 0.0
+        },
+        "Overseer": {
+          "status": "error",
+          "score": 0.0
+        }
+      }
+    },
+    {
+      "date": "2026-08-13",
+      "generated": "2026-08-13T20:53:26Z",
+      "status": "completed",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 85.1h old, SLA 48h \u00b7 stale 1 cycle\n\n\ud83d\udccb Weekly Review \u2014 2026-08-13\n\nIssues Found\n- ufc-dashboard (#66): Scraper parse-failure on 2026-08-22 Hernandez vs Rodrigues \u2014 page fetches but 0 bouts extracted (bout_count 8), so event carries no odds; masked by 100% run success. Watch: UFC 330 line flagged stale <2 days out (not filed).\n- Note: coachvision is idle/stale (no footage ever ingested) but self-test passes \u2014 monitoring gap, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Signal-proximity telemetry panel (effort: low, impact: high): 0/10 signals acted; chart distance-to-trigger to see if market's quiet vs thresholds miscalibrated. No capital at risk. (#38)\n2. ufc-dashboard \u2014 Push line-movement alerts to Telegram/Discord (effort: low, impact: high): movement data already computed but stuck in JSON; add webhook sink w/ dedup for real-time odds tracking. (#67)\n3. overseer \u2014 Dead-man's-switch heartbeat alert (effort: low, impact: high): overseer ran 1\u00d7/7d (78h stale); independent freshness ping removes the SPOF that would silently blind all monitoring. (#17)\n4. crypto-trading \u2014 Walk-forward backtest + param-sweep harness (effort: high, impact: high): 90d P&L -793, Sharpe -2.71 is systematic; offline replay quantifies whether an edge exists before risking changes. (#39)\n5. coachvision \u2014 Bundled demo clip + auto report (effort: medium, impact: medium): reuse passing 77-frame fixture to auto-produce a sample report, lowering activation barrier and exercising the report path. (#21)\n6. ufc-dashboard \u2014 Per-bout CLV history + steam-move flags (effort: medium, impact: medium): persist timestamped odds to compute closing-line value and detect sharp moves. (#68)",
+      "counts": {
+        "tools": 19,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 7
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "stale",
+          "score": 0.25
         },
         "UFC dashboard": {
           "status": "ok",

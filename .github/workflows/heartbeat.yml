@@ -1,0 +1,42 @@
+name: Overseer Heartbeat
+
+# Dead-man's switch for the weekly review (overseer #13 / #17).
+#
+# Deliberately a SEPARATE workflow from weekly-review.yml, not a step inside it:
+# a job cannot detect its own failure to start. If the weekly cron lapses, the
+# workflow is disabled, or the run dies before its first step, nothing in that
+# file executes — but this one still fires and goes red.
+#
+# It needs no ANTHROPIC_API_KEY and no OVERSEER_GITHUB_TOKEN. That is the point:
+# the outage it exists to catch was an expired GitHub token, so the alarm must
+# not depend on the credential it is watching. Everything it checks comes from
+# docs/digest.json in the checkout.
+
+on:
+  schedule:
+    # 15:00 UTC daily — a day after the Monday 14:00 weekly run, so a missed
+    # review is caught within ~24h rather than at the end of the next week.
+    - cron: "0 15 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # No `pip install` step: heartbeat.py is standard-library only, so the
+      # alarm keeps working even if the pipeline's dependencies stop resolving.
+      - name: Check that the overseer is alive and seeing
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python scripts/heartbeat.py

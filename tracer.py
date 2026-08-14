@@ -142,6 +142,7 @@ class RunTracer:
             if ev["kind"] != "tool_call" or ev["name"] not in self.read_tools:
                 continue
             label = self.read_tools[ev["name"]]
+            obj = {}
             if ev["is_error"]:
                 status, reason = "error", _oneline(ev["result"], 120)
             else:
@@ -152,21 +153,42 @@ class RunTracer:
                 rs = obj.get("status", "ok")
                 if rs != "ok":
                     status, reason = "blind", ("not configured" if rs == "not_configured" else rs)
+                elif _is_stale(obj):
+                    status, reason = "stale", "read OK but the project's data is past-due / stale"
                 elif _is_idle(obj):
-                    status, reason = "idle", "read OK but no recent activity / stale data"
+                    status, reason = "idle", "read OK but no recent activity"
                 else:
                     status, reason = "ok", None
-            prev = self.prev_projects.get(label, {})
+            # Prefer the project's self-reported `app` name from its status file;
+            # fall back to the static READ_TOOLS label when a read fails or the
+            # file omits `app`, so the name stays stable across healthy/blind runs.
+            name = _app_name(obj) or label
+            prev = self.prev_projects.get(name, {})
             if status == "ok":
-                projects[label] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+                projects[name] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
+            elif status == "stale":
+                # Data past-due, but the read itself worked so last_ok updates;
+                # track how many cycles it's been stale so a chronically dark feed
+                # escalates week over week instead of resetting. Carry the age +
+                # freshness SLA through so the alert can say *how* past-due it is
+                # (overseer #1). UFC nests these under data_* (see read tool).
+                rec = {"status": "stale", "reason": reason, "last_ok": now_iso,
+                       "blind_cycles": 0, "stale_cycles": prev.get("stale_cycles", 0) + 1}
+                age = obj.get("age_hours", obj.get("data_age_hours"))
+                sla = obj.get("sla_hours", obj.get("data_sla_hours"))
+                if age is not None:
+                    rec["age_hours"] = age
+                if sla is not None:
+                    rec["sla_hours"] = sla
+                projects[name] = rec
             elif status == "idle":
                 # Idle read fine, so last_ok updates; track how long it's been quiet.
-                projects[label] = {"status": "idle", "reason": reason, "last_ok": now_iso,
-                                   "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
+                projects[name] = {"status": "idle", "reason": reason, "last_ok": now_iso,
+                                  "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
             else:
-                projects[label] = {"status": status, "reason": reason,
-                                   "last_ok": prev.get("last_ok"),
-                                   "blind_cycles": prev.get("blind_cycles", 0) + 1}
+                projects[name] = {"status": status, "reason": reason,
+                                  "last_ok": prev.get("last_ok"),
+                                  "blind_cycles": prev.get("blind_cycles", 0) + 1}
         return projects
 
     def rollup(self) -> dict:
@@ -184,17 +206,27 @@ class RunTracer:
             status = p.get("status")
             if status == "ok":
                 continue
-            cycles = p.get("idle_cycles", 0) if status == "idle" else p.get("blind_cycles", 0)
+            if status == "stale":
+                cycles = p.get("stale_cycles", 0)
+            elif status == "idle":
+                cycles = p.get("idle_cycles", 0)
+            else:
+                cycles = p.get("blind_cycles", 0)
+            # A stale feed is a freshness violation the moment we see it — a
+            # scheduled job has stopped — so it nudges immediately rather than
+            # waiting out the idle/blind cycle threshold (overseer #1).
+            nudge = True if status == "stale" else cycles >= NUDGE_CYCLES
             attention.append({
                 "name": name,
                 "status": status,
                 "detail": _attention_detail(status, p),
                 "cycles": cycles,
-                "nudge": cycles >= NUDGE_CYCLES,
+                "nudge": nudge,
             })
-        # Nudged projects first, then the rest, each alphabetical — the things
-        # that need action surface at the top of the list.
-        attention.sort(key=lambda a: (not a["nudge"], a["name"]))
+        # Nudged projects first; within each group most-severe status first
+        # (can't-see-it before past-due before merely-quiet), then alphabetical —
+        # so a dead daily feed never sits below a harmlessly-idle project.
+        attention.sort(key=lambda a: (not a["nudge"], _ATTENTION_SEVERITY.get(a["status"], 0), a["name"]))
         return {
             "ok": sum(1 for p in health.values() if p.get("status") == "ok"),
             "total": len(health),
@@ -204,6 +236,41 @@ class RunTracer:
             "nudge_threshold": NUDGE_CYCLES,
             "attention": attention,
         }
+
+    def freshness_alerts(self) -> list[dict]:
+        """Every project whose published data has breached its freshness SLA this
+        run — computed straight from project health, independent of what the
+        digest author chose to mention (overseer #1). Issue #34 (a crypto feed
+        silently ~153h stale) slipped through because the digest stayed quiet
+        about it; deriving the alerts here means a halted feed can't hide behind
+        an LLM omission. Sorted by name for a stable order."""
+        alerts = []
+        for name, p in self.project_health().items():
+            if p.get("status") != "stale":
+                continue
+            alerts.append({
+                "name": name,
+                "detail": _attention_detail("stale", p),
+                "age_hours": p.get("age_hours"),
+                "sla_hours": p.get("sla_hours"),
+                "stale_cycles": p.get("stale_cycles", 0),
+            })
+        alerts.sort(key=lambda a: a["name"])
+        return alerts
+
+    def freshness_banner(self) -> str:
+        """A short plain-text STALENESS ALERTS block to lead the digest with when
+        a feed is past-due — prepended to the Telegram digest and the dashboard
+        summary so silent staleness is impossible (overseer #1). Returns "" when
+        nothing is stale, so a healthy week's digest is left untouched. The header
+        is all-caps so the dashboard's formatDigest renders it as a section
+        heading like the digest's own sections."""
+        alerts = self.freshness_alerts()
+        if not alerts:
+            return ""
+        lines = ["STALENESS ALERTS"]
+        lines += [f"- {a['name']} — {a['detail']}" for a in alerts]
+        return "\n".join(lines)
 
     def write_digest(self, path: str) -> None:
         """Emit docs/digest.json — what the installable web app reads."""
@@ -217,9 +284,16 @@ class RunTracer:
                                  "label": f"{ev['name']} ({label})",
                                  "text": _tool_summary(ev)})
             elif ev["kind"] == "thinking":
-                timeline.append({"ts": ev["ts"], "agent": ev.get("agent"),
-                                 "label": "reasoning",
-                                 "text": _oneline(ev["text"], 240)})
+                entry = {"ts": ev["ts"], "agent": ev.get("agent"),
+                         "label": "reasoning",
+                         "text": _oneline(ev["text"], 240)}
+                # Ship the full reasoning (capped) alongside the truncated line
+                # so the dashboard can expand it in place instead of dead-ending
+                # at "…" — the full text otherwise lives only in the CI artifact.
+                full = _oneline(ev["text"], 2000)
+                if full != entry["text"]:
+                    entry["text_full"] = full
+                timeline.append(entry)
         payload = {
             "generated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": self.status,
@@ -241,7 +315,9 @@ class RunTracer:
         that day's record rather than double-counting. The file is capped to the
         last `max_runs` records so it (and the sparklines) stay small. Per project
         we store a 0..1 health score (ok=1, idle=0.5, error/blind=0) so a
-        regression shows up as the line dropping week over week.
+        regression shows up as the line dropping week over week. The run's digest
+        `summary` is stored too, so the dashboard can offer an expandable log of
+        past digests, not just the latest one.
         """
         try:
             with open(path, encoding="utf-8") as f:
@@ -255,6 +331,7 @@ class RunTracer:
             "date": now.strftime("%Y-%m-%d"),
             "generated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "status": self.status,
+            "summary": self.digest_text or "",
             "counts": dict(self.counts),
             "projects": {name: {"status": p.get("status"), "score": _status_score(p.get("status"))}
                          for name, p in self.project_health().items()},
@@ -288,9 +365,17 @@ _ACTIVITY_KEYS = ("trades", "signals_evaluated", "footage_processed", "frames_pr
                   "clips_processed", "events_tracked", "runs_7d")
 
 
+# Attention-row ordering: lower sorts first (more urgent). "Can't see it"
+# (blind/error) outranks a past-due feed (stale), which outranks a quiet-but-fresh
+# project (idle). Keeps the dead-daily-feed inversion from ever recurring.
+_ATTENTION_SEVERITY = {"error": 0, "blind": 0, "stale": 1, "idle": 2}
+
+
 # Per-project health collapsed to a 0..1 score the dashboard plots as a sparkline
-# (overseer #6): a drop from 1.0 to 0.5/0.0 is a visible week-over-week regression.
-_STATUS_SCORE = {"ok": 1.0, "idle": 0.5, "error": 0.0, "blind": 0.0}
+# (overseer #6): a drop from 1.0 to 0.5/0.25/0.0 is a visible week-over-week
+# regression. `stale` (a past-due feed) sits below `idle` (quiet but fresh)
+# because a scheduled job that has stopped is a real problem, not just a quiet week.
+_STATUS_SCORE = {"ok": 1.0, "idle": 0.5, "stale": 0.25, "error": 0.0, "blind": 0.0}
 
 
 def _status_score(status) -> float:
@@ -309,12 +394,39 @@ def activity_idle(data) -> bool:
     return bool(present) and all(v in (0, None) for v in present)
 
 
-def _is_idle(obj: dict) -> bool:
-    """A read succeeded but the project shows no recent activity (overseer #4):
-    explicit stale/idle flags, or every known activity counter at zero. Lets us
-    distinguish 'quiet' from 'dead' instead of rendering zero-activity as green.
+def _app_name(obj: dict):
+    """A project's self-reported display name: the `app` field of the status file
+    it publishes, surfaced through the read tool's `data`. Preferring it lets a
+    repo rename itself on the dashboard (e.g. Volleyball → coachvision) without a
+    code change. Returns None when there's no readable `app` so the caller can
+    fall back to the static READ_TOOLS label."""
+    data = obj.get("data") if isinstance(obj, dict) else None
+    if isinstance(data, dict):
+        app = data.get("app")
+        if isinstance(app, str) and app.strip():
+            return app.strip()
+    return None
+
+
+def _is_stale(obj: dict) -> bool:
+    """A read succeeded but the project's own status file declares its data
+    past-due — an explicit `stale`/`data_stale` flag. This is a freshness
+    violation (a scheduled job that has stopped producing), distinct from a
+    genuinely quiet-but-fresh project: a daily bot dark for days is a problem
+    *now*, not merely 'no recent activity'. Callers check this before `_is_idle`
+    so staleness never gets flattened into the softer idle bucket (overseer #1).
     """
-    if obj.get("stale") or obj.get("data_stale") or obj.get("idle") is True:
+    return bool(obj.get("stale") or obj.get("data_stale"))
+
+
+def _is_idle(obj: dict) -> bool:
+    """A read succeeded and the data is fresh but the project shows no recent
+    activity (overseer #4): an explicit `idle` flag, or every known activity
+    counter at zero. Distinct from `_is_stale` — this is 'quiet', not 'dead'.
+    Lets us render zero-activity as amber instead of green without conflating it
+    with a past-due feed.
+    """
+    if obj.get("idle") is True:
         return True
     data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
     return activity_idle(data)
@@ -324,8 +436,21 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}" + ("" if n == 1 else "s")
 
 
+def _fmt_hours(h) -> str:
+    """Compact hour formatting: 48 not 48.0, 6.4 not 6.40."""
+    return f"{h:g}h" if isinstance(h, (int, float)) else str(h)
+
+
 def _attention_detail(status: str, p: dict) -> str:
     """One-line reason a project needs attention, built from its health flags."""
+    if status == "stale":
+        # Say how past-due it is against its SLA when we know the numbers
+        # ("data 153h old, SLA 48h"); fall back to "past-due" when a status file
+        # flagged itself stale without a parseable timestamp (overseer #1).
+        age, sla = p.get("age_hours"), p.get("sla_hours")
+        when = f"data {_fmt_hours(age)} old" if age is not None else "data past-due"
+        sla_txt = f", SLA {_fmt_hours(sla)}" if sla is not None else ""
+        return f"{when}{sla_txt} · stale " + _plural(p.get("stale_cycles", 0), "cycle")
     if status == "idle":
         return "no recent activity · idle " + _plural(p.get("idle_cycles", 0), "cycle")
     if status == "blind":

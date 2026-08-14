@@ -70,6 +70,11 @@ DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 # so the overseer is a trend monitor and not just a point-in-time board
 # (overseer #6). Capped so the file (and the sparklines) stay small.
 HISTORY_PATH = os.getenv("HISTORY_PATH", "docs/history.json")
+
+# What the pipeline has actually DELIVERED, not just proposed — read back from
+# the issues it filed. Feeds the dashboard's "Shipped" panel and the agents'
+# dedupe context.
+LEDGER_PATH = os.getenv("LEDGER_PATH", "docs/shipped.json")
 HISTORY_MAX_RUNS = int(os.getenv("HISTORY_MAX_RUNS", "26"))  # ~6 months of weekly runs
 
 # ── DRY-RUN SWITCH ───────────────────────────────────────────────────────
@@ -95,23 +100,50 @@ def _env(name, default=None):
     return v.strip() if isinstance(v, str) else v
 
 
+# ── PER-PROJECT FRESHNESS SLA (overseer #1) ──────────────────────────────
+# How old a project's published status file may get before it's flagged STALE.
+# A silently-halted feed must trip an alert, not read as healthy: issue #34 was
+# the crypto status file sitting ~153h stale while the digest stayed quiet.
+# Each project sets its OWN SLA (a daily bot's data goes stale far sooner than a
+# weekly pipeline's) via env, defaulting to 48h — two missed daily runs. The
+# shared default is itself tunable via FRESHNESS_SLA_HOURS.
+FRESHNESS_SLA_DEFAULT_HOURS = int(os.getenv("FRESHNESS_SLA_HOURS", "48"))
+
+
+def _sla_hours(env_name):
+    """A project's freshness SLA in hours, from its own env var, falling back to
+    the shared default. A blank or non-numeric value falls back rather than
+    erroring, so a fat-fingered GitHub Variable can't break the whole run."""
+    raw = _env(env_name)
+    try:
+        return int(raw) if raw else FRESHNESS_SLA_DEFAULT_HOURS
+    except ValueError:
+        return FRESHNESS_SLA_DEFAULT_HOURS
+
+
 PROJECTS = {
     "trading_bot": {
         "label": "Crypto trading bot (Coinbase Advanced Trade via CCXT, daily cloud runs)",
         "repo": _env("TRADING_REPO"),
         "db_path": _env("TRADING_DB_PATH"),              # local deployments
         "status_path": _env("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
+        "sla_hours": _sla_hours("TRADING_SLA_HOURS"),    # daily bot → 48h default
     },
+    # Internal key + env vars stay "volleyball"/VOLLEYBALL_* (the deployment's
+    # GitHub Variables are wired to them); only the human-facing name changed
+    # after the repo rebranded from Volleyball to coachvision (martial arts).
     "volleyball": {
-        "label": "Volleyball CV pipeline (ball + player tracking, coaching feedback)",
+        "label": "coachvision — martial-arts CV pipeline (technique tracking + coaching feedback)",
         "repo": _env("VOLLEYBALL_REPO"),
         "results_path": _env("VOLLEYBALL_RESULTS_PATH"),                       # local
         "status_path": _env("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
+        "sla_hours": _sla_hours("VOLLEYBALL_SLA_HOURS"),
     },
     "ufc": {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
         "repo": _env("UFC_REPO"),  # repo whose Actions runs + status file we read
         "status_path": _env("UFC_STATUS_PATH", "overseer-status.json"),
+        "sla_hours": _sla_hours("UFC_SLA_HOURS"),
     },
     "overseer": {
         "label": "Project Overseer itself — this agent: the weekly-review runner, "
@@ -132,9 +164,13 @@ REVIEW_PROJECTS = CORE_PROJECTS + ("overseer",)
 
 # Maps each read tool to the project it reports on — used to track per-project
 # read health (blind-spot detection) across runs. (overseer self-review #1)
+# The value is only a FALLBACK display name: when a project publishes an `app`
+# field in its overseer-status.json, that self-reported name wins on the
+# dashboard (see tracer.project_health / _app_name). This label is what shows
+# when the read fails or the status file omits `app`.
 READ_TOOLS = {
     "read_trading_bot_log": "Trading bot",
-    "read_volleyball_results": "Volleyball",
+    "read_volleyball_results": "coachvision",
     "read_ufc_scraper_status": "UFC dashboard",
     "read_overseer_status": "Overseer",
 }
@@ -169,6 +205,351 @@ def _github():
         from github import Auth, Github  # PyGithub
         _gh = Github(auth=Auth.Token(token))
     return _gh
+
+
+# ── DELIVERY LEDGER ──────────────────────────────────────────────────────
+# Closing the loop: the overseer proposes work every week and never learns what
+# came of it. Two costs follow from that, and this fixes both from one source.
+#
+#   1. Nothing shows what the pipeline has actually DELIVERED — only what it
+#      suggested. A month of digests reads as a pile of ideas with no evidence
+#      any of them mattered.
+#   2. With no memory of what it already proposed, the Idea agent re-proposes it.
+#      That is not hypothetical: #13/#17 are the same dead-man's switch five
+#      weeks apart, #11/#15 the same staleness alerting, #9/#12/#14/#16 the same
+#      schema validation four times over seven weeks, and ufc-dashboard#68
+#      proposed a per-bout CLV tracker that was already fully built and running.
+#
+# Every issue the agents file is stamped with OVERSEER_MARKER, so the ledger is
+# just "read back our own issues and see what happened to them".
+
+# Stamped into every filed issue body. Changing this orphans older issues from
+# the ledger, so treat it as a stable identifier, not a message.
+OVERSEER_MARKER = "_Filed by Project Overseer._"
+
+
+def _ledger_entry(issue, merged_only=True):
+    """One ledger row from a GitHub issue, or None if it isn't ours.
+
+    `merged_only` decides what counts as SHIPPED. A closed issue whose fix sits
+    on an unmerged branch is 'in flight', not delivered — claiming otherwise
+    would let the dashboard take credit for unreviewed code. GitHub only reports
+    a linked PR as merged once it lands on the default branch, so that flag is
+    the honest signal and we key off it rather than off the close alone.
+    """
+    body = issue.body or ""
+    labels = {l.name for l in issue.labels}
+    # Legacy fallback: bugs filed before file_issue stamped the marker, and
+    # enhancements are still recognisable by their title prefix + effort labels.
+    ours = (OVERSEER_MARKER in body
+            or issue.title.startswith("[enhancement]")
+            or any(l.startswith("effort:") for l in labels))
+    if not ours:
+        return None
+
+    kind = "enhancement" if ("enhancement" in labels
+                             or issue.title.startswith("[enhancement]")) else "bug"
+    entry = {
+        "repo": issue.repository.full_name,
+        "number": issue.number,
+        "title": issue.title.removeprefix("[enhancement]").strip(),
+        "kind": kind,
+        "url": issue.html_url,
+        "state": issue.state,
+        "created_at": issue.created_at.isoformat() if issue.created_at else None,
+        "closed_at": issue.closed_at.isoformat() if issue.closed_at else None,
+    }
+    for axis in ("effort", "impact"):
+        match = next((l.split(":", 1)[1] for l in labels if l.startswith(f"{axis}:")), None)
+        if match:
+            entry[axis] = match
+
+    if issue.state != "closed":
+        # An open issue with work already on a branch is IN FLIGHT, not merely
+        # open — otherwise the panel shows nothing happening right up until the
+        # moment a PR merges, which is the least useful time to learn about it.
+        pending = [pr for pr in _linked_prs(issue) if not pr.merged and pr.state == "open"]
+        if pending:
+            entry["status"] = "in_flight"
+            entry["fix_url"] = pending[0].html_url
+            entry["fix_ref"] = f"PR #{pending[0].number}"
+        else:
+            entry["status"] = "open"
+        return entry
+
+    reason = getattr(issue, "state_reason", None)
+    if reason in ("duplicate", "not_planned"):
+        # Explicitly NOT shipped, and worth keeping: a duplicate is evidence the
+        # dedupe is failing, which is half the reason this ledger exists.
+        entry["status"] = reason
+        return entry
+
+    # A closed-as-completed issue is DELIVERED unless there is positive evidence
+    # the work is still pending. The first cut had this backwards: it treated the
+    # absence of a merged PR as proof of non-delivery, so anything shipped by a
+    # direct commit to main could never read as shipped. These repos land most
+    # work that way — the first refresh duly reported six coachvision features
+    # from June, long live in production, as "in flight". Absence of a PR link is
+    # absence of evidence, not evidence of absence.
+    prs = _linked_prs(issue)
+    merged = [pr for pr in prs if pr.merged]
+    pending = [pr for pr in prs if not pr.merged and pr.state == "open"]
+
+    # WHERE it landed, best source first. Without this the panel can say
+    # "shipped" and still leave you hunting through commit history for it.
+    if merged:
+        entry["fix_url"] = merged[0].html_url
+        entry["fix_ref"] = f"PR #{merged[0].number}"
+        if merged[0].merge_commit_sha:
+            entry["fix_sha"] = merged[0].merge_commit_sha[:7]
+    elif pending:
+        entry["fix_url"] = pending[0].html_url
+        entry["fix_ref"] = f"PR #{pending[0].number} (open)"
+    else:
+        sha = _closing_commit(issue)
+        if sha:
+            entry["fix_url"] = f"https://github.com/{entry['repo']}/commit/{sha}"
+            entry["fix_ref"] = sha[:7]
+            entry["fix_sha"] = sha[:7]
+
+    if not merged_only:
+        entry["status"] = "shipped"
+    elif merged:
+        entry["status"] = "shipped"
+    elif pending:
+        # The one case that genuinely is not delivered yet: a fix exists but is
+        # sitting in review. This is what keeps the panel from taking credit for
+        # unmerged code.
+        entry["status"] = "in_flight"
+    else:
+        entry["status"] = "shipped"
+    return entry
+
+
+def _closing_commit(issue):
+    """SHA of the commit that closed this issue, if it was closed by one.
+
+    Covers the direct-commit workflow these repos actually use, so "where did
+    this land" has an answer even when no pull request was involved.
+    """
+    try:
+        for event in issue.get_timeline():
+            if event.event == "closed" and getattr(event, "commit_id", None):
+                return event.commit_id
+    except Exception:  # noqa: BLE001 — enrichment must never break a run
+        return None
+    return None
+
+
+def _linked_prs(issue):
+    """Pull requests cross-referenced from this issue's timeline.
+
+    Best-effort by design: the timeline API is the only place the link is
+    recorded, and a repo where we lack permission to read it yields nothing
+    rather than failing the run.
+    """
+    out = []
+    try:
+        for event in issue.get_timeline():
+            if event.event not in ("cross-referenced", "connected", "closed"):
+                continue
+            source = getattr(event, "source", None)
+            pr = getattr(source, "issue", None) if source else None
+            if pr is not None and getattr(pr, "pull_request", None):
+                out.append(pr.as_pull_request())
+    except Exception:  # noqa: BLE001 — ledger enrichment must never break a run
+        return []
+    return out
+
+
+def _has_open_fix(issue):
+    """True when an unmerged PR references this still-open issue."""
+    return any(not pr.merged and pr.state == "open" for pr in _linked_prs(issue))
+
+
+def _has_merged_fix(issue):
+    """True when a merged PR closed this issue — the signal that work landed."""
+    return any(pr.merged for pr in _linked_prs(issue))
+
+
+# Outcomes that cannot change again. A shipped fix does not un-ship, and a
+# duplicate does not stop being one — so a refresh can carry these forward
+# instead of re-walking each issue's timeline. That is what makes a frequent
+# refresh cheap: the per-issue PR lookup is the expensive call, and it only has
+# to run for the handful of entries still in motion.
+TERMINAL_STATUSES = ("shipped", "duplicate", "not_planned")
+
+
+def delivery_ledger(merged_only=True, limit_per_repo=100, known=None):
+    """Every overseer-filed issue across the reviewed repos, with its outcome.
+
+    `known`: a previously published ledger (as returned by this function or read
+    back from LEDGER_PATH). Entries in it with a terminal status are reused
+    as-is, skipping their timeline lookup. Pass None for a full rebuild.
+
+    Returns {"entries": [...], "totals": {...}, "errors": {...}}. Never raises:
+    an unreachable repo contributes an error note instead of killing the run,
+    because a partial ledger is still worth showing.
+    """
+    settled = {}
+    for entry in (known or {}).get("entries", []):
+        if entry.get("status") in TERMINAL_STATUSES:
+            settled[(entry.get("repo"), entry.get("number"))] = entry
+
+    entries, repo_errors = [], {}
+    for key in REVIEW_PROJECTS:
+        slug = PROJECTS[key].get("repo")
+        if not slug:
+            continue
+        try:
+            repo = _github().get_repo(slug)
+            for issue in repo.get_issues(state="all")[:limit_per_repo]:
+                if issue.pull_request is not None:
+                    continue  # get_issues returns PRs too
+                prior = settled.get((slug, issue.number))
+                # Reuse only while the issue is still closed. If it was reopened
+                # its outcome is live again and has to be recomputed, or the
+                # ledger would keep reporting a settled state that no longer holds.
+                if prior and issue.state == "closed":
+                    entries.append(prior)
+                    continue
+                entry = _ledger_entry(issue, merged_only=merged_only)
+                if entry:
+                    entries.append(entry)
+        except Exception as exc:  # noqa: BLE001
+            repo_errors[slug] = str(exc)[:120]
+
+    entries.sort(key=lambda e: e.get("closed_at") or e.get("created_at") or "", reverse=True)
+    totals = {"proposed": len(entries)}
+    for status in ("shipped", "in_flight", "open", "duplicate", "not_planned"):
+        totals[status] = sum(1 for e in entries if e["status"] == status)
+    # The number the dashboard leads with. Duplicates are excluded from the
+    # denominator: re-proposing the same idea shouldn't dilute the delivery rate,
+    # it's tracked separately as a dedupe failure.
+    considered = totals["proposed"] - totals["duplicate"]
+    totals["delivery_rate"] = round(totals["shipped"] / considered, 3) if considered else 0.0
+    totals["duplicate_rate"] = round(totals["duplicate"] / totals["proposed"], 3) if entries else 0.0
+    return {"entries": entries, "totals": totals, "errors": repo_errors}
+
+
+def write_ledger(ledger, path=None):
+    """Persist the ledger for the dashboard. No-op when there's nothing to write.
+
+    A None ledger means the fetch failed this run; the previously published file
+    is left alone rather than being replaced with an empty one, so a transient
+    GitHub error doesn't blank the panel.
+    """
+    if not ledger:
+        return None
+    path = path or LEDGER_PATH
+    payload = dict(ledger)
+    payload["generated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+        f.write("\n")
+    return path
+
+
+def known_work_block(ledger, per_repo=12):
+    """Compact 'already proposed / already shipped' list for the agent prompts.
+
+    This is the half of the ledger that changes agent BEHAVIOUR rather than the
+    dashboard. Given the pipeline re-proposed the same idea four times over seven
+    weeks, showing each agent what it has already asked for is the cheapest
+    available fix — far cheaper than hoping it remembers to search first.
+    """
+    by_repo = {}
+    for entry in ledger.get("entries", []):
+        by_repo.setdefault(entry["repo"], []).append(entry)
+    if not by_repo:
+        return "(no previously filed issues on record)"
+
+    lines = []
+    for repo, items in sorted(by_repo.items()):
+        lines.append(f"{repo}:")
+        for e in items[:per_repo]:
+            state = {"shipped": "SHIPPED", "in_flight": "IN FLIGHT",
+                     "open": "STILL OPEN", "duplicate": "closed as duplicate",
+                     "not_planned": "closed, not planned"}.get(e["status"], e["status"])
+            lines.append(f"  - #{e['number']} [{state}] {e['title']}")
+    return "\n".join(lines)
+
+
+# ── CREDENTIAL PREFLIGHT ─────────────────────────────────────────────────
+# Why this exists: four consecutive weekly runs (2026-07-20 → 2026-08-10)
+# reported SUCCESS in the Actions tab while every GitHub tool call inside them
+# failed with 401 "Bad credentials" on an expired PAT. Each agent handled its
+# tool errors gracefully and still produced a digest, so the workflow never went
+# red and the outage stayed invisible for four weeks — the projects simply went
+# unreviewed. Checking the credential up front turns that silent failure into a
+# loud one, before an agent burns a run (and API spend) on a dead token.
+
+def _http_status(exc):
+    """HTTP status carried by a PyGithub exception, if any."""
+    return getattr(exc, "status", None)
+
+
+def preflight_github():
+    """Validate the GitHub credential and per-repo reach before the agents run.
+
+    Checks three things, cheapest first:
+      1. a token is configured at all
+      2. the token authenticates (401 ⇒ expired/revoked — the July failure)
+      3. each configured project repo is actually reachable with it (404/403 ⇒
+         the repo was left out when the token was regenerated, which fails only
+         for that project and is easy to miss)
+
+    Returns a structured report and never raises — the caller decides what is
+    fatal. `status` is one of:
+      "ok"             every configured repo is reachable
+      "not_configured" no token at all (local dev / partial setup)
+      "error"          the token is present but rejected, or some repo is
+                       unreachable; `fatal` is True when NO repo is reachable,
+                       which is the case where a run is worthless.
+    """
+    if not (os.getenv("OVERSEER_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN")):
+        return {"status": "not_configured",
+                "detail": "No OVERSEER_GITHUB_TOKEN — every GitHub-backed tool "
+                          "will report not_configured.",
+                "fatal": False}
+
+    try:
+        login = _github().get_user().login
+    except Exception as exc:  # noqa: BLE001 — auth failure surfaces as 401
+        status = _http_status(exc)
+        hint = ("token is expired or revoked — regenerate it and update the "
+                "OVERSEER_GITHUB_TOKEN repo secret") if status == 401 else str(exc)
+        return {"status": "error", "detail": f"GitHub auth failed ({status}): {hint}",
+                "fatal": True}
+
+    # Per-repo reach. A fine-grained PAT scoped to only some of the projects
+    # authenticates fine but 404s on the ones it was not granted.
+    repos, unreachable = {}, []
+    for key in REVIEW_PROJECTS:
+        slug = PROJECTS[key].get("repo")
+        if not slug:
+            continue
+        try:
+            _github().get_repo(slug)
+            repos[slug] = "ok"
+        except Exception as exc:  # noqa: BLE001
+            code = _http_status(exc)
+            repos[slug] = f"unreachable ({code}): the token may not include this repo"
+            unreachable.append(slug)
+
+    if unreachable and len(unreachable) == len(repos):
+        return {"status": "error", "login": login, "repos": repos,
+                "detail": f"Token authenticates as {login} but reaches none of "
+                          f"its {len(repos)} configured repos: {', '.join(unreachable)}.",
+                "fatal": True}
+    if unreachable:
+        return {"status": "error", "login": login, "repos": repos,
+                "detail": f"Token cannot reach: {', '.join(unreachable)}. Those "
+                          "projects will go unreviewed; the rest still run.",
+                "fatal": False}
+    return {"status": "ok", "login": login, "repos": repos,
+            "detail": f"Authenticated as {login}; all {len(repos)} configured repos reachable.",
+            "fatal": False}
 
 # ── TOOL SCHEMAS ─────────────────────────────────────────────────────────
 # Keyed by name so each agent can request just the subset it's allowed to use
@@ -412,10 +793,28 @@ def tool_specs(names):
 # ── TOOL IMPLEMENTATIONS ─────────────────────────────────────────────────
 
 
-def _read_status_file(repo_slug, path):
+def _freshness(generated_at, sla_hours):
+    """Age of a status file (hours) and whether it breaches its freshness SLA.
+
+    Returns (age_hours, is_stale). A missing or unparseable 'generated_at' yields
+    (None, False): we can't prove the feed is stale, so we don't assert it — the
+    project just reads as fresh/idle rather than falsely past-due (overseer #1)."""
+    if not generated_at:
+        return None, False
+    try:
+        ts = datetime.fromisoformat(str(generated_at).replace("Z", "+00:00"))
+    except ValueError:
+        return None, False
+    age_h = round((datetime.now(timezone.utc) - ts).total_seconds() / 3600, 1)
+    return age_h, age_h > sla_hours
+
+
+def _read_status_file(repo_slug, path, sla_hours=FRESHNESS_SLA_DEFAULT_HOURS):
     """Read a JSON status file the project publishes to its own repo.
     Cloud-native: the overseer runs anywhere and just reads the file via the API.
-    Flags staleness from the file's own 'generated_at' if present."""
+    Flags staleness when the file's own 'generated_at' is older than the
+    project's freshness SLA, and echoes both the age and the SLA so the digest
+    can say *how* past-due it is (overseer #1)."""
     repo = _github().get_repo(repo_slug)
     try:
         content = repo.get_contents(path)
@@ -425,17 +824,14 @@ def _read_status_file(repo_slug, path):
     data = json.loads(content.decoded_content.decode("utf-8"))
     result = {"status": "ok", "source": f"{repo_slug}/{path}", "data": data,
               # Explicit idle signal so the agent doesn't have to infer it (overseer #5).
-              "idle": activity_idle(data)}
-    generated = data.get("generated_at")
-    if generated:
-        try:
-            ts = datetime.fromisoformat(generated.replace("Z", "+00:00"))
-            age_h = (datetime.now(timezone.utc) - ts).total_seconds() / 3600
-            result["age_hours"] = round(age_h, 1)
-            if age_h > 48:  # daily bot → anything older than 2 days is stale
-                result["stale"] = True
-        except ValueError:
-            pass
+              "idle": activity_idle(data),
+              # The SLA this feed is held to, echoed so the digest can cite it.
+              "sla_hours": sla_hours}
+    age_h, stale = _freshness(data.get("generated_at"), sla_hours)
+    if age_h is not None:
+        result["age_hours"] = age_h
+        if stale:
+            result["stale"] = True
     return result
 
 
@@ -457,7 +853,7 @@ def read_trading_bot_log(days=7):
                 "pnl": round(row["pnl"], 2), "win_rate": round(row["win_rate"], 3)}
     # Cloud deployment: read the status file the bot publishes to its repo.
     if cfg["repo"]:
-        return _read_status_file(cfg["repo"], cfg["status_path"])
+        return _read_status_file(cfg["repo"], cfg["status_path"], cfg["sla_hours"])
     return {"status": "not_configured",
             "detail": "Set TRADING_DB_PATH (local) or have the bot publish "
                       f"{cfg['status_path']} to TRADING_REPO (cloud)."}
@@ -473,7 +869,7 @@ def read_volleyball_results(days=7):
             return {"status": "ok", "days": days, "results": json.load(f)}
     # Cloud: read the status file the pipeline publishes to its repo.
     if cfg["repo"]:
-        return _read_status_file(cfg["repo"], cfg["status_path"])
+        return _read_status_file(cfg["repo"], cfg["status_path"], cfg["sla_hours"])
     return {"status": "not_configured",
             "detail": "Set VOLLEYBALL_RESULTS_PATH (local) or have the pipeline publish "
                       f"{cfg['status_path']} to VOLLEYBALL_REPO (cloud)."}
@@ -525,11 +921,13 @@ def read_ufc_scraper_status():
     # Data freshness — distinct from run success (ufc-dashboard #10): if the
     # scraper publishes a status file with a data timestamp, surface its age so
     # silently-frozen upstream data is caught even when runs keep "succeeding".
-    status = _read_status_file(repo_slug, cfg["status_path"])
+    status = _read_status_file(repo_slug, cfg["status_path"], cfg["sla_hours"])
     if status.get("status") == "ok":
         health["data"] = status["data"]
         if "age_hours" in status:
             health["data_age_hours"] = status["age_hours"]
+        if "sla_hours" in status:
+            health["data_sla_hours"] = status["sla_hours"]
         if status.get("stale"):
             health["data_stale"] = True
     return health
@@ -570,7 +968,11 @@ def file_issue(repo, title, body):
         print(f"          title: {title}")
         print(f"          body : {_oneline(body, 200)}\n")
         return {"status": "dry_run", "repo": repo, "title": title}
-    issue = _github().get_repo(repo).create_issue(title=title, body=body)
+    # Stamp bugs with the same marker enhancements carry, so the delivery ledger
+    # can attribute BOTH kinds back to the overseer. Without it a filed bug was
+    # indistinguishable from a hand-written issue and never counted as shipped.
+    issue = _github().get_repo(repo).create_issue(
+        title=title, body=f"{body}\n\n---\n{OVERSEER_MARKER}")
     return {"status": "filed", "number": issue.number, "url": issue.html_url}
 
 
@@ -583,7 +985,7 @@ def propose_enhancement(repo, title, rationale, effort, impact):
         print(f"          why   : {_oneline(rationale, 200)}\n")
         return {"status": "dry_run", "repo": repo, "title": title,
                 "effort": effort, "impact": impact}
-    body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n_Filed by Project Overseer._"
+    body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n{OVERSEER_MARKER}"
     issue = _github().get_repo(repo).create_issue(title=f"[enhancement] {title}", body=body)
     # Labels may not exist in the repo; best-effort, don't fail the call over it.
     try:
@@ -738,6 +1140,12 @@ def list_open_issues(repo):
             "open_fix_prs": fix_prs}
 
 
+# A transport git cannot resolve, so `git push origin ...` fails on the URL
+# before any credential lookup happens. Deliberately not an https:// URL: those
+# can be rewritten by insteadOf rules or authenticated by a helper.
+BLOCKED_PUSH_URL = "overseer-push-blocked://refusing-shell-push"
+
+
 def setup_fix_workspace(repo, issue_number):
     if repo not in configured_repos():
         return {"status": "error",
@@ -760,11 +1168,29 @@ def setup_fix_workspace(repo, issue_number):
         return {"status": "error", "detail": f"branch creation failed: {out}"}
     _git(workdir, "config", "user.name", "overseer-bot")
     _git(workdir, "config", "user.email", "overseer-bot@users.noreply.github.com")
-    # Strip the token from the clone's remote: run_in_workspace lets the agent
-    # run arbitrary git, and a credentialed remote would let a shell `git push`
-    # bypass commit_and_push's default-branch guard. commit_and_push re-attaches
-    # the token only for its own push.
+    # Block shell pushes POSITIVELY, not by assuming the environment is
+    # credential-free.
+    #
+    # run_in_workspace lets the agent run arbitrary git, so a shell
+    # `git push origin main` must not be able to bypass commit_and_push's
+    # default-branch guard. Stripping the token from the remote URL is necessary
+    # but NOT sufficient: it only works if nothing else supplies credentials. Any
+    # ambient credential helper, an `http.extraheader`, or a proxy with
+    # `url.insteadOf` rewriting puts them back — and then the push succeeds.
+    #
+    # That is not hypothetical. Running this repo's own test suite inside a
+    # sandbox whose git proxy authenticates github.com pushed a live branch to
+    # AndyRBrett/ufc-dashboard, while the test asserting "the shell cannot push"
+    # reported failure only because the push had worked.
+    #
+    # So: point pushurl at a transport that cannot exist, and clear inherited
+    # credential helpers. `git push origin ...` now fails on the URL itself,
+    # before any credential is consulted. commit_and_push sets a real pushurl for
+    # the duration of its own guarded push and restores this afterwards.
     _git(workdir, "remote", "set-url", "origin", f"https://github.com/{repo}.git")
+    _git(workdir, "remote", "set-url", "--push", "origin", BLOCKED_PUSH_URL)
+    _git(workdir, "config", "--local", "credential.helper", "")
+    _git(workdir, "config", "--local", "http.https://github.com/.extraheader", "")
     _, files = _git(workdir, "ls-files")
     file_list = files.splitlines()
     _workspaces[repo] = {"dir": workdir, "branch": branch,
@@ -850,13 +1276,14 @@ def commit_and_push(repo, message):
         print(f"          message: {_oneline(message, 200)}\n")
         return {"status": "dry_run", "branch": current,
                 "detail": "Committed locally; push to origin skipped (dry run)."}
-    # The remote is kept credential-free (see setup_fix_workspace); attach the
-    # token just for this push, then strip it again.
-    _git(ws["dir"], "remote", "set-url", "origin", _clone_url(repo))
+    # Pushes are blocked at the pushurl (see setup_fix_workspace). Open the gate
+    # for this one guarded push only, and close it again whatever happens — a
+    # failed push must not leave the workspace able to push from the shell.
+    _git(ws["dir"], "remote", "set-url", "--push", "origin", _clone_url(repo))
     try:
         code, out = _git(ws["dir"], "push", "-u", "origin", current, timeout=120)
     finally:
-        _git(ws["dir"], "remote", "set-url", "origin", f"https://github.com/{repo}.git")
+        _git(ws["dir"], "remote", "set-url", "--push", "origin", BLOCKED_PUSH_URL)
     if code != 0:
         return {"status": "error", "detail": f"git push failed: {out}"}
     ws["pushed"] = True
@@ -1049,12 +1476,21 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer,
             # Isolate tool failures: a raising tool becomes an error result the
             # agent can route around, not a crash that aborts the whole run.
             try:
+                if block.name == "send_telegram_summary":
+                    # Lead the digest with any deterministic staleness alert so a
+                    # halted feed can't hide behind a quiet LLM summary (overseer
+                    # #1 / issue #34). Prepending BEFORE the send means Telegram
+                    # and the dashboard summary both carry it.
+                    banner = tracer.freshness_banner()
+                    if banner:
+                        base = block.input.get("text", "")
+                        block.input["text"] = f"{banner}\n\n{base}" if base else banner
                 func = TOOL_FUNCTIONS[block.name]
                 result = func(**block.input)
                 content = json.dumps(result)
                 is_error = False
                 if block.name == "send_telegram_summary":
-                    # Capture the digest text for the dashboard / push notification.
+                    # Capture the (banner-prefixed) digest for the dashboard / push.
                     tracer.set_digest(block.input.get("text", ""))
             except Exception as exc:  # noqa: BLE001
                 content = f"Tool '{block.name}' failed: {exc}"

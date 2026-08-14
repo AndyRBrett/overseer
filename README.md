@@ -78,6 +78,120 @@ just like any other project. The repo defaults to `GITHUB_REPOSITORY` (override
 with an `OVERSEER_REPO` variable). For self-filing to work,
 `OVERSEER_GITHUB_TOKEN` must include **this** repo with Issues: write.
 
+### Closing the loop (the delivery ledger)
+
+The pipeline proposed work every week and never learned what came of it. That
+cost two things, and one ledger fixes both.
+
+Every issue the agents file is stamped `_Filed by Project Overseer._`, so the
+overseer can read its own issues back and see what happened to them. That
+becomes `docs/shipped.json` and the dashboard's **Shipped** panel — what the
+overseer has actually *delivered*, not merely suggested.
+
+**`in_flight` requires positive evidence.** A closed-as-completed issue counts as
+delivered unless a linked PR is actually still open — that one case is what stops
+the panel taking credit for code sitting in review. The first cut had this
+backwards, treating "no merged PR found" as proof of non-delivery, which reported
+six coachvision features live in production since June as "in flight": these
+repos land most work by direct commit, so a missing PR link is the normal case,
+not a red flag. Duplicates are excluded from the delivery-rate denominator (one
+dedupe failure shouldn't be punished twice) and reported separately.
+
+The same ledger is injected into the Bug-Hunter's and Idea agent's prompts as an
+**ALREADY ON RECORD** list. That is the more valuable half. Without it the
+pipeline re-proposed its own ideas constantly:
+
+| Cluster | Filings |
+|---|---|
+| overseer — schema validation | #9, #12, #14, #16 (4×, over 7 weeks) |
+| crypto-trading — signal near-miss telemetry | #27, #35, #38 (3×, all still open) |
+| ufc-dashboard — line-movement alerts | #17 (shipped), #21, #26, #52, #67 |
+| ufc-dashboard — CLV / odds time-series | #19 (shipped), #22, #68 |
+| overseer — dead-man's switch | #13, #17 |
+| overseer — staleness alerting | #11, #15 |
+| coachvision — demo/sample output | #19, #21 |
+
+`ufc-dashboard#68` is the sharpest case: it proposed a per-bout CLV tracker that
+was already built, running, and computing CLV for 95 bouts in production.
+
+#### Keeping the ledger live
+
+The ledger used to be written only by the weekly review, so a PR merged on
+Tuesday still read "in flight" until the following Monday. `ledger-refresh.yml`
+decouples it: the refresh is **pure GitHub reads** — no Anthropic key, no agents,
+no model calls — so it can run constantly for effectively nothing.
+
+| Trigger | Covers | Latency |
+|---|---|---|
+| `pull_request: closed`, `issues: closed/reopened` | the overseer's own work | seconds |
+| `schedule` hourly at :20 | the other three repos | ≤ 1 hour |
+| `repository_dispatch: ledger-refresh` | opt-in, any repo | seconds |
+| `workflow_dispatch` (`full: true`) | manual, full re-walk | on demand |
+
+**Why the other three repos poll instead of pushing:** GitHub fires
+`pull_request` events only in the repo where the PR lives, so instant cross-repo
+updates need a `repository_dispatch` call *from* each project repo — which means
+a PAT with `actions: write` stored in three more places. That is the credential
+sprawl that caused the July outage, traded for 59 minutes of latency. The
+dispatch trigger is wired up regardless, so you can opt any repo in by adding a
+step to its own workflow:
+
+```yaml
+      - name: Tell the overseer something shipped
+        if: github.event.pull_request.merged == true
+        run: |
+          curl -sS -X POST -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.OVERSEER_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/<you>/overseer/dispatches \
+            -d '{"event_type":"ledger-refresh"}'
+```
+
+The refresh is **incremental**: outcomes that can't change again (shipped,
+duplicate, not planned) are carried forward from the published ledger, so the
+expensive per-issue timeline lookup only runs for entries still in motion — 9 of
+65 today. A reopened issue drops its settled status and is recomputed. Run with
+`--full` to re-walk everything.
+
+It refuses to publish a ledger emptier than the live one: entries don't vanish,
+so a collapse to zero means a bad credential or an unconfigured environment, and
+blanking the panel would destroy the record it exists to keep.
+
+### Failing loudly (credential preflight + heartbeat)
+
+Between 2026-07-20 and 2026-08-10 the weekly Action reported **success** four
+times in a row while an expired PAT made every GitHub tool call return 401. The
+agents handled each tool error gracefully and still wrote a digest, so nothing
+went red and all four projects sat unreviewed for a month. Two independent
+guards now make that failure loud:
+
+**1. Credential preflight** (`tools.preflight_github`, run by the orchestrator
+before any agent starts). It checks that a token exists, that it authenticates,
+and that each configured repo is actually reachable with it:
+
+| Situation | Result |
+|---|---|
+| No token at all | warn, continue — every GitHub tool reports `not_configured` |
+| Token expired / revoked (401) | **abort with a non-zero exit** before spending API budget |
+| Token reaches *some* repos | warn by name, continue — those projects go unreviewed |
+| Token reaches *no* repos | **abort** — a review that reads nothing isn't a review |
+
+**2. Heartbeat** (`scripts/heartbeat.py`, its own daily workflow). A job cannot
+detect its own failure to start, so this runs separately and asks two things:
+*did the review run* (is `docs/digest.json` still advancing?) and *did it see
+anything* (did most tool calls fail?). The second is what catches a green-but-
+blind run. It exits non-zero on failure, which turns the Action red and triggers
+GitHub's own failure email, and optionally sends a Telegram alert.
+
+The heartbeat is **standard-library only** and uses no GitHub token by design —
+the outage it exists to catch is a broken credential, so it must not need one.
+
+Tune with `HEARTBEAT_MAX_AGE_HOURS` (default 192h — one missed weekly run plus a
+day of slack) and `HEARTBEAT_ERROR_RATIO` (default 0.5 of tool calls).
+
+> **Fine-grained PATs expire.** That is what caused the outage. Set a calendar
+> reminder for a week before yours lapses, or use a longer expiry — the heartbeat
+> will tell you within a day either way, but a reminder avoids the gap entirely.
+
 ## What you need to provide (and how to get each)
 
 Only the Anthropic key is required. Anything unset just makes that tool report
@@ -129,6 +243,15 @@ branch*, branch = `main`, folder = `/docs`. Your app URL appears there (like
 The app shows the latest digest and run stats, refreshed each week. That alone
 needs nothing further.
 
+The dashboard follows your system light/dark theme, and every card is built for
+phone-first reading: the digest and agent timeline have **Copy** (and, on
+browsers with a native share sheet, **Share**) buttons, filed issues are
+tappable links to GitHub, the step-by-step agent trace is collapsed behind a
+"Show all steps" toggle, truncated reasoning expands in place, and a
+**Previous runs** card archives past digests. The header shows how long ago the
+last run happened (amber if a weekly run looks overdue) with a manual refresh
+button.
+
 **At a glance + idle nudges.** The top of the dashboard shows a one-line rollup
 of the run — how many projects are healthy, how many need attention, and how many
 issues/ideas came out of it — so each weekly review is scannable in seconds. Any
@@ -137,6 +260,20 @@ runs (default 2) is promoted from a quiet badge to an explicit call-out at the
 top, so a project quietly going dark (e.g. volleyball idle for several cycles)
 can't hide in the timeline. The threshold is reused by the per-project health
 card; set the `OVERSEER_NUDGE_CYCLES` variable to tune it without code changes.
+
+**Per-project freshness SLA + staleness alerts.** Every project that publishes an
+`overseer-status.json` is held to a **freshness SLA** — how old that file's
+`generated_at` may get before the feed is flagged **STALE** (a scheduled job that
+has silently stopped, e.g. issue #34: a crypto feed that sat ~153h stale while the
+digest stayed quiet). Each project sets its own SLA, since a daily bot's data goes
+stale far sooner than a slower pipeline's; the default is **48h** (two missed daily
+runs). Tune per project with the `TRADING_SLA_HOURS`, `VOLLEYBALL_SLA_HOURS`, and
+`UFC_SLA_HOURS` variables (or change the shared default with `FRESHNESS_SLA_HOURS`).
+When any feed is past-due, a machine-generated **`STALENESS ALERTS`** block —
+listing each feed with how far past its SLA it is (`data 153h old, SLA 48h`) — is
+prepended to the top of the digest **before it's sent**, so it leads both the
+Telegram message and the dashboard, independent of what the review agents wrote. A
+halted feed can no longer hide behind a quiet summary.
 
 **Trends (week over week).** Each run also appends a small record to
 `docs/history.json` (per-project health score + issue/enhancement counts, capped
@@ -197,4 +334,7 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `docs/` — the installable web app (GitHub Pages): `index.html`, `app.js`,
   `sw.js` (service worker / push handler), `manifest.webmanifest`, icons
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
+- `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
+  happening, or completes while blind (stdlib only, no token)
 - `.github/workflows/weekly-review.yml` — cron, digest commit, push, report artifact
+- `.github/workflows/heartbeat.yml` — daily heartbeat, independent of the above

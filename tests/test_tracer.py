@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 
 import tracer
-from tracer import RunTracer, _is_idle, _status_score, activity_idle
+from tracer import RunTracer, _is_idle, _is_stale, _status_score, activity_idle
 
 
 def _tracer(tmp_path):
@@ -39,9 +39,9 @@ def test_project_health_ok_resets_and_blind_increments(tmp_path):
 def test_project_health_idle_on_zero_activity(tmp_path):
     t = _tracer(tmp_path)
     t.prev_projects = {"Trading bot": {"status": "idle", "last_ok": "x", "idle_cycles": 1}}
-    # read OK but zero trades + stale published data → IDLE, not OK
+    # read OK, data fresh, but zero trades → IDLE (quiet), not OK
     t.tool_call(0, "read_trading_bot_log", {},
-                '{"status": "ok", "stale": true, "data": {"trades": 0, "pnl": 0}}', False)
+                '{"status": "ok", "data": {"trades": 0, "pnl": 0}}', False)
     # UFC: read OK with real activity → OK
     t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 49}', False)
     ph = t.project_health()
@@ -62,7 +62,9 @@ def test_activity_idle_edge_cases():
 
 
 def test_is_idle_handles_malformed_status_json():
-    assert _is_idle({"stale": True}) is True
+    # A `stale` flag is staleness, not idleness — the two are separate buckets now.
+    assert _is_stale({"stale": True}) is True
+    assert _is_idle({"stale": True}) is False
     assert _is_idle({"idle": True}) is True
     assert _is_idle({"status": "ok", "data": {"footage_processed": 0, "frames_processed": 0}}) is True
     assert _is_idle({"status": "ok", "data": {"trades": 2}}) is False
@@ -70,6 +72,29 @@ def test_is_idle_handles_malformed_status_json():
     assert _is_idle({"status": "ok", "data": None}) is False   # null data → no crash
     # empty-fingerprint event with zero activity (the UFC #14 shape) → idle, no crash
     assert _is_idle({"status": "ok", "data": {"odds_fingerprint": "", "events_tracked": 0}}) is True
+
+
+def test_project_health_prefers_app_name_from_status_file(tmp_path):
+    # A project self-identifies via the `app` field of its published status file;
+    # that name must win over the static READ_TOOLS label so a repo can rebrand
+    # (Volleyball → coachvision) on the dashboard without a code change.
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "Volleyball"}  # stale fallback label
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "data": {"app": "coachvision", "domain": "martial_arts", "runs_7d": 5}}', False)
+    ph = t.project_health()
+    assert "coachvision" in ph and "Volleyball" not in ph
+    assert ph["coachvision"]["status"] == "ok"
+
+
+def test_project_health_falls_back_to_label_without_app(tmp_path):
+    # No readable `app` (e.g. a blind read, or a status file that omits it) →
+    # the static label is used, so the name stays stable across healthy/blind runs.
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "coachvision"}
+    t.tool_call(0, "read_trading_bot_log", {}, '{"status": "not_configured"}', False)
+    ph = t.project_health()
+    assert ph["coachvision"]["status"] == "blind"
 
 
 def test_project_health_error_counts_as_blind(tmp_path):
@@ -80,12 +105,80 @@ def test_project_health_error_counts_as_blind(tmp_path):
 
 
 def test_status_score_maps_health_to_trend_value():
-    # ok is healthy (1.0), idle is half (0.5), error/blind/unknown bottom out (0).
+    # ok is healthy (1.0), idle is half (0.5), stale is worse (0.25), error/blind/
+    # unknown bottom out (0) — so a feed going stale visibly dips the sparkline.
     assert _status_score("ok") == 1.0
     assert _status_score("idle") == 0.5
+    assert _status_score("stale") == 0.25
     assert _status_score("error") == 0.0
     assert _status_score("blind") == 0.0
     assert _status_score(None) == 0.0
+
+
+def test_project_health_stale_is_distinct_from_idle(tmp_path):
+    # A `stale` flag = past-due data (a scheduled job has stopped). That must
+    # land in its own "stale" bucket, not be flattened into "idle" — the read
+    # still worked so last_ok updates, and stale_cycles carries forward.
+    t = _tracer(tmp_path)
+    t.prev_projects = {"Trading bot": {"status": "stale", "last_ok": "x", "stale_cycles": 1}}
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+    ph = t.project_health()["Trading bot"]
+    assert ph["status"] == "stale"
+    assert ph["stale_cycles"] == 2       # carried forward + 1
+    assert ph["last_ok"]                  # stale still read fine
+    assert _status_score(ph["status"]) == 0.25
+
+
+def test_project_health_captures_age_and_sla_when_stale(tmp_path):
+    # A stale read carries the age + freshness SLA through to project health so
+    # the alert can say how past-due the feed is (overseer #1).
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153.2, "sla_hours": 48, "data": {"trades": 0}}', False)
+    p = t.project_health()["Trading bot"]
+    assert p["status"] == "stale" and p["age_hours"] == 153.2 and p["sla_hours"] == 48
+
+
+def test_project_health_captures_ufc_nested_age_and_sla(tmp_path):
+    # UFC nests freshness under data_age_hours/data_sla_hours (the read tool wraps
+    # workflow health around the status file) — those must still be captured.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {},
+                '{"status": "ok", "runs_7d": 5, "data_stale": true, "data_age_hours": 90, "data_sla_hours": 48}', False)
+    p = t.project_health()["UFC dashboard"]
+    assert p["status"] == "stale" and p["age_hours"] == 90 and p["sla_hours"] == 48
+
+
+def test_attention_detail_stale_cites_age_and_sla(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153, "sla_hours": 48, "data": {"trades": 0}}', False)
+    detail = t.rollup()["attention"][0]["detail"]
+    assert "153h old" in detail and "SLA 48h" in detail
+
+
+def test_freshness_banner_empty_when_nothing_stale(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 9}', False)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "data": {"trades": 3}}', False)
+    assert t.freshness_banner() == ""
+    assert t.freshness_alerts() == []
+
+
+def test_freshness_banner_leads_with_stale_feeds(tmp_path):
+    # The deterministic banner that gets prepended to the digest so a halted feed
+    # can't hide behind a quiet summary (overseer #1 / issue #34).
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "Crypto"}
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "age_hours": 153, "sla_hours": 48, "data": {"trades": 0}}', False)
+    banner = t.freshness_banner()
+    assert banner.startswith("STALENESS ALERTS")
+    assert "Crypto" in banner and "153h old" in banner and "SLA 48h" in banner
+    alerts = t.freshness_alerts()
+    assert len(alerts) == 1 and alerts[0]["name"] == "Crypto" and alerts[0]["age_hours"] == 153
 
 
 def test_write_history_appends_and_scores(tmp_path):
@@ -101,6 +194,41 @@ def test_write_history_appends_and_scores(tmp_path):
     assert rec["projects"]["UFC dashboard"]["score"] == 1.0      # ok
     assert rec["projects"]["Trading bot"]["score"] == 0.0        # blind
     assert rec["counts"] == t.counts and rec["status"] == "completed"
+
+
+def test_digest_timeline_ships_full_reasoning_when_truncated(tmp_path):
+    # Long reasoning is truncated for the timeline row but the full text (capped)
+    # rides along as text_full so the dashboard can expand it in place.
+    t = _tracer(tmp_path)
+    t.thinking(0, "x" * 500)
+    t.thinking(0, "short thought")
+    t.write_digest(str(tmp_path / "d.json"))
+    tl = json.load(open(tmp_path / "d.json"))["timeline"]
+    assert tl[0]["text"].endswith("…") and len(tl[0]["text"]) == 240
+    assert tl[0]["text_full"] == "x" * 500
+    assert "text_full" not in tl[1]  # short rows don't carry a duplicate
+
+
+def test_write_history_records_digest_summary(tmp_path):
+    # The run's digest text is stored per record so the dashboard can offer an
+    # expandable log of past digests, not just the latest one.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)
+    t.set_digest("Issues Found\n- something broke")
+    t.finish("completed")
+    hpath = tmp_path / "history.json"
+    t.write_history(str(hpath))
+    rec = json.load(open(hpath))["runs"][0]
+    assert rec["summary"] == "Issues Found\n- something broke"
+
+
+def test_write_history_summary_defaults_to_empty(tmp_path):
+    # A run that produced no digest stores an empty string, not null/KeyError.
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 50}', False)
+    t.write_history(str(tmp_path / "history.json"))
+    rec = json.load(open(tmp_path / "history.json"))["runs"][0]
+    assert rec["summary"] == ""
 
 
 def test_write_history_replaces_same_day_run(tmp_path):
@@ -137,7 +265,7 @@ def test_rollup_flags_idle_project_past_threshold(tmp_path, monkeypatch):
     t.prev_projects = {"Trading bot": {"status": "idle", "last_ok": "x", "idle_cycles": 2}}
     # Trading bot idle for a 3rd cycle → past threshold, must be nudged.
     t.tool_call(0, "read_trading_bot_log", {},
-                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+                '{"status": "ok", "data": {"trades": 0}}', False)
     # UFC healthy → counts toward "ok", never appears in attention.
     t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "ok", "runs_7d": 49}', False)
     r = t.rollup()
@@ -153,7 +281,7 @@ def test_rollup_below_threshold_is_not_nudged(tmp_path, monkeypatch):
     t = _tracer(tmp_path)
     # First idle cycle, threshold 3 → listed for attention but not yet nudged.
     t.tool_call(0, "read_trading_bot_log", {},
-                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+                '{"status": "ok", "data": {"trades": 0}}', False)
     r = t.rollup()
     assert r["attention"][0]["cycles"] == 1
     assert r["attention"][0]["nudge"] is False
@@ -166,11 +294,40 @@ def test_rollup_sorts_nudged_first(tmp_path, monkeypatch):
     # UFC blind for a 3rd cycle (nudged); Trading bot freshly idle (not nudged).
     t.tool_call(0, "read_ufc_scraper_status", {}, '{"status": "not_configured"}', False)
     t.tool_call(0, "read_trading_bot_log", {},
-                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+                '{"status": "ok", "data": {"trades": 0}}', False)
     r = t.rollup()
     # Nudged project sorts ahead of the merely-flagged one.
     assert [a["name"] for a in r["attention"]] == ["UFC dashboard", "Trading bot"]
     assert r["attention"][0]["nudge"] is True and r["attention"][1]["nudge"] is False
+
+
+def test_rollup_stale_nudges_on_first_cycle(tmp_path, monkeypatch):
+    # A stale feed is past-due the moment it's seen, so it nudges immediately —
+    # it does not wait out the idle/blind cycle threshold (overseer #1).
+    monkeypatch.setattr(tracer, "NUDGE_CYCLES", 3)
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)
+    a = t.rollup()["attention"][0]
+    assert a["status"] == "stale" and a["cycles"] == 1 and a["nudge"] is True
+    assert "past-due" in a["detail"]
+
+
+def test_rollup_stale_outranks_longer_idle(tmp_path, monkeypatch):
+    # The finding-#1 inversion: a dead daily feed (stale, 1 cycle) must sort
+    # ABOVE a harmlessly-idle project that's been quiet for many cycles.
+    monkeypatch.setattr(tracer, "NUDGE_CYCLES", 2)
+    t = _tracer(tmp_path)
+    t.read_tools = {"read_trading_bot_log": "Crypto", "read_ufc_scraper_status": "coachvision"}
+    t.prev_projects = {"coachvision": {"status": "idle", "last_ok": "x", "idle_cycles": 5}}
+    t.tool_call(0, "read_trading_bot_log", {},
+                '{"status": "ok", "stale": true, "data": {"trades": 0}}', False)   # stale, cycle 1
+    t.tool_call(0, "read_ufc_scraper_status", {},
+                '{"status": "ok", "data": {"runs_7d": 0}}', False)                  # idle, cycle 6
+    att = t.rollup()["attention"]
+    assert [a["name"] for a in att] == ["Crypto", "coachvision"]
+    assert att[0]["status"] == "stale" and att[0]["nudge"] is True
+    assert att[1]["status"] == "idle" and att[1]["cycles"] == 6
 
 
 def test_rollup_present_in_digest(tmp_path):

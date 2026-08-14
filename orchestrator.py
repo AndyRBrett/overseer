@@ -39,6 +39,30 @@ def run_pipeline(dry_run=False):
               "/ comment_on_issue are intercepted. Nothing will hit GitHub "
               "or Telegram. ***\n")
 
+    # Credential preflight — BEFORE the agents spend any API budget.
+    #
+    # A dead GitHub token used to produce a perfectly green run: every tool call
+    # 401'd, the agents worked around the errors, a digest was written, and the
+    # Action reported success. That happened four weeks running and nothing
+    # surfaced it. Now a credential that cannot reach a single repo stops the
+    # run loudly instead, and a partially-scoped one warns by name.
+    check = tools.preflight_github()
+    if check["status"] == "ok":
+        print(f"[preflight] {check['detail']}")
+    else:
+        print(f"[preflight] {check['status'].upper()}: {check['detail']}")
+        for slug, state in (check.get("repos") or {}).items():
+            if state != "ok":
+                print(f"[preflight]   - {slug}: {state}")
+    if check.get("fatal"):
+        raise SystemExit(
+            "\n*** ABORTED: the GitHub credential is unusable, so this review "
+            "would read nothing and file nothing.\n"
+            f"*** {check['detail']}\n"
+            "*** Fix: regenerate the PAT and update the OVERSEER_GITHUB_TOKEN "
+            "secret (Settings → Secrets and variables → Actions).\n"
+        )
+
     import anthropic
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
@@ -50,11 +74,34 @@ def run_pipeline(dry_run=False):
     tracer.start()
     status = "completed"
 
+    # Delivery ledger: read back the issues this pipeline has already filed and
+    # what became of them. Fetched ONCE and shared, since both agents need the
+    # same view and it costs a handful of API calls.
+    #
+    # It does two jobs. It feeds the dashboard's record of what the overseer has
+    # actually delivered, and — more importantly — it goes into both agents'
+    # prompts so they stop re-proposing finished work. Without it the pipeline
+    # filed the same schema-validation idea four times across seven weeks and
+    # once proposed a feature that was already running in production.
+    try:
+        ledger = tools.delivery_ledger()
+        known_work = tools.known_work_block(ledger)
+        t = ledger["totals"]
+        print(f"[ledger] {t['proposed']} filed · {t['shipped']} shipped · "
+              f"{t['in_flight']} in flight · {t['open']} open · "
+              f"{t['duplicate']} duplicate")
+    except Exception as exc:  # noqa: BLE001 — a missing ledger must not stop a review
+        print(f"[ledger] unavailable ({exc}) — agents run without dedupe context")
+        ledger, known_work = None, None
+
     try:
         # 1 → 2 → 3 → 4, strictly sequential; each agent finishes before the next.
-        bug_output = agent_bug_hunter.run(client, tracer)
+        # The Fixer takes the Bug-Hunter's report rather than the ledger: it acts
+        # on what was just filed, while known_work exists to stop the other two
+        # re-filing what already exists.
+        bug_output = agent_bug_hunter.run(client, tracer, known_work=known_work)
         fix_output = agent_fixer.run(client, tracer, bug_output)
-        idea_output = agent_idea.run(client, tracer)
+        idea_output = agent_idea.run(client, tracer, known_work=known_work)
         agent_reviewer.run(client, tracer, bug_output, idea_output, fix_output)
     except Exception as exc:  # noqa: BLE001 — record, render, then re-raise
         status = f"crashed: {exc}"
@@ -62,6 +109,7 @@ def run_pipeline(dry_run=False):
         tracer.write()
         tracer.write_digest(tools.DIGEST_PATH)
         tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
+        tools.write_ledger(ledger)
         raise
     finally:
         tools.cleanup_workspaces()  # never leave fixer clones behind
@@ -70,6 +118,7 @@ def run_pipeline(dry_run=False):
     tracer.write()
     tracer.write_digest(tools.DIGEST_PATH)
     tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
+    tools.write_ledger(ledger)
 
 
 def main():
