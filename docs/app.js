@@ -385,6 +385,60 @@ function renderShipped(ledger) {
   $("shipped").innerHTML = head + groups;
 }
 
+// Model spend — what the run cost, and what the two-tier split saved.
+//
+// The pipeline runs three agents; only the Bug-Hunter's calls are consequential
+// enough to need the heavy model, so the other two run on a cheaper one. That
+// is a claim, and this panel is the evidence for it: the baseline reprices this
+// run's ACTUAL token counts at the heavy rate, so the saving is arithmetic
+// rather than an assertion. It stays hidden on older digests that predate the
+// accounting, and on any run whose model isn't in the rate card — a confident
+// $0.00 would be worse than showing nothing.
+function renderSpend(spend, runs) {
+  if (!spend || !spend.agents || !spend.agents.length) return;
+  $("spend-card").style.display = "";
+
+  const usd = (v) => (v == null ? "—" : `$${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`);
+  const stats = [["this run", usd(spend.total_usd)]];
+  if (spend.saved_usd != null) {
+    stats.push(["saved", usd(spend.saved_usd)]);
+    stats.push(["vs. all-heavy", spend.saved_pct != null ? `${spend.saved_pct}%` : "—"]);
+  }
+  // Cumulative saving across the retained history, which is the number that
+  // actually justifies the change — one run's few cents never will.
+  const lifetime = (runs || [])
+    .map((r) => (r.spend && r.spend.saved_usd) || 0)
+    .reduce((a, b) => a + b, 0);
+  if (lifetime > 0) stats.push([`saved over ${runs.length} runs`, usd(lifetime)]);
+
+  const head = `<div class="stats">` + stats.map(([l, v]) =>
+    `<div class="stat"><div class="n">${escapeHtml(v)}</div><div class="l">${escapeHtml(l)}</div></div>`
+  ).join("") + `</div>`;
+
+  const rows = spend.agents.map((a) => {
+    const inTok = (a.input || 0) + (a.cache_write || 0) + (a.cache_read || 0);
+    // Light is the cheap path, so it gets the green chip; heavy is a deliberate
+    // choice rather than a problem, so it stays neutral — not amber.
+    const cls = a.tier === "light" ? "ok" : "";
+    return `<div class="prow">
+      <div>
+        <div class="pname"><span class="rc ${cls}">${escapeHtml(a.tier || "?")}</span>
+          ${escapeHtml(a.agent)}</div>
+        <div class="pmeta">${escapeHtml(a.model || "unknown model")} ·
+          ${inTok.toLocaleString()} in / ${(a.output || 0).toLocaleString()} out ·
+          ${a.calls || 0} call${a.calls === 1 ? "" : "s"}</div>
+      </div>
+      <div class="pname">${escapeHtml(a.usd == null ? "unpriced" : usd(a.usd))}</div>
+    </div>`;
+  }).join("");
+
+  const note = `<div class="spend-note">Estimated from published list prices and this
+    run's token counts — Anthropic's invoice is the authority. The baseline reprices the
+    same tokens at ${escapeHtml(spend.heavy_model || "the heavy model")}.</div>`;
+
+  $("spend").innerHTML = head + rows + note;
+}
+
 async function loadDigest() {
   try {
     const res = await fetch("digest.json?" + Date.now()); // bust cache
@@ -413,6 +467,7 @@ async function loadDigest() {
 
     renderGenerated(d);
     renderShipped(ledger);
+    renderSpend(d.spend, runs);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};

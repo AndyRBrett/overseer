@@ -41,6 +41,39 @@ TOOL_CATEGORY = {
 }
 DEFAULT_CATEGORY = ("tool", "#6b7280")
 
+# ── COST ESTIMATION ──────────────────────────────────────────────────────
+# List price in USD per million tokens, (input, output). This produces the
+# dashboard's spend estimate, not a billing record — Anthropic's invoice is the
+# authority. A model missing from this table still has its tokens counted; it is
+# simply reported as unpriced, because a confident $0.00 would be worse than an
+# honest blank.
+MODEL_PRICES = {
+    "claude-opus-5": (5.00, 25.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "claude-sonnet-5": (3.00, 15.00),   # intro $2/$10 through 2026-08-31; list price used
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-haiku-4-5": (1.00, 5.00),
+}
+# Prompt-cache multipliers against the model's input rate.
+CACHE_WRITE_MULTIPLIER = 1.25
+CACHE_READ_MULTIPLIER = 0.10
+
+
+def price_usd(model: str, tokens: dict) -> float | None:
+    """Estimated USD for one agent's token counts, or None if the model is unpriced."""
+    rates = MODEL_PRICES.get(model)
+    if rates is None:
+        return None
+    rate_in, rate_out = rates
+    return (
+        tokens.get("input", 0) * rate_in
+        + tokens.get("cache_write", 0) * rate_in * CACHE_WRITE_MULTIPLIER
+        + tokens.get("cache_read", 0) * rate_in * CACHE_READ_MULTIPLIER
+        + tokens.get("output", 0) * rate_out
+    ) / 1_000_000
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%H:%M:%S")
@@ -58,6 +91,8 @@ class RunTracer:
         self.read_tools = {}          # {tool_name: project_label} — set by caller
         self.prev_projects = {}       # last run's per-project health, for continuity
         self.agent = None             # current pipeline agent, for labelling output
+        self.usage: dict[str, dict] = {}  # per-agent model + token spend, in pipeline order
+        self.heavy_model = None       # the heavy tier, for the what-if baseline
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -105,6 +140,81 @@ class RunTracer:
         tag = "ERROR" if is_error else category.upper()
         print(f"[{_now()}] [{tag:9}] {self._prefix()}{name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
 
+    # ── model spend ──────────────────────────────────────────────────────
+
+    def set_agent_model(self, agent: str, model: str, tier: str) -> None:
+        """Record which model an agent was dispatched to, before it spends anything.
+
+        Called even for a run that crashes on its first turn, so the digest can
+        still say which tier was in play.
+        """
+        entry = self.usage.setdefault(agent, {
+            "agent": agent, "calls": 0,
+            "input": 0, "output": 0, "cache_write": 0, "cache_read": 0,
+        })
+        entry["model"], entry["tier"] = model, tier
+        self._record("agent_model", agent=agent, model=model, tier=tier)
+        print(f"[{_now()}] [model    ] {agent} → {model} ({tier})")
+
+    def record_usage(self, agent: str, model: str, usage) -> None:
+        """Accumulate one response's token usage against its agent.
+
+        `usage` is the SDK's usage object (or None — an older SDK, or a stubbed
+        client in tests, must not break a run). Attributes are read defensively
+        for the same reason: a missing cache counter should cost us a line in a
+        spend estimate, never the review itself.
+        """
+        entry = self.usage.setdefault(agent, {
+            "agent": agent, "model": model, "tier": None, "calls": 0,
+            "input": 0, "output": 0, "cache_write": 0, "cache_read": 0,
+        })
+        if usage is None:
+            return
+        entry["calls"] += 1
+        for key, attr in (("input", "input_tokens"), ("output", "output_tokens"),
+                          ("cache_write", "cache_creation_input_tokens"),
+                          ("cache_read", "cache_read_input_tokens")):
+            entry[key] += getattr(usage, attr, 0) or 0
+
+    def spend(self) -> dict:
+        """This run's estimated model spend, per agent, plus what tiering saved.
+
+        `baseline_usd` reprices the SAME token counts at the heavy model's rate —
+        it is what this run would have cost with every agent on the heavy tier,
+        not a second run. Token counts would differ slightly on a different
+        model, so treat the saving as an estimate of the right magnitude rather
+        than a precise figure. When any agent ran on a model missing from
+        MODEL_PRICES the dollar figures are withheld (`priced: false`) and the
+        token counts are reported alone.
+        """
+        agents, total, baseline = [], 0.0, 0.0
+        priced = bool(self.usage)
+        # The baseline is only claimable if the heavy model is priced too.
+        have_baseline = price_usd(self.heavy_model, {}) is not None
+        for entry in self.usage.values():
+            usd = price_usd(entry.get("model"), entry)
+            row = {k: entry.get(k) for k in
+                   ("agent", "model", "tier", "calls", "input", "output",
+                    "cache_write", "cache_read")}
+            row["usd"] = None if usd is None else round(usd, 4)
+            agents.append(row)
+            if usd is None:
+                priced = False
+                continue
+            total += usd
+            baseline += price_usd(self.heavy_model, entry) or 0.0
+        have_baseline = have_baseline and priced
+        return {
+            "agents": agents,
+            "priced": priced,
+            "heavy_model": self.heavy_model,
+            "total_usd": round(total, 4) if priced else None,
+            "baseline_usd": round(baseline, 4) if have_baseline else None,
+            "saved_usd": round(baseline - total, 4) if have_baseline else None,
+            "saved_pct": (round(100 * (baseline - total) / baseline, 1)
+                          if have_baseline and baseline else None),
+        }
+
     def set_digest(self, text: str) -> None:
         """The final digest the agent publishes — surfaced on the dashboard."""
         self.digest_text = text
@@ -117,6 +227,18 @@ class RunTracer:
             f"{self.counts['tools']} tool calls, {self.counts['issues']} issue(s), "
             f"{self.counts['enhancements']} enhancement(s), {self.counts['errors']} error(s) ──"
         )
+        spend = self.spend()
+        for row in spend["agents"]:
+            usd = "unpriced" if row["usd"] is None else f"${row['usd']:.4f}"
+            print(f"[{_now()}] [spend    ] {row['agent']:<11} {row['model']} "
+                  f"({row['tier']}) · {row['input'] + row['cache_write'] + row['cache_read']:,} in / "
+                  f"{row['output']:,} out · {usd}")
+        if spend["total_usd"] is not None:
+            line = f"[{_now()}] [spend    ] run total ${spend['total_usd']:.4f}"
+            if spend["saved_usd"] is not None:
+                line += (f" · ${spend['baseline_usd']:.4f} all-heavy "
+                         f"→ saved ${spend['saved_usd']:.4f} ({spend['saved_pct']}%)")
+            print(line)
 
     # ── output ───────────────────────────────────────────────────────────
 
@@ -301,6 +423,7 @@ class RunTracer:
             "counts": dict(self.counts),
             "rollup": self.rollup(),
             "projects": self.project_health(),
+            "spend": self.spend(),
             "timeline": timeline,
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -335,6 +458,10 @@ class RunTracer:
             "counts": dict(self.counts),
             "projects": {name: {"status": p.get("status"), "score": _status_score(p.get("status"))}
                          for name, p in self.project_health().items()},
+            # Just the three dollar figures, not the per-agent breakdown — enough
+            # to trend cost week over week and show the tiering's saving holding
+            # (or not) without bloating a 26-run file.
+            "spend": {k: self.spend()[k] for k in ("total_usd", "baseline_usd", "saved_usd")},
         }
         # Replace a record from the same day (re-run) instead of appending a dup.
         if runs and runs[-1].get("date") == record["date"]:

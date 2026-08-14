@@ -30,8 +30,75 @@ from datetime import datetime, timedelta, timezone
 
 from tracer import RunTracer, activity_idle
 
-# All three agents run on the same model unless overridden.
-MODEL = os.getenv("OVERSEER_MODEL", "claude-opus-4-8")
+# ── MODEL TIERS ──────────────────────────────────────────────────────────
+# The three agents do not all need the same class of model, and the two that
+# run long tool loops dominate the bill.
+#
+#   Bug-Hunter  — HEAVY. Its calls are the consequential ones: telling a feed
+#                 that is legitimately quiet apart from one that has died, and
+#                 deciding whether to file a bug on a real repo. Getting that
+#                 wrong means either a false alarm or another silent four-week
+#                 outage, which is the failure this pipeline exists to catch.
+#   Idea-Agent  — light. Enhancement ideation and effort/impact ranking. Its
+#                 output is filtered by the Reviewer and then by a human, so a
+#                 weak idea costs one line in a digest.
+#   Reviewer    — light. Dedupes and summarizes two reports it is handed; it
+#                 reads no data and files nothing.
+#
+# Both models are configurable. Set OVERSEER_LIGHT_MODEL to the same value as
+# OVERSEER_MODEL — or list every agent in OVERSEER_HEAVY_AGENTS — to put the
+# whole pipeline back on one model. The tiering has an off switch that needs no
+# code change, and run_agent records the actual token spend per agent either
+# way, so the saving is measured rather than assumed.
+AGENT_NAMES = ("Bug-Hunter", "Idea-Agent", "Reviewer")
+
+
+def _env(name, default=None):
+    """Read an env var, trimming whitespace and treating a BLANK value as unset.
+
+    Two things bite here. A repo slug pasted into a GitHub Variable can carry a
+    trailing CRLF (overseer #3) — hence the strip. And an *unset* GitHub Actions
+    variable is interpolated into the workflow as an empty string rather than
+    omitted, so a plain `os.getenv(name, default)` returns "" and never reaches
+    the default — which for a model name means handing the API model="".
+    """
+    value = os.getenv(name)
+    if isinstance(value, str):
+        value = value.strip()
+    return value or default
+
+
+MODEL = _env("OVERSEER_MODEL", "claude-opus-4-8")
+LIGHT_MODEL = _env("OVERSEER_LIGHT_MODEL", "claude-sonnet-5")
+
+
+def _parse_heavy_agents(raw):
+    """Parse OVERSEER_HEAVY_AGENTS, warning loudly about names that match no agent.
+
+    A typo here would silently demote the Bug-Hunter to the light model — the
+    exact class of quiet misconfiguration this project keeps getting bitten by —
+    so unknown names are reported rather than ignored.
+    """
+    names = tuple(n.strip() for n in raw.split(",") if n.strip())
+    unknown = [n for n in names if n not in AGENT_NAMES]
+    if unknown:
+        print(f"[model] WARNING: OVERSEER_HEAVY_AGENTS names no such agent: "
+              f"{', '.join(unknown)} (known: {', '.join(AGENT_NAMES)})")
+    return names
+
+
+HEAVY_AGENTS = _parse_heavy_agents(_env("OVERSEER_HEAVY_AGENTS", "Bug-Hunter"))
+
+
+def model_for(agent):
+    """The model this agent runs on: MODEL if it's judgment-heavy, else LIGHT_MODEL."""
+    if not LIGHT_MODEL or LIGHT_MODEL == MODEL:
+        return MODEL
+    return MODEL if agent in HEAVY_AGENTS else LIGHT_MODEL
+
+
+def tier_for(agent):
+    return "heavy" if model_for(agent) == MODEL else "light"
 
 # Safety bound on each agent's tool-use loop. Without this, a model that keeps
 # calling tools would never terminate. On the final iteration we drop the tools
@@ -78,11 +145,7 @@ def set_dry_run(value: bool) -> None:
 # Repo slug ("owner/name") + data-source location per project, from env.
 # The repo slugs are injected into the system prompts so the agents file issues
 # and enhancements against the correct repositories.
-def _env(name, default=None):
-    """Read an env var, trimming stray whitespace/newlines — e.g. a repo slug
-    pasted into a GitHub Variable with a trailing CRLF (see overseer #3)."""
-    v = os.getenv(name, default)
-    return v.strip() if isinstance(v, str) else v
+# (_env, which reads these, is defined with the model config near the top.)
 
 
 # ── PER-PROJECT FRESHNESS SLA (overseer #1) ──────────────────────────────
@@ -921,8 +984,14 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
 
     Returns the agent's final text output (its structured summary) so the
     orchestrator can pass it on to the next agent.
+
+    The model comes from model_for(agent) — see MODEL / LIGHT_MODEL above — and
+    every response's token usage is reported to the tracer, so each run's
+    dashboard shows what the tiering actually cost and actually saved.
     """
     tracer.set_agent(agent)
+    model = model_for(agent)
+    tracer.set_agent_model(agent, model, tier_for(agent))
     specs = tool_specs(tool_names)
     messages = [{"role": "user", "content": user_message}]
     final_text = ""
@@ -931,7 +1000,7 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
         last_iteration = iteration == MAX_ITERATIONS - 1
 
         response = client.messages.create(
-            model=MODEL,
+            model=model,
             max_tokens=4096,
             # Adaptive thinking with summarized display: judgment-heavy work
             # (bug vs. enhancement, effort/impact ranking, dedupe), and the
@@ -943,6 +1012,8 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
             tools=[] if last_iteration else specs,
             messages=messages,
         )
+
+        tracer.record_usage(agent, model, getattr(response, "usage", None))
 
         texts = []
         for block in response.content:
