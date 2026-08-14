@@ -89,18 +89,42 @@ def test_closed_issue_with_a_merged_fix_is_shipped(monkeypatch):
     assert _entry(issue)["status"] == "shipped"
 
 
-def test_closed_issue_without_a_merged_fix_is_only_in_flight(monkeypatch):
-    # THE HONESTY TEST. A closed issue whose fix sits on an unmerged branch is
-    # not delivered. Reporting it as shipped would let the dashboard take credit
-    # for unreviewed code — which is exactly the state of today's four branches.
-    _stub_merge(monkeypatch, False)
+def test_closed_issue_with_an_OPEN_pr_is_in_flight(monkeypatch):
+    # THE HONESTY TEST. A fix sitting in review is not delivered — this is what
+    # stops the panel taking credit for unmerged code.
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [_PR(False, "open", 8)])
     issue = _Issue(5, "Fix it", body=o.OVERSEER_MARKER, state="closed",
                    state_reason="completed")
-    assert _entry(issue)["status"] == "in_flight"
+    entry = _entry(issue)
+    assert entry["status"] == "in_flight"
+    assert entry["fix_ref"] == "PR #8 (open)"
+
+
+def test_closed_issue_with_no_pr_at_all_is_shipped(monkeypatch):
+    # THE BUG THE FIRST REFRESH EXPOSED. These repos land most work by direct
+    # commit to main, so "no linked PR" is the normal case for delivered work —
+    # not proof it is pending. Treating absence of a PR as non-delivery reported
+    # six coachvision features from June, long live in production, as in flight.
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [])
+    monkeypatch.setattr(o, "_closing_commit", lambda i: None)
+    issue = _Issue(5, "Fix it", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    assert _entry(issue)["status"] == "shipped"
+
+
+def test_a_direct_commit_closure_records_where_it_landed(monkeypatch):
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [])
+    monkeypatch.setattr(o, "_closing_commit", lambda i: "deadbeefcafe")
+    issue = _Issue(5, "Fix it", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    entry = _entry(issue)
+    assert entry["status"] == "shipped"
+    assert entry["fix_ref"] == "deadbee"
+    assert entry["fix_url"].endswith("/commit/deadbeefcafe")
 
 
 def test_merged_only_false_counts_any_closed_issue(monkeypatch):
-    _stub_merge(monkeypatch, False)
+    monkeypatch.setattr(o, "_linked_prs", lambda i: [_PR(False, "open", 9)])
     issue = _Issue(6, "Fix it", body=o.OVERSEER_MARKER, state="closed",
                    state_reason="completed")
     assert _entry(issue, merged_only=False)["status"] == "shipped"
@@ -144,16 +168,19 @@ def test_open_issue_with_a_pending_pr_reads_as_in_flight(monkeypatch):
     assert entry["fix_ref"] == "PR #42"
 
 
-def test_merge_check_failure_degrades_to_in_flight():
-    # An unreadable timeline (missing permission) must not crash the run, and
-    # must not optimistically claim delivery.
+def test_unreadable_timeline_does_not_crash_the_run():
+    # Missing permission on the timeline API must degrade, not raise. With no PR
+    # evidence either way, a completed closure still counts as delivered — the
+    # enrichment is for the "where", not for deciding the "whether".
     class _Boom(_Issue):
         def get_timeline(self):
             raise RuntimeError("no permission")
 
     issue = _Boom(10, "Fix", body=o.OVERSEER_MARKER, state="closed",
                   state_reason="completed")
-    assert o._ledger_entry(issue)["status"] == "in_flight"
+    entry = o._ledger_entry(issue)
+    assert entry["status"] == "shipped"
+    assert "fix_url" not in entry
 
 
 # --- aggregate maths --------------------------------------------------------
@@ -289,7 +316,7 @@ def test_full_rebuild_ignores_the_published_ledger(monkeypatch):
     known = {"entries": [{"repo": "A/overseer", "number": 4, "title": "Done",
                           "status": "shipped", "kind": "bug", "url": "",
                           "created_at": "2026-07-01", "closed_at": "2026-08-01"}]}
-    # known=None is what --full passes: no carry-forward, so the unmerged
-    # reality (in_flight) replaces the stale "shipped".
-    assert o.delivery_ledger(known=None)["entries"][0]["status"] == "in_flight"
+    # known=None is what --full passes: no carry-forward, recomputed from live
+    # state (no pending PR -> delivered).
+    assert o.delivery_ledger(known=None)["entries"][0]["status"] == "shipped"
     assert o.delivery_ledger(known=known)["entries"][0]["status"] == "shipped"
