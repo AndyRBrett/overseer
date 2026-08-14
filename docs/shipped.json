@@ -9,7 +9,7 @@
       "number": 16,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Add unit tests + a synthetic-fixture smoke test for each read tool and the tracer",
       "url": "https://github.com/AndyRBrett/overseer/issues/16"
     },
@@ -190,7 +190,7 @@
       "number": 14,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Auto-generate a coaching highlight clip (rally cuts + ball-track overlay) per processed session",
       "url": "https://github.com/AndyRBrett/coachvision/issues/14"
     },
@@ -203,7 +203,7 @@
       "number": 13,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Add an auto-ingest watcher with a first-run onboarding nudge and Slack/email confirmation",
       "url": "https://github.com/AndyRBrett/coachvision/issues/13"
     },
@@ -320,12 +320,15 @@
       "closed_at": "2026-08-13T21:26:26+00:00",
       "created_at": "2026-07-06T16:49:31+00:00",
       "effort": "low",
+      "fix_ref": "PR #21",
+      "fix_sha": "fec74bf",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/21",
       "impact": "high",
       "kind": "enhancement",
       "number": 13,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Add a dead-man's-switch heartbeat alert if the overseer misses its weekly run",
       "url": "https://github.com/AndyRBrett/overseer/issues/13"
     },
@@ -761,7 +764,7 @@
       "number": 11,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Generate auto coaching-feedback summary (rally length, ball-speed, contact-zone heatmap) per ingested clip",
       "url": "https://github.com/AndyRBrett/coachvision/issues/11"
     },
@@ -774,7 +777,7 @@
       "number": 10,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Add a sample-clip self-test that runs the full CV pipeline on a bundled 10s reference clip",
       "url": "https://github.com/AndyRBrett/coachvision/issues/10"
     },
@@ -787,7 +790,7 @@
       "number": 9,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Auto-generate per-rally highlight clips with coaching tags",
       "url": "https://github.com/AndyRBrett/coachvision/issues/9"
     },
@@ -800,7 +803,7 @@
       "number": 8,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
-      "status": "in_flight",
+      "status": "shipped",
       "title": "Add an idle-footage ingestion nudge + drop-folder auto-detect",
       "url": "https://github.com/AndyRBrett/coachvision/issues/8"
     },
@@ -867,15 +870,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-14T02:56:40Z",
+  "generated": "2026-08-14T03:00:02Z",
   "totals": {
-    "delivery_rate": 0.778,
+    "delivery_rate": 0.926,
     "duplicate": 10,
     "duplicate_rate": 0.156,
-    "in_flight": 8,
+    "in_flight": 0,
     "not_planned": 4,
     "open": 0,
     "proposed": 64,
-    "shipped": 42
+    "shipped": 50
   }
 }
