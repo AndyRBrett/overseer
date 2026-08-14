@@ -1,0 +1,66 @@
+name: Clean up merged branches
+
+# Manual only — this never runs on a schedule. Branch deletion should be a
+# decision someone makes, not something that happens quietly in the background.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Dry run lists what would go; Delete applies it."
+        type: choice
+        required: true
+        default: "dry-run"
+        options: ["dry-run", "delete"]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clean up merged branches
+        shell: bash
+        env:
+          # Needs Contents: write on all four repos. The default GITHUB_TOKEN
+          # cannot do this job — it is scoped to this repo alone, so it would
+          # succeed here and fail on the other three.
+          GH_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          GH_OWNER: ${{ github.repository_owner }}
+          # Read through the environment rather than interpolated into the script
+          # body, so the input is data and never shell syntax.
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -uo pipefail
+
+          if [ "$MODE" = "delete" ] && [ -z "$GH_TOKEN" ]; then
+            echo "::error::OVERSEER_GITHUB_TOKEN is not set — every delete would 403."
+            exit 1
+          fi
+
+          if [ "$MODE" = "delete" ]; then args=(--go); else args=(); fi
+
+          # tee keeps the full detail in the log while the job summary — the part
+          # that is readable on a phone — carries the same output.
+          bash scripts/delete-merged-branches.sh "${args[@]}" 2>&1 | tee /tmp/cleanup.log
+          status=${PIPESTATUS[0]}
+
+          {
+            echo "## Branch cleanup — \`$MODE\`"
+            echo
+            if [ "$MODE" = "dry-run" ]; then
+              echo "**Nothing was changed.** Re-run with **mode: delete** to apply."
+              echo
+            fi
+            if [ "$status" -ne 0 ]; then
+              echo "⚠️ **$status deletion(s) failed.** Usually token scope:"
+              echo "deleting a branch needs Contents: write on that repo."
+              echo
+            fi
+            echo '```'
+            grep -E "^(===|  (deleted|would delete|FAILED|SKIP|skip|reason|clone))|^SUMMARY" \
+              /tmp/cleanup.log || tail -n 60 /tmp/cleanup.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$status"
