@@ -253,7 +253,13 @@ def _ledger_entry(issue, merged_only=True):
         # An open issue with work already on a branch is IN FLIGHT, not merely
         # open — otherwise the panel shows nothing happening right up until the
         # moment a PR merges, which is the least useful time to learn about it.
-        entry["status"] = "in_flight" if _has_open_fix(issue) else "open"
+        pending = [pr for pr in _linked_prs(issue) if not pr.merged and pr.state == "open"]
+        if pending:
+            entry["status"] = "in_flight"
+            entry["fix_url"] = pending[0].html_url
+            entry["fix_ref"] = f"PR #{pending[0].number}"
+        else:
+            entry["status"] = "open"
         return entry
 
     reason = getattr(issue, "state_reason", None)
@@ -263,8 +269,17 @@ def _ledger_entry(issue, merged_only=True):
         entry["status"] = reason
         return entry
 
+    merged = [pr for pr in _linked_prs(issue) if pr.merged]
+    if merged:
+        # WHERE it was implemented, not just that it was. Without this the panel
+        # can say "shipped" and still leave you hunting through commit history
+        # for the change it is talking about.
+        entry["fix_url"] = merged[0].html_url
+        entry["fix_ref"] = f"PR #{merged[0].number}"
+        if merged[0].merge_commit_sha:
+            entry["fix_sha"] = merged[0].merge_commit_sha[:7]
     if merged_only:
-        entry["status"] = "shipped" if _has_merged_fix(issue) else "in_flight"
+        entry["status"] = "shipped" if merged else "in_flight"
     else:
         entry["status"] = "shipped"
     return entry

@@ -311,10 +311,10 @@ function renderGenerated(d) {
 // closed issue — a fix sitting on an unreviewed branch is in flight, and
 // claiming it as delivered would make this panel flattering instead of useful.
 const SHIPPED_STATES = {
-  shipped:     { label: "shipped",    cls: "ok" },
-  in_flight:   { label: "in flight",  cls: "idle" },
-  open:        { label: "open",       cls: "" },
-  duplicate:   { label: "duplicate",  cls: "stale" },
+  shipped:     { label: "shipped",     cls: "ok" },
+  in_flight:   { label: "in flight",   cls: "warn" },
+  open:        { label: "open",        cls: "" },
+  duplicate:   { label: "duplicate",   cls: "" },
   not_planned: { label: "not planned", cls: "" },
 };
 
@@ -327,37 +327,62 @@ function renderShipped(ledger) {
   const head =
     `<div class="stats">` +
     [["shipped", t.shipped], ["in flight", t.in_flight], ["open", t.open],
-     ["filed", t.proposed]]
-      .map(([k, v]) => `<div class="stat"><b>${v ?? 0}</b><span>${k}</span></div>`)
+     ["duplicate", t.duplicate], ["not planned", t.not_planned], ["filed", t.proposed]]
+      .map(([k, v]) => `<div class="stat"><div class="n">${v ?? 0}</div><div class="l">${k}</div></div>`)
       .join("") +
     `</div>` +
     `<div class="sub">${pct(t.delivery_rate)} of non-duplicate proposals delivered` +
-    (t.duplicate ? ` · <span class="warn">${t.duplicate} filed as duplicates (${pct(t.duplicate_rate)})</span>` : "") +
+    (t.duplicate ? ` · <span class="warn">${t.duplicate} duplicates (${pct(t.duplicate_rate)})</span>` : "") +
     `</div>`;
 
-  // Newest first, and shipped work first within that — the panel exists to show
-  // delivery, so delivery leads.
+  // Grouped by project, and EVERY item rendered — a capped list answers "how are
+  // we doing" but not "what happened to this specific idea", which is the
+  // question the panel exists for. Each repo is a <details> so the page stays
+  // scannable while still holding the whole record.
   const order = { shipped: 0, in_flight: 1, open: 2, duplicate: 3, not_planned: 4 };
-  const rows = ledger.entries
-    .slice()
-    .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9))
-    .slice(0, 25)
-    .map((e) => {
-      const st = SHIPPED_STATES[e.status] || { label: e.status, cls: "" };
-      const repo = escapeHtml((e.repo || "").split("/").pop());
-      const when = e.closed_at || e.created_at;
-      const ago = when ? relativeTime(when) : "";
-      return `<div class="proj">
-        <div class="proj-main">
-          <span class="badge ${st.cls}">${st.label}</span>
-          <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a>
-          <span class="meta">${repo} #${e.number}${ago ? " · " + escapeHtml(ago) : ""}</span>
-        </div>
-      </div>`;
-    })
-    .join("");
+  const byRepo = new Map();
+  for (const e of ledger.entries) {
+    const short = (e.repo || "?").split("/").pop();
+    if (!byRepo.has(short)) byRepo.set(short, []);
+    byRepo.get(short).push(e);
+  }
 
-  $("shipped").innerHTML = head + rows;
+  const row = (e) => {
+    const st = SHIPPED_STATES[e.status] || { label: e.status, cls: "" };
+    const when = e.closed_at || e.created_at;
+    const ago = when ? relativeTime(when) : "";
+    // WHERE it landed. A "shipped" badge with no link still leaves you digging
+    // through commit history for the change it is referring to.
+    const fix = e.fix_url
+      ? ` · <a href="${escapeHtml(e.fix_url)}" target="_blank" rel="noopener" class="fix">${escapeHtml(e.fix_ref || "fix")}</a>`
+      : "";
+    // WHY, for anything that wasn't simply built — carried on the row so a
+    // decision isn't buried in an issue comment nobody opens.
+    const why = e.decision
+      ? `<div class="pmeta why">${escapeHtml(e.decision)}</div>` : "";
+    return `<div class="prow${e.status === "shipped" ? "" : " dim"}">
+      <div>
+        <div class="pname"><span class="rc ${st.cls}">${st.label}</span>
+          <a href="${escapeHtml(e.url)}" target="_blank" rel="noopener">${escapeHtml(e.title)}</a></div>
+        <div class="pmeta">#${e.number}${ago ? " · " + escapeHtml(ago) : ""}${fix}</div>
+        ${why}
+      </div>
+    </div>`;
+  };
+
+  const groups = [...byRepo.entries()].sort().map(([repo, items]) => {
+    items.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || b.number - a.number);
+    const shipped = items.filter((e) => e.status === "shipped").length;
+    const pending = items.filter((e) => e.status === "open" || e.status === "in_flight").length;
+    return `<details class="repo-group">
+      <summary><strong>${escapeHtml(repo)}</strong>
+        <span class="pmeta">${shipped}/${items.length} shipped${pending ? ` · ${pending} pending` : ""}</span>
+      </summary>
+      ${items.map(row).join("")}
+    </details>`;
+  }).join("");
+
+  $("shipped").innerHTML = head + groups;
 }
 
 async function loadDigest() {

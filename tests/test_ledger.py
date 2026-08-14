@@ -47,8 +47,19 @@ def _entry(issue, merged_only=True, monkeypatch=None):
     return o._ledger_entry(issue, merged_only=merged_only)
 
 
+class _PR:
+    """Stand-in for a linked pull request."""
+
+    def __init__(self, merged, state="closed", number=99):
+        self.merged, self.state, self.number = merged, state, number
+        self.html_url = f"https://github.com/A/overseer/pull/{number}"
+        self.merge_commit_sha = "abc1234def" if merged else None
+
+
 def _stub_merge(monkeypatch, merged):
-    monkeypatch.setattr(o, "_has_merged_fix", lambda issue: merged)
+    """Point _ledger_entry's PR lookup at a fake linked PR."""
+    monkeypatch.setattr(o, "_linked_prs",
+                        lambda issue: [_PR(merged, "closed" if merged else "open")])
 
 
 def test_overseer_filed_issues_are_recognised_by_marker():
@@ -112,6 +123,25 @@ def test_not_planned_is_distinct_from_shipped():
 def test_open_issues_are_tracked_as_open():
     issue = _Issue(9, "[enhancement] Pending", body=o.OVERSEER_MARKER)
     assert _entry(issue)["status"] == "open"
+
+
+def test_shipped_entries_record_where_the_fix_landed(monkeypatch):
+    # "shipped" without a link means "go dig through commit history" — the
+    # panel has to say WHERE, not just whether.
+    _stub_merge(monkeypatch, True)
+    issue = _Issue(11, "Fix", body=o.OVERSEER_MARKER, state="closed",
+                   state_reason="completed")
+    entry = _entry(issue)
+    assert entry["fix_url"].endswith("/pull/99")
+    assert entry["fix_ref"] == "PR #99"
+    assert entry["fix_sha"] == "abc1234"
+
+
+def test_open_issue_with_a_pending_pr_reads_as_in_flight(monkeypatch):
+    monkeypatch.setattr(o, "_linked_prs", lambda issue: [_PR(False, "open", 42)])
+    entry = _entry(_Issue(12, "[enhancement] Pending", body=o.OVERSEER_MARKER))
+    assert entry["status"] == "in_flight"
+    assert entry["fix_ref"] == "PR #42"
 
 
 def test_merge_check_failure_degrades_to_in_flight():
