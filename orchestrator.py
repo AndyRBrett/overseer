@@ -63,6 +63,10 @@ def run_pipeline(dry_run=False):
 
     tracer = RunTracer()
     tracer.read_tools = tools.READ_TOOLS
+    # The heavy tier is the yardstick the run's spend is measured against.
+    tracer.heavy_model = tools.MODEL
+    plan = ", ".join(f"{name} → {tools.model_for(name)}" for name in tools.AGENT_NAMES)
+    print(f"[model] {plan}")
     tracer.prev_projects = tools.load_prev_projects()
     tracer.start()
     status = "completed"

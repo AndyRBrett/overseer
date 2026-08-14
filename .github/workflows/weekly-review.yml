@@ -28,6 +28,13 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          # Model tiers (all optional — see README "Model tiers"). Only the
+          # Bug-Hunter runs on the heavy model by default; set
+          # OVERSEER_LIGHT_MODEL to the same value as OVERSEER_MODEL to put the
+          # whole pipeline back on one model without touching code.
+          OVERSEER_MODEL: ${{ vars.OVERSEER_MODEL }}
+          OVERSEER_LIGHT_MODEL: ${{ vars.OVERSEER_LIGHT_MODEL }}
+          OVERSEER_HEAVY_AGENTS: ${{ vars.OVERSEER_HEAVY_AGENTS }}
           # Project repo slugs + data sources (set the ones you have):
           TRADING_REPO: ${{ vars.TRADING_REPO }}
           VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}

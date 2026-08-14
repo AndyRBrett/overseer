@@ -37,6 +37,41 @@ All tool implementations live in `tools.py`, which every agent imports from, so
 tool logic is never duplicated. The Reviewer's digest is also captured into
 `docs/digest.json` (updating the web app) and pushed as a notification.
 
+### Model tiers — paying for judgment, not for text
+
+The three agents don't all need the same class of model, and running them all on
+the most expensive one was buying nothing on two of the three.
+
+| Agent | Tier | Why |
+| --- | --- | --- |
+| Bug-Hunter | **heavy** (`OVERSEER_MODEL`) | Its calls are the consequential ones: telling a feed that's legitimately quiet apart from one that has died, and deciding whether to file a bug on a real repo. Getting that wrong means a false alarm — or another silent four-week outage, which is the failure this pipeline exists to catch. |
+| Idea Agent | light (`OVERSEER_LIGHT_MODEL`) | Enhancement ideation and effort/impact ranking. Its output is filtered by the Reviewer and then by a human, so a weak idea costs one line in a digest. |
+| Reviewer | light | Dedupes and summarizes two reports it's handed. It reads no data and files nothing. |
+
+Defaults: `OVERSEER_MODEL=claude-opus-4-8`, `OVERSEER_LIGHT_MODEL=claude-sonnet-5`.
+On a representative run that lands around **20% cheaper** — the light agents are
+roughly 40% of the spend and cost 60% as much per token.
+
+Three knobs, all optional:
+
+- `OVERSEER_MODEL` — the heavy tier.
+- `OVERSEER_LIGHT_MODEL` — the light tier. **Set it to the same value as
+  `OVERSEER_MODEL` to put the whole pipeline back on one model.** The tiering has
+  an off switch that needs no code change.
+- `OVERSEER_HEAVY_AGENTS` — comma-separated agents that get the heavy tier
+  (default `Bug-Hunter`; valid names are `Bug-Hunter`, `Idea-Agent`, `Reviewer`).
+  A name matching no agent is reported at startup rather than silently ignored —
+  a typo here would quietly demote the Bug-Hunter.
+
+**The saving is measured, not asserted.** Every response's token usage is
+recorded per agent, and each run's digest carries a `spend` block that the
+dashboard renders as a **Model spend** panel: what each agent cost, the run
+total, and a baseline that reprices *the same token counts* at the heavy rate —
+i.e. what this run would have cost with every agent on the heavy tier. Cumulative
+saving is trended across runs in `docs/history.json`. Figures come from published
+list prices (`MODEL_PRICES` in `tracer.py`); Anthropic's invoice is the authority,
+and a model missing from that table is reported as *unpriced* rather than free.
+
 ### Dry run (test safely)
 
 `python orchestrator.py --dry-run` runs the entire pipeline but intercepts the
@@ -301,5 +336,8 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
   happening, or completes while blind (stdlib only, no token)
+- `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
+- `scripts/delete-merged-branches.sh` — one-off cleanup of branches already
+  merged into `main`; dry-run by default, `--go` to apply
 - `.github/workflows/weekly-review.yml` — cron, digest commit, push, report artifact
 - `.github/workflows/heartbeat.yml` — daily heartbeat, independent of the above

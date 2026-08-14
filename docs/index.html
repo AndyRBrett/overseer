@@ -126,6 +126,7 @@
     .pmeta.why { margin-top: 3px; font-style: italic; color: var(--muted); }
     .pmeta a.fix { color: var(--link); text-decoration: none; }
     .pmeta a.fix:hover { text-decoration: underline; }
+    .spend-note { margin-top: 10px; font-size: 12px; color: var(--muted); }
     details.repo-group { margin-top: 10px; }
     details.repo-group > summary { cursor: pointer; padding: 6px 0; display: flex;
       gap: 10px; align-items: baseline; }
@@ -242,6 +243,11 @@
     <div class="card" id="shipped-card" style="display:none">
       <div class="section-label">Shipped (what came of the proposals)</div>
       <div id="shipped"></div>
+    </div>
+
+    <div class="card" id="spend-card" style="display:none">
+      <div class="section-label">Model spend (this run)</div>
+      <div id="spend"></div>
     </div>
 
     <div class="card">
