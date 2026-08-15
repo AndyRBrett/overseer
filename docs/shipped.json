@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "closed_at": null,
+      "created_at": "2026-08-15T10:05:15+00:00",
+      "kind": "bug",
+      "number": 23,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/23"
+    },
+    {
       "closed_at": "2026-08-13T22:00:58+00:00",
       "created_at": "2026-08-13T20:52:48+00:00",
       "effort": "medium",
@@ -836,15 +847,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-15T10:06:58Z",
+  "generated": "2026-08-15T10:12:42Z",
   "totals": {
-    "delivery_rate": 0.917,
+    "delivery_rate": 0.898,
     "duplicate": 12,
-    "duplicate_rate": 0.2,
+    "duplicate_rate": 0.197,
     "in_flight": 0,
     "not_planned": 4,
-    "open": 0,
-    "proposed": 60,
+    "open": 1,
+    "proposed": 61,
     "shipped": 44
   }
 }
