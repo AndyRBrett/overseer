@@ -28,7 +28,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from tracer import RunTracer, activity_idle
+from tracer import RAISED_KEY, RunTracer, activity_idle
 
 # ── MODEL TIERS ──────────────────────────────────────────────────────────
 # The three agents do not all need the same class of model, and the two that
@@ -950,6 +950,56 @@ TOOL_FUNCTIONS = {
     "propose_enhancement": propose_enhancement,
     "send_telegram_summary": send_telegram_summary,
 }
+
+# ── SHARED TELEMETRY READ ────────────────────────────────────────────────
+
+def read_all_projects():
+    """Read every project's status ONCE per run, for all agents to share.
+
+    The Bug-Hunter and the Idea Agent were each opening the same four status
+    files in the same run — eight reads for four files, and a whole API turn per
+    agent spent doing it. Reading once and handing both agents the result cuts
+    that turn out of the loop entirely.
+
+    It also removes a subtler problem: the two agents read minutes apart, so a
+    feed that published in between gave them different pictures of the same run.
+    Now they reason over one snapshot.
+
+    A tool that raises is captured as an error entry rather than propagating —
+    one unreadable project must not take the review down, which is the same
+    contract the tools have when an agent calls them directly.
+
+    That capture carries RAISED_KEY. Project health distinguishes a tool that
+    threw ("error") from one that returned a handled error status ("blind"), and
+    when the agents called the tools themselves that difference was carried by
+    the tool-result envelope. Flattening both into a dict would have silently
+    reclassified every missing status file.
+    """
+    readings = {}
+    for name in READ_TOOLS:
+        try:
+            readings[name] = TOOL_FUNCTIONS[name]()
+        except Exception as exc:  # noqa: BLE001 — degrade, never abort
+            readings[name] = {"status": "error", "detail": f"{name} failed: {exc}",
+                              RAISED_KEY: True}
+    return readings
+
+
+def telemetry_block(readings):
+    """Format the shared readings for injection into an agent's system prompt.
+
+    Emitted as JSON per project because that is exactly what the agents used to
+    receive as tool results — same shape, same field names, so their existing
+    reasoning about `stale`, `idle` and `status` carries over unchanged.
+    """
+    if not readings:
+        return "(no telemetry could be read this run)"
+    lines = []
+    for name, data in readings.items():
+        lines.append(f"{READ_TOOLS.get(name, name)} (via {name}):")
+        lines.append(f"  {json.dumps(data, default=str)}")
+    return "\n".join(lines)
+
 
 # ── SHARED PROMPT HELPERS ────────────────────────────────────────────────
 

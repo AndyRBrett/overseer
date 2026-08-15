@@ -10,13 +10,13 @@ orchestrator hands to the Reviewer (Agent 3).
 import tools
 
 # Brainstorm only. No file_issue, no search — this agent never decides whether
-# something is "broken"; it only proposes improvements. read_overseer_status lets
-# it ground ideas for improving the overseer itself.
+# something is "broken"; it only proposes improvements.
+#
+# The read tools are gone: every project's telemetry is now read once per run and
+# injected into the prompt below, so this agent starts with its grounding already
+# in hand instead of spending an entire API turn fetching what the Bug-Hunter
+# just fetched. Leaving the tools available would have made the saving optional.
 TOOL_NAMES = [
-    "read_trading_bot_log",
-    "read_volleyball_results",
-    "read_ufc_scraper_status",
-    "read_overseer_status",
     "propose_enhancement",
 ]
 
@@ -31,10 +31,15 @@ broken — bugs are a different agent's problem. You are here purely to imagine
 how each project could be more capable, more useful, more robust, or more
 delightful.
 
+THIS RUN'S PROJECT TELEMETRY — read once for the whole pipeline, current as of
+this run. Ground your ideas in it. There are no read tools to call; this is the
+data.
+{telemetry}
+
 Process:
-- Read each project's recent results with the read tools to ground your ideas in
-  what the project actually does (but don't get distracted by failures). Use
-  read_overseer_status to ground ideas for improving the overseer itself.
+- Work from the telemetry above to ground your ideas in what each project
+  actually does (but don't get distracted by failures). It covers the overseer
+  itself too, so ideas for improving the pipeline are fair game.
 - Produce AT LEAST THREE distinct enhancement ideas spread across the projects —
   don't pile them all onto one. The overseer itself is fair game: think about its
   reliability, test coverage, notifications, dashboard clarity, and the pipeline.
@@ -44,8 +49,8 @@ Process:
     - effort: low / medium / high (be honest about implementation cost)
     - impact: low / medium / high (don't inflate)
 - Favour low-effort / high-impact ideas, but a few ambitious ones are fine too.
-- If a read tool returns "not_configured" or "error", you can still propose
-  ideas for that project from its description above — just don't invent fake data.
+- If a project's telemetry says "not_configured" or "error", you can still
+  propose ideas for it from its description above — just don't invent fake data.
 
 ALREADY ON RECORD — do not re-propose these:
 {known_work}
@@ -73,7 +78,7 @@ USER_MESSAGE = ("Brainstorm at least three ranked enhancement ideas across the "
                 "three projects and the overseer itself.")
 
 
-def build_system_prompt(known_work=None):
+def build_system_prompt(known_work=None, telemetry=None):
     """System prompt with the already-filed ledger injected.
 
     Falls back to a clear 'no record' note rather than an empty string, so the
@@ -82,10 +87,11 @@ def build_system_prompt(known_work=None):
     return SYSTEM_PROMPT_TEMPLATE.format(
         project_block=tools.project_block(),
         known_work=known_work or "(no previously filed issues on record)",
+        telemetry=telemetry or "(telemetry unavailable — use the read tools)",
     )
 
 
-def run(client, tracer, known_work=None):
+def run(client, tracer, known_work=None, telemetry=None):
     """Run the Idea Agent to completion; return its structured idea list text.
 
     `known_work` is the delivery ledger's compact summary of what has already
@@ -94,7 +100,7 @@ def run(client, tracer, known_work=None):
     return tools.run_agent(
         client,
         agent="Idea-Agent",
-        system=build_system_prompt(known_work),
+        system=build_system_prompt(known_work, telemetry),
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,

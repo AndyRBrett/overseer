@@ -91,10 +91,32 @@ def run_pipeline(dry_run=False):
         print(f"[ledger] unavailable ({exc}) — agents run without dedupe context")
         ledger, known_work = None, None
 
+    # Telemetry: every project's status read ONCE, before any agent starts.
+    #
+    # The Bug-Hunter and Idea Agent were each opening the same four status files
+    # in the same run, and each spent a full API turn — carrying its entire
+    # context — doing it. Reading once and injecting the result into both
+    # prompts removes that turn from both loops.
+    #
+    # It also makes the two agents reason over the SAME snapshot. They used to
+    # read minutes apart, so a feed that published in between could show them
+    # different pictures of one run.
+    try:
+        readings = tools.read_all_projects()
+        telemetry = tools.telemetry_block(readings)
+        # Recorded as tool calls so project health, freshness alerts, nudges and
+        # the history scores — all derived from read-tool events — keep working.
+        tracer.shared_reads(readings)
+    except Exception as exc:  # noqa: BLE001 — fall back to the agents' own reads
+        print(f"[telemetry] shared read failed ({exc}) — agents will read directly")
+        telemetry = None
+
     try:
         # 1 → 2 → 3, strictly sequential; each agent finishes before the next.
-        bug_output = agent_bug_hunter.run(client, tracer, known_work=known_work)
-        idea_output = agent_idea.run(client, tracer, known_work=known_work)
+        bug_output = agent_bug_hunter.run(client, tracer, known_work=known_work,
+                                          telemetry=telemetry)
+        idea_output = agent_idea.run(client, tracer, known_work=known_work,
+                                     telemetry=telemetry)
         agent_reviewer.run(client, tracer, bug_output, idea_output)
     except Exception as exc:  # noqa: BLE001 — record, render, then re-raise
         status = f"crashed: {exc}"

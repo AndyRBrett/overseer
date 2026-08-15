@@ -26,6 +26,14 @@ from datetime import datetime, timezone
 # also emitted into the digest so the dashboard highlights the same projects.
 NUDGE_CYCLES = max(1, int(os.getenv("OVERSEER_NUDGE_CYCLES", "2")))
 
+# Marks a shared telemetry reading whose tool RAISED, as opposed to one that
+# returned a handled error status. project_health grades those as "error" and
+# "blind" respectively, so the distinction has to survive the trip.
+#
+# It lives here rather than in tools because tools imports tracer; defining it
+# the other way round would be a circular import.
+RAISED_KEY = "_tool_raised"
+
 # Maps each tool to a visual category: a label + colour used in the timeline.
 # This is what turns a flat log into something you can read at a glance —
 # "investigate" steps look different from a filed bug or a proposed idea.
@@ -139,6 +147,28 @@ class RunTracer:
         )
         tag = "ERROR" if is_error else category.upper()
         print(f"[{_now()}] [{tag:9}] {self._prefix()}{name}({_oneline(json.dumps(tool_input))}) -> {_oneline(result)}")
+
+    def shared_reads(self, readings: dict) -> None:
+        """Record the run's one-shot telemetry read as ordinary tool calls.
+
+        Project health, the freshness alerts, the nudges and the history scores
+        are all derived from read-tool `tool_call` events. Hoisting the reads out
+        of the agent loops without recording them here would leave every one of
+        those blank while the run still reported success — the exact silent
+        degradation this project keeps having to design against.
+
+        They are attributed to a Telemetry phase rather than to an agent, since
+        no agent made them, and the dashboard groups its timeline by agent.
+        """
+        previous = self.agent
+        self.set_agent("Telemetry")
+        for name, data in readings.items():
+            # is_error mirrors what the agent loop passed: True only when the
+            # tool itself threw. A tool that RETURNED an error status is not an
+            # errored call, and health grades the two differently.
+            is_error = isinstance(data, dict) and bool(data.get(RAISED_KEY))
+            self.tool_call(0, name, {}, json.dumps(data, default=str), is_error)
+        self.agent = previous
 
     # ── model spend ──────────────────────────────────────────────────────
 
