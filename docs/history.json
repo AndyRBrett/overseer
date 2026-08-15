@@ -298,14 +298,14 @@
     },
     {
       "date": "2026-08-15",
-      "generated": "2026-08-15T10:06:58Z",
+      "generated": "2026-08-15T10:18:10Z",
       "status": "completed",
-      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.3h old, SLA 48h \u00b7 stale 3 cycles\n\nIssues Found\n- coachvision \u2014 Status frozen since 2026-08-10 (122h old, breaches 48h SLA); scheduled run has silently lapsed, creating a monitoring-blind spot (#23).\n- Crypto bot, UFC dashboard, Overseer \u2014 no confirmed bugs; all healthy this cycle (crypto's negative PnL is a strategy issue already tracked in #24/#38/#39, not a defect).\n\nTop Enhancement Ideas (ranked)\n1. Overseer \u2014 Dedup check before filing proposals (effort: low, impact: high): fixes the chronic duplicate-proposal problem flagged in the brief, reducing noise in every future digest.\n2. coachvision \u2014 Alert/flag when selftest passes but 0 real clips ingested (effort: low, impact: high): current \"verified\" status is misleading since the system has never processed real footage \u2014 masks the real problem behind #23.\n3. UFC dashboard \u2014 Prioritize odds-budget spend toward the 5 awaiting-card events (effort: low, impact: medium): prevents fresh events from being starved now that odds_budget_exhausted is true.\n4. Crypto bot \u2014 Move from uniform BTC/ETH/SOL signal thresholds to per-asset thresholds (effort: medium, impact: medium): quiet-market verdict with 0 near-trigger signals across 10 evaluations suggests thresholds are too blunt for differing asset volatility.",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.5h old, SLA 48h \u00b7 stale 4 cycles\n\nIssues Found\n- coachvision: Data feed stale (122.5h old, >48h SLA) \u2014 runner has lapsed even though self-test passes. Already tracked as open issue #23, no new regression; still needs a fix.\n- All other projects (crypto-trading, ufc-dashboard, overseer) healthy \u2014 no new bugs. Crypto's negative P&L/Sharpe and UFC's odds_budget_exhausted flag are non-bug states (strategy performance / non-impacting flag, respectively).\n\nTop Enhancement Ideas (ranked)\n1. ufc-dashboard \u2014 Adaptive odds-API budget allocator (effort: low, impact: high): odds_budget_exhausted is wasting polls on distant events; prioritize by time-to-event/line-movement for quick high-value fix.\n2. crypto-trading \u2014 Volatility-scaled breakout/exit thresholds (effort: medium, impact: high): fixed % thresholds can't fire in current low-vol \"quiet market\" (0 signals); normalizing by realized vol unblocks the strategy.\n3. overseer \u2014 Per-project \"attention score\" ranking on dashboard (effort: medium, impact: high): green freshness is hiding real issues (bad Sharpe, stale coachvision, budget exhaustion) \u2014 surface what actually needs attention first.\n4. crypto-trading \u2014 Correlation/concentration guard across BTC/ETH/SOL (effort: medium, impact: medium): prevents accidental triple-beta stacking once signals resume firing.\n5. coachvision \u2014 Pose-estimation form-scoring vs. reference library (effort: high, impact: medium): valuable upgrade, but low priority until the stale pipeline (#23) is actually fixed and producing fresh clips.",
       "counts": {
-        "tools": 12,
+        "tools": 14,
         "errors": 0,
-        "issues": 1,
-        "enhancements": 0
+        "issues": 0,
+        "enhancements": 5
       },
       "projects": {
         "Trading bot": {
@@ -326,9 +326,9 @@
         }
       },
       "spend": {
-        "total_usd": 0.4914,
-        "baseline_usd": 0.5202,
-        "saved_usd": 0.0288
+        "total_usd": 0.4008,
+        "baseline_usd": 0.4263,
+        "saved_usd": 0.0255
       }
     }
   ]
