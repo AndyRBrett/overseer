@@ -298,13 +298,13 @@
     },
     {
       "date": "2026-08-15",
-      "generated": "2026-08-15T00:37:43Z",
+      "generated": "2026-08-15T10:06:58Z",
       "status": "completed",
-      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 112.8h old, SLA 48h \u00b7 stale 2 cycles\n\nIssues Found\n- coachvision: Pipeline is dead, not just idle \u2014 `last_run_at`/`generated_at` frozen at 2026-08-10 (age 112.8h, >2x the 48h SLA). Runner itself has stopped.\n- ufc-dashboard scraper: success_rate_7d = 0.74 (~13/50 runs failing) with a last_error on the most recent run \u2014 needs investigation.\n- overseer: Inconsistent project-slug usage \u2014 search runs under `coachvision` while `file_issue` uses `AndyRBrett/volleyball`. Risk of missed dedup / misfiled issues; should standardize on one slug.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Near-duplicate detection for propose_enhancement before filing (effort: medium, impact: high): Stops the pipeline's worst recurring failure \u2014 re-filing the same idea across weeks and burning owner triage time.\n2. crypto-trading \u2014 Auto-tune signal thresholds from historical signal_proximity percentiles (effort: medium, impact: medium/high): Market's been in a \"quiet\" zero-near-trigger regime for weeks with deeply negative Sharpe/Sortino; dynamic thresholds built on already-shipped telemetry could get real fills again.\n3. coachvision \u2014 Add cloud/camera-roll auto-sync for footage ingestion (effort: medium/high, impact: high): Zero real footage has ever been ingested despite watcher/onboarding/demo mode already shipped; this removes the last manual-move step blocking real adoption.\n4. ufc-dashboard \u2014 Backtest CLV/\"sharp\" flags against actual fight outcomes (effort: medium/high, impact: high): Turns already-shipped CLV/sharp classification from descriptive into a validated, predictive metric with rolling hit-rate/ROI.",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.3h old, SLA 48h \u00b7 stale 3 cycles\n\nIssues Found\n- coachvision \u2014 Status frozen since 2026-08-10 (122h old, breaches 48h SLA); scheduled run has silently lapsed, creating a monitoring-blind spot (#23).\n- Crypto bot, UFC dashboard, Overseer \u2014 no confirmed bugs; all healthy this cycle (crypto's negative PnL is a strategy issue already tracked in #24/#38/#39, not a defect).\n\nTop Enhancement Ideas (ranked)\n1. Overseer \u2014 Dedup check before filing proposals (effort: low, impact: high): fixes the chronic duplicate-proposal problem flagged in the brief, reducing noise in every future digest.\n2. coachvision \u2014 Alert/flag when selftest passes but 0 real clips ingested (effort: low, impact: high): current \"verified\" status is misleading since the system has never processed real footage \u2014 masks the real problem behind #23.\n3. UFC dashboard \u2014 Prioritize odds-budget spend toward the 5 awaiting-card events (effort: low, impact: medium): prevents fresh events from being starved now that odds_budget_exhausted is true.\n4. Crypto bot \u2014 Move from uniform BTC/ETH/SOL signal thresholds to per-asset thresholds (effort: medium, impact: medium): quiet-market verdict with 0 near-trigger signals across 10 evaluations suggests thresholds are too blunt for differing asset volatility.",
       "counts": {
-        "tools": 14,
-        "errors": 2,
-        "issues": 0,
+        "tools": 12,
+        "errors": 0,
+        "issues": 1,
         "enhancements": 0
       },
       "projects": {
@@ -326,9 +326,9 @@
         }
       },
       "spend": {
-        "total_usd": 0.4797,
-        "baseline_usd": 0.5642,
-        "saved_usd": 0.0844
+        "total_usd": 0.4914,
+        "baseline_usd": 0.5202,
+        "saved_usd": 0.0288
       }
     }
   ]
