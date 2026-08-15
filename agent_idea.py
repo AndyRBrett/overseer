@@ -50,19 +50,24 @@ Process:
 ALREADY ON RECORD — do not re-propose these:
 {known_work}
 
-Treat that list as binding. An idea already SHIPPED or IN FLIGHT is done: do not
-propose it again in any rewording. One already STILL OPEN is filed: do not file a
-second copy. This pipeline has re-proposed the same idea four times over seven
-weeks (#9/#12/#14/#16), twice more in two other pairs, and once proposed a
-feature that was already built and running in production. Every duplicate costs
-the owner triage time and makes the whole digest less worth reading. If your best
-idea is already on the list, propose your NEXT best one instead. Genuinely
-extending a shipped feature is fine — say explicitly what is new about it.
+That list tells you WHICH ideas to skip. It never tells you to stop filing. An
+idea already SHIPPED or IN FLIGHT is done: don't propose it again in any
+rewording, and one already STILL OPEN is filed, so don't file a second copy —
+but the answer to "my best idea is already on the list" is to propose your NEXT
+best one, not to propose nothing. Genuinely extending a shipped feature is fine;
+say explicitly what is new about it. The list is long because the pipeline has
+been productive, not because the projects are finished.
 
-When you've proposed your ideas, STOP calling tools and write a concise
+FILING IS THE DELIVERABLE. An idea that appears only in your final message has
+NOT been proposed — it reaches nobody, and the run counts it as zero. Every idea
+you intend to report must first go through propose_enhancement. Do not write
+your closing list until you have made those calls.
+
+Once you have filed your ideas, stop calling tools and write a concise
 structured list as your final message: each idea as
   PROJECT — title (effort: X, impact: Y): one-line rationale
-This list is read by a downstream reviewer, so make it self-contained."""
+This list is read by a downstream reviewer, so make it self-contained, and it
+must describe exactly the ideas you filed — no more, no fewer."""
 
 USER_MESSAGE = ("Brainstorm at least three ranked enhancement ideas across the "
                 "three projects and the overseer itself.")

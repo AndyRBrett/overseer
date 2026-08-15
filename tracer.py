@@ -227,6 +227,8 @@ class RunTracer:
             f"{self.counts['tools']} tool calls, {self.counts['issues']} issue(s), "
             f"{self.counts['enhancements']} enhancement(s), {self.counts['errors']} error(s) ──"
         )
+        for alert in self.output_alerts():
+            print(f"[{_now()}] [WARNING  ] {alert['agent']} {alert['detail']}")
         spend = self.spend()
         for row in spend["agents"]:
             usd = "unpriced" if row["usd"] is None else f"${row['usd']:.4f}"
@@ -359,6 +361,33 @@ class RunTracer:
             "attention": attention,
         }
 
+    def output_alerts(self) -> list[dict]:
+        """Agents that produced prose but took no action this run.
+
+        The Idea Agent filed 6, 7, 7 enhancements on three consecutive runs, then
+        0 on the next two — while still writing a confident, well-reasoned list
+        of ideas in its final message. Nothing failed, no error was logged, and
+        the digest read exactly as it always had. It took comparing run counts
+        against a commit timestamp to notice at all.
+
+        That is the same silent-degradation shape as the four-week token outage:
+        an agent that stops acting while continuing to sound healthy. So it gets
+        the same treatment — a deterministic check on what the run actually DID,
+        independent of what any agent said about it.
+        """
+        expected = {"Idea-Agent": ("enhancements", "propose_enhancement")}
+        alerts = []
+        for agent, (counter, tool) in expected.items():
+            if agent not in self.usage:
+                continue  # agent never ran; that is a different problem
+            if self.counts.get(counter, 0) == 0:
+                alerts.append({
+                    "agent": agent,
+                    "detail": f"produced no {counter} this run — it never called "
+                              f"{tool}, so nothing it reported was filed",
+                })
+        return alerts
+
     def freshness_alerts(self) -> list[dict]:
         """Every project whose published data has breached its freshness SLA this
         run — computed straight from project health, independent of what the
@@ -423,6 +452,7 @@ class RunTracer:
             "counts": dict(self.counts),
             "rollup": self.rollup(),
             "projects": self.project_health(),
+            "output_alerts": self.output_alerts(),
             "spend": self.spend(),
             "timeline": timeline,
         }

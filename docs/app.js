@@ -503,8 +503,15 @@ async function loadDigest() {
         return `<div class="nudge ${st}"><span class="pbadge ${st}">${badge}</span>
           <span class="ntext"><b>${escapeHtml(a.name)}</b> — ${escapeHtml(a.detail)}</span></div>`;
       }).join("");
+      // An agent that reasoned, wrote a confident summary, and filed nothing.
+      // This sits with the project nudges because it is the same failure shape:
+      // the run looks healthy and quietly delivered less than it claims.
+      const silent = (d.output_alerts || []).map((a) =>
+        `<div class="nudge blind"><span class="pbadge blind">SILENT</span>
+          <span class="ntext"><b>${escapeHtml(a.agent)}</b> — ${escapeHtml(a.detail)}</span></div>`
+      ).join("");
       $("rollup").innerHTML = `<div class="rollup-chips">${chips}</div>` +
-        (nudges ? `<div class="nudges">${nudges}</div>` : "");
+        (nudges || silent ? `<div class="nudges">${nudges}${silent}</div>` : "");
       $("rollup-card").style.display = "";
     }
 
