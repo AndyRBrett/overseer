@@ -31,9 +31,15 @@ Your single job is to find and file CONFIRMED BUGS. You do NOT propose
 enhancements, ideas, or "nice to haves" — a separate agent does that. Stay in
 your lane.
 
+THIS RUN'S PROJECT TELEMETRY — read once for the whole pipeline, current as of
+this run. Start here; it is the same data the read tools return.
+{telemetry}
+
 Process:
-- Read each project's recent logs/results using the read tools. Use
-  read_overseer_status to check the overseer's OWN weekly-run health.
+- Work from the telemetry above, which covers every project including the
+  overseer's OWN weekly-run health. The read tools remain available if you need
+  to re-check something specific while confirming a bug, but you do not need
+  them to get started — that reading is already done.
 - A bug is something genuinely BROKEN or FAILING: a crash, an error, a failed
   workflow run, stale/frozen data, a success rate that has dropped, a value
   that is clearly wrong. "Could be better" is NOT a bug — ignore it.
@@ -71,18 +77,19 @@ ALREADY ON RECORD — issues this pipeline has already filed:
 """
 
 
-def build_system_prompt(known_work=None):
+def build_system_prompt(known_work=None, telemetry=None):
     """System prompt with the already-filed ledger injected (see tools.known_work_block)."""
     return SYSTEM_PROMPT_TEMPLATE.format(
         project_block=tools.project_block(),
         known_work=known_work or "(no previously filed issues on record)",
+        telemetry=telemetry or "(telemetry unavailable — use the read tools)",
     )
 
 USER_MESSAGE = ("Investigate this week's data for all three projects and the "
                 "overseer itself, and file any confirmed bugs.")
 
 
-def run(client, tracer, known_work=None):
+def run(client, tracer, known_work=None, telemetry=None):
     """Run the Bug-Hunter to completion; return its structured summary text.
 
     `known_work` is the delivery ledger's summary of already-filed issues, so a
@@ -91,7 +98,7 @@ def run(client, tracer, known_work=None):
     return tools.run_agent(
         client,
         agent="Bug-Hunter",
-        system=build_system_prompt(known_work),
+        system=build_system_prompt(known_work, telemetry),
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,

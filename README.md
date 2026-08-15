@@ -37,6 +37,16 @@ All tool implementations live in `tools.py`, which every agent imports from, so
 tool logic is never duplicated. The Reviewer's digest is also captured into
 `docs/digest.json` (updating the web app) and pushed as a notification.
 
+**Telemetry is read once per run**, before any agent starts, and injected into
+the Bug-Hunter's and Idea Agent's prompts (`tools.read_all_projects`). The two
+agents were each opening the same four status files in the same run, and each
+spent a full API turn — carrying its entire context — doing it. Reading once
+removes that turn from both loops, and means both agents reason over the *same*
+snapshot; they used to read minutes apart, so a feed that published in between
+could show them different pictures of one run. The Bug-Hunter keeps the read
+tools for re-checking a specific feed while confirming a bug; the Idea Agent
+does not have them, so the saving isn't optional.
+
 ### Model tiers — paying for judgment, not for text
 
 The three agents don't all need the same class of model, and running them all on
