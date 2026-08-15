@@ -324,16 +324,42 @@ function renderShipped(ledger) {
   $("shipped-card").style.display = "";
 
   const pct = (v) => `${Math.round((v || 0) * 100)}%`;
-  const head =
-    `<div class="stats">` +
-    [["shipped", t.shipped], ["in flight", t.in_flight], ["open", t.open],
-     ["duplicate", t.duplicate], ["not planned", t.not_planned], ["filed", t.proposed]]
-      .map(([k, v]) => `<div class="stat"><div class="n">${v ?? 0}</div><div class="l">${k}</div></div>`)
-      .join("") +
+
+  // Lead with the one number that answers "is this thing delivering", drawn as
+  // a bar. Six equal-sized tiles made the reader divide 44 by 70 themselves to
+  // find out. The breakdown stays underneath for anyone who wants it.
+  //
+  // The bar's segments are exactly delivery_rate's denominator — everything
+  // except duplicates (see tools.delivery_ledger). That matters: sizing the bar
+  // on shipped+in_flight+open alone would fill it to 88% while the label beside
+  // it read 82%, and a reader who checked would be right to distrust both.
+  const parts = [
+    ["s-shipped", "shipped", t.shipped || 0],
+    ["s-flight", "in flight", t.in_flight || 0],
+    ["s-open", "open", t.open || 0],
+    ["s-noplan", "not planned", t.not_planned || 0],
+  ];
+  const considered = parts.reduce((a, [, , v]) => a + v, 0);
+  const bar =
+    `<div class="stat-hero"><b>${t.shipped ?? 0}</b> shipped of ${considered}` +
+    ` · <span class="hero-pct">${pct(t.delivery_rate)} delivered</span></div>` +
+    `<div class="dbar">` +
+    parts.map(([c, , v]) => considered
+      ? `<span class="${c}" style="width:${(v / considered) * 100}%"></span>` : "").join("") +
     `</div>` +
-    `<div class="sub">${pct(t.delivery_rate)} of non-duplicate proposals delivered` +
-    (t.duplicate ? ` · <span class="warn">${t.duplicate} duplicates (${pct(t.duplicate_rate)})</span>` : "") +
+    `<div class="dkey">` +
+    parts.filter(([, , v]) => v > 0)
+      .map(([c, l, v]) => `<span><i class="${c}"></i>${v} ${l}</span>`).join("") +
     `</div>`;
+
+  // Duplicates are the one thing outside the bar: a re-proposal of an existing
+  // idea isn't work, it's a dedupe failure, and counting it would dilute the
+  // rate rather than describe it.
+  const aside = `<div class="sub">${t.proposed ?? 0} filed all time` +
+    (t.duplicate ? ` · ${t.duplicate} duplicate (${pct(t.duplicate_rate)})` : "") +
+    `</div>`;
+
+  const head = bar + aside;
 
   // Grouped by project, and EVERY item rendered — a capped list answers "how are
   // we doing" but not "what happened to this specific idea", which is the
@@ -399,21 +425,32 @@ function renderSpend(spend, runs) {
   $("spend-card").style.display = "";
 
   const usd = (v) => (v == null ? "—" : `$${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`);
-  const stats = [["this run", usd(spend.total_usd)]];
-  if (spend.saved_usd != null) {
-    stats.push(["saved", usd(spend.saved_usd)]);
-    stats.push(["vs. all-heavy", spend.saved_pct != null ? `${spend.saved_pct}%` : "—"]);
-  }
-  // Cumulative saving across the retained history, which is the number that
-  // actually justifies the change — one run's few cents never will.
-  const lifetime = (runs || [])
-    .map((r) => (r.spend && r.spend.saved_usd) || 0)
-    .reduce((a, b) => a + b, 0);
-  if (lifetime > 0) stats.push([`saved over ${runs.length} runs`, usd(lifetime)]);
 
-  const head = `<div class="stats">` + stats.map(([l, v]) =>
-    `<div class="stat"><div class="n">${escapeHtml(v)}</div><div class="l">${escapeHtml(l)}</div></div>`
-  ).join("") + `</div>`;
+  // Same shape as the Shipped panel: one sentence carrying the answer, then the
+  // supporting numbers. Reading two panels the same way is most of what makes a
+  // dashboard feel legible.
+  const hero = `<div class="stat-hero"><b>${usd(spend.total_usd)}</b> this run` +
+    (spend.saved_pct != null
+      ? ` · <span class="hero-pct">${spend.saved_pct}% cheaper</span> than running every` +
+        ` agent heavy, saving ${usd(spend.saved_usd)}`
+      : "") + `</div>`;
+
+  const stats = [];
+  // Cumulative saving is the number that actually justifies the change — one
+  // run's few cents never will. Hidden until it covers more than the current
+  // run, since "saved this run $0.11" beside "saved to date $0.11" reads as a
+  // duplicated tile rather than a total.
+  const scored = (runs || []).filter((r) => r.spend && r.spend.saved_usd != null);
+  if (scored.length > 1) {
+    stats.push([`saved over ${scored.length} runs`,
+                usd(scored.reduce((a, r) => a + r.spend.saved_usd, 0))]);
+  }
+
+  const head = hero + (stats.length
+    ? `<div class="stats">` + stats.map(([l, v]) =>
+        `<div class="stat"><div class="n">${escapeHtml(v)}</div><div class="l">${escapeHtml(l)}</div></div>`
+      ).join("") + `</div>`
+    : "");
 
   const rows = spend.agents.map((a) => {
     const inTok = (a.input || 0) + (a.cache_write || 0) + (a.cache_read || 0);
@@ -490,11 +527,13 @@ async function loadDigest() {
     const nudgeAt = (rollup && rollup.nudge_threshold) || 2;
     if (rollup) {
       const att = rollup.attention || [];
+      // Health only. The issues/ideas counts used to be repeated here as chips
+      // AND as tiles directly below, so the same two numbers appeared twice
+      // within one screen. The glance answers "is anything wrong"; the tiles
+      // below answer "what did the run do".
       const chips = [
         `<span class="rc ok">${rollup.ok}/${rollup.total} healthy</span>`,
         att.length ? `<span class="rc warn">${att.length} need${att.length === 1 ? "s" : ""} attention</span>` : "",
-        `<span class="rc">${rollup.issues} issue${rollup.issues === 1 ? "" : "s"} filed</span>`,
-        `<span class="rc">${rollup.enhancements} idea${rollup.enhancements === 1 ? "" : "s"} proposed</span>`,
       ].filter(Boolean).join("");
       // Only projects past the nudge threshold get an explicit call-out row.
       const nudges = att.filter((a) => a.nudge).map((a) => {

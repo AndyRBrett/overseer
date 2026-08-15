@@ -42,7 +42,11 @@
     body { font: 15px/1.55 -apple-system, system-ui, sans-serif; margin: 0;
            background: var(--bg); color: var(--text);
            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
-           overflow-wrap: anywhere; }              /* never let long tokens overflow */
+           /* break-word, NOT anywhere. `anywhere` breaks mid-token even when the
+              word would fit on the next line, which rendered "$0.31" as "$0.3 /
+              1" and "DUPLICATE" as "DUPLICA / TE". Long unbreakable tokens are
+              handled where they actually occur (.wrap-any below). */
+           overflow-wrap: break-word; }
     header { padding: 22px 18px 10px; }
     header h1 { margin: 0; font-size: 19px; }
     header .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
@@ -56,11 +60,47 @@
     #generated.stale { color: var(--stale); }
     main { padding: 8px 18px 40px; max-width: 780px; margin: 0 auto; }
 
-    .stats { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
-    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-            padding: 10px 14px; flex: 1; min-width: 70px; }
-    .stat .n { font-size: 22px; font-weight: 700; }
-    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+    /* Stat tiles. A grid rather than flex: flex:1 with min-width:70px squeezed
+       six tiles onto one row and forced every label to wrap mid-word. auto-fit
+       lets the row reflow to as many columns as actually fit, so a label gets
+       the width it needs or moves to the next line whole. */
+    /* 150px is chosen so a phone lands on exactly 2 columns (a 4-tile row reads
+       as a balanced 2x2 instead of 3 + a lone orphan) while the 780px desktop
+       column still fits all 4 across. */
+    .stats { display: grid; gap: 10px; margin: 12px 0 18px;
+             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .stat { background: var(--card2); border: 1px solid var(--border2); border-radius: 10px;
+            padding: 10px 12px; min-width: 0; }
+    /* Numbers never break, at any width — a wrapped "$0.31" is not a number.
+       They shrink instead, and tabular figures keep tiles optically aligned. */
+    .stat .n { font-size: clamp(17px, 5.2vw, 22px); font-weight: 700;
+               white-space: nowrap; font-variant-numeric: tabular-nums;
+               color: var(--text-strong); }
+    .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase;
+               letter-spacing: .03em; line-height: 1.3; margin-top: 2px;
+               overflow-wrap: normal; word-break: normal; hyphens: none; }
+
+    /* Only for content that genuinely contains unbreakable tokens (URLs, JSON,
+       tool payloads) — the narrow exception the global rule used to be. */
+    .wrap-any, .digest, .item .body, pre, code { overflow-wrap: anywhere; }
+
+    /* Delivery bar — turns "44 shipped of 70 filed" into something readable at a
+       glance instead of six numbers you have to mentally divide. */
+    .dbar { display: flex; height: 8px; border-radius: 999px; overflow: hidden;
+            background: var(--border2); margin: 10px 0 6px; }
+    .dbar span { display: block; height: 100%; }
+    .dbar .s-shipped, .dkey .s-shipped { background: #10b981; }
+    .dbar .s-flight,  .dkey .s-flight  { background: #f59e0b; }
+    .dbar .s-open,    .dkey .s-open    { background: #64748b; }
+    .dbar .s-noplan,  .dkey .s-noplan  { background: #3f4b5f; }
+    .dkey { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px;
+            color: var(--muted); }
+    .dkey i { display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+              margin-right: 5px; vertical-align: baseline; }
+    .stat-hero { font-size: 15px; color: var(--text2); }
+    .stat-hero b { font-size: 24px; font-weight: 700; color: var(--text-strong);
+                   margin-right: 3px; }
+    .stat-hero .hero-pct { color: var(--text-strong); font-weight: 600; }
 
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
             padding: 16px; margin: 12px 0; overflow: hidden; }   /* clip stray overflow */
@@ -130,6 +170,13 @@
     details.repo-group { margin-top: 10px; }
     details.repo-group > summary { cursor: pointer; padding: 6px 0; display: flex;
       gap: 10px; align-items: baseline; }
+    /* A repo name is a single identifier — "crypto-trading" breaking after the
+       hyphen turned every row into a ragged two-line block. */
+    details.repo-group > summary strong { white-space: nowrap; }
+    /* .pmeta's size lives on `.prow .pmeta`, and a summary is not a .prow — so
+       these rows were rendering at the 15px body size and wrapping. */
+    details.repo-group > summary .pmeta { margin-top: 0; font-size: 11.5px;
+      color: var(--muted); }
     details.repo-group[open] > summary { border-bottom: 1px solid var(--border); margin-bottom: 4px; }
     .nudges { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
     .nudge { display: flex; align-items: center; gap: 10px; padding: 9px 11px;
