@@ -298,14 +298,14 @@
     },
     {
       "date": "2026-08-15",
-      "generated": "2026-08-15T10:18:10Z",
+      "generated": "2026-08-15T10:36:01Z",
       "status": "completed",
-      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.5h old, SLA 48h \u00b7 stale 4 cycles\n\nIssues Found\n- coachvision: Data feed stale (122.5h old, >48h SLA) \u2014 runner has lapsed even though self-test passes. Already tracked as open issue #23, no new regression; still needs a fix.\n- All other projects (crypto-trading, ufc-dashboard, overseer) healthy \u2014 no new bugs. Crypto's negative P&L/Sharpe and UFC's odds_budget_exhausted flag are non-bug states (strategy performance / non-impacting flag, respectively).\n\nTop Enhancement Ideas (ranked)\n1. ufc-dashboard \u2014 Adaptive odds-API budget allocator (effort: low, impact: high): odds_budget_exhausted is wasting polls on distant events; prioritize by time-to-event/line-movement for quick high-value fix.\n2. crypto-trading \u2014 Volatility-scaled breakout/exit thresholds (effort: medium, impact: high): fixed % thresholds can't fire in current low-vol \"quiet market\" (0 signals); normalizing by realized vol unblocks the strategy.\n3. overseer \u2014 Per-project \"attention score\" ranking on dashboard (effort: medium, impact: high): green freshness is hiding real issues (bad Sharpe, stale coachvision, budget exhaustion) \u2014 surface what actually needs attention first.\n4. crypto-trading \u2014 Correlation/concentration guard across BTC/ETH/SOL (effort: medium, impact: medium): prevents accidental triple-beta stacking once signals resume firing.\n5. coachvision \u2014 Pose-estimation form-scoring vs. reference library (effort: high, impact: medium): valuable upgrade, but low priority until the stale pipeline (#23) is actually fixed and producing fresh clips.",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.8h old, SLA 48h \u00b7 stale 5 cycles\n\nIssues Found\n- coachvision: pipeline still frozen since 2026-08-10 (now 122.8h old, breaches 48h SLA) \u2014 already tracked as open #23, no new bug filed (duplicate condition).\n- No other new bugs this week. crypto-trading, ufc-dashboard, and overseer all healthy (fresh runs, no errors). Known non-bugs: crypto-trading's negative P&L/Sharpe (tracked in #41/#42), ufc-dashboard's odds_budget_exhausted (#73, expected state).\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Enhancement-backlog aging tracker (effort: low, impact: medium): Cheap addition to the digest that surfaces untriaged ideas sitting 60+ days, making backlog rot visible alongside pipeline staleness.\n2. crypto-trading \u2014 Transaction-cost-aware signal gate (effort: medium, impact: high): Directly targets the root cause of the ongoing negative P&L/Sharpe -2.29 by suppressing trades whose edge doesn't clear real fees+slippage.\n3. coachvision \u2014 Cloud/action-camera auto-import connector (effort: medium, impact: high): Likely fixes the real reason footage never gets ingested (manual copy friction) \u2014 more impactful than just tracking the staleness.\n4. ufc-dashboard \u2014 Fighter-history/style-matchup predictive overlay (effort: high, impact: high): Valuable new signal (model vs market probability divergence) but biggest lift \u2014 good next-quarter candidate, not urgent.",
       "counts": {
-        "tools": 14,
+        "tools": 13,
         "errors": 0,
         "issues": 0,
-        "enhancements": 5
+        "enhancements": 4
       },
       "projects": {
         "Trading bot": {
@@ -326,9 +326,9 @@
         }
       },
       "spend": {
-        "total_usd": 0.4008,
-        "baseline_usd": 0.4263,
-        "saved_usd": 0.0255
+        "total_usd": 0.3069,
+        "baseline_usd": 0.4127,
+        "saved_usd": 0.1058
       }
     }
   ]
