@@ -105,13 +105,8 @@ def tier_for(agent):
 # so the model is forced to produce a closing summary instead of more tool calls.
 MAX_ITERATIONS = 25
 
-# The overseer runs weekly; if its own last completed run is older than this, the
-# schedule likely lapsed — a skipped run must not read as healthy (overseer #5).
-SCHEDULE_STALE_HOURS = 192  # 8 days
-
-
-def _schedule_stale(age_hours):
-    return age_hours is not None and age_hours > SCHEDULE_STALE_HOURS
+# The overseer's own schedule check lives with the freshness SLAs below, since
+# it is the same rule applied to this project: see SCHEDULE_STALE_HOURS.
 
 
 # The dashboard (docs/, served by GitHub Pages) reads this file. The weekly
@@ -152,21 +147,76 @@ def set_dry_run(value: bool) -> None:
 # How old a project's published status file may get before it's flagged STALE.
 # A silently-halted feed must trip an alert, not read as healthy: issue #34 was
 # the crypto status file sitting ~153h stale while the digest stayed quiet.
-# Each project sets its OWN SLA (a daily bot's data goes stale far sooner than a
-# weekly pipeline's) via env, defaulting to 48h — two missed daily runs. The
-# shared default is itself tunable via FRESHNESS_SLA_HOURS.
+#
+# THE RULE: an SLA is derived from how often that project actually PUBLISHES,
+# never picked by feel.
+#
+#     sla_hours = publish_interval_hours + SLA_GRACE_HOURS
+#
+# One full missed publish cycle, plus a day of slack because GitHub's scheduled
+# crons are best-effort and routinely drift. A daily publisher lands on 48h and
+# a weekly one on 192h, which is where both conventions in this repo already sat
+# — the rule reproduces them rather than reinventing them.
+#
+# Why it matters that this is derived: coachvision publishes weekly (Mondays
+# 06:00 UTC) and was being graded against the shared 48h default, so from every
+# Wednesday onward it was flagged STALE for behaving exactly as designed. Five
+# consecutive runs raised a correct-looking alarm about a healthy project. An
+# alert that fires on normal operation is worse than no alert, because it
+# teaches you to skim past the panel where the real one will appear.
+#
+# Both halves are overridable per project: <PROJECT>_PUBLISH_INTERVAL_HOURS to
+# state the cadence, or <PROJECT>_SLA_HOURS to set the deadline outright.
 FRESHNESS_SLA_DEFAULT_HOURS = int(os.getenv("FRESHNESS_SLA_HOURS", "48"))
+SLA_GRACE_HOURS = int(os.getenv("SLA_GRACE_HOURS", "24"))
+
+HOURLY, DAILY, WEEKLY = 1, 24, 168
 
 
-def _sla_hours(env_name):
-    """A project's freshness SLA in hours, from its own env var, falling back to
-    the shared default. A blank or non-numeric value falls back rather than
-    erroring, so a fat-fingered GitHub Variable can't break the whole run."""
+def sla_for_interval(publish_interval_hours):
+    """The staleness deadline for a feed that publishes every N hours."""
+    return publish_interval_hours + SLA_GRACE_HOURS
+
+
+# The overseer runs weekly (weekly-review.yml: `0 14 * * 1`), so its own missed
+# schedule is the same rule applied to this project — a skipped run must not read
+# as healthy (overseer #5). Derived rather than hardcoded to 192 so that if the
+# grace period is ever retuned, the overseer is held to the same bar it holds
+# everything else to.
+SCHEDULE_STALE_HOURS = sla_for_interval(WEEKLY)
+
+
+def _schedule_stale(age_hours):
+    return age_hours is not None and age_hours > SCHEDULE_STALE_HOURS
+
+
+def _int_env(env_name, default=None):
+    """An int from env, falling back rather than erroring on junk — a
+    fat-fingered GitHub Variable must not break the whole run."""
     raw = _env(env_name)
     try:
-        return int(raw) if raw else FRESHNESS_SLA_DEFAULT_HOURS
+        return int(raw) if raw else default
     except ValueError:
-        return FRESHNESS_SLA_DEFAULT_HOURS
+        return default
+
+
+def _sla_hours(env_name, publish_interval_hours=None):
+    """A project's freshness SLA, in precedence order:
+
+    1. <PROJECT>_SLA_HOURS — an explicit deadline, when the cadence rule doesn't
+       fit (a feed with no schedule at all, say).
+    2. <PROJECT>_PUBLISH_INTERVAL_HOURS — state the cadence, derive the deadline.
+    3. The project's known publish interval, declared in PROJECTS below.
+    4. The shared default, for a project whose cadence nobody has recorded yet.
+    """
+    explicit = _int_env(env_name)
+    if explicit is not None:
+        return explicit
+    interval = _int_env(env_name.replace("_SLA_HOURS", "_PUBLISH_INTERVAL_HOURS"),
+                        publish_interval_hours)
+    if interval is not None:
+        return sla_for_interval(interval)
+    return FRESHNESS_SLA_DEFAULT_HOURS
 
 
 PROJECTS = {
@@ -175,7 +225,10 @@ PROJECTS = {
         "repo": _env("TRADING_REPO"),
         "db_path": _env("TRADING_DB_PATH"),              # local deployments
         "status_path": _env("TRADING_STATUS_PATH", "overseer-status.json"),  # cloud: file the bot publishes
-        "sla_hours": _sla_hours("TRADING_SLA_HOURS"),    # daily bot → 48h default
+        # The bot ticks hourly, but run-bot.yml gates the status publish behind
+        # MIN_AGE_HOURS=20, so the file itself refreshes about once a day. The
+        # SLA tracks the PUBLISH cadence, not the tick cadence. → 48h
+        "sla_hours": _sla_hours("TRADING_SLA_HOURS", DAILY),
     },
     # Internal key + env vars stay "volleyball"/VOLLEYBALL_* (the deployment's
     # GitHub Variables are wired to them); only the human-facing name changed
@@ -185,13 +238,23 @@ PROJECTS = {
         "repo": _env("VOLLEYBALL_REPO"),
         "results_path": _env("VOLLEYBALL_RESULTS_PATH"),                       # local
         "status_path": _env("VOLLEYBALL_STATUS_PATH", "overseer-status.json"),  # cloud
-        "sla_hours": _sla_hours("VOLLEYBALL_SLA_HOURS"),
+        # overseer-status.yml runs `schedule: 0 6 * * 1` — weekly, Mondays 06:00
+        # UTC — and publishes whether or not footage arrived, precisely so the
+        # overseer can tell idle from broken. Under the old 48h default it read
+        # STALE from every Wednesday on, which is why five consecutive runs
+        # raised an alarm about a project that was working as designed. → 192h
+        "sla_hours": _sla_hours("VOLLEYBALL_SLA_HOURS", WEEKLY),
     },
     "ufc": {
         "label": "UFC fight card dashboard (scraper + odds tracking)",
         "repo": _env("UFC_REPO"),  # repo whose Actions runs + status file we read
         "status_path": _env("UFC_STATUS_PATH", "overseer-status.json"),
-        "sla_hours": _sla_hours("UFC_SLA_HOURS"),
+        # update.yml runs far more often around a card (every 4h Thu–Sat, every
+        # 5 min during fight windows), but the only GUARANTEED publish is the
+        # daily 09:00 UTC cron. An SLA is a floor, so it tracks the slowest
+        # guaranteed cadence — sizing it on fight-night frequency would page us
+        # every ordinary Tuesday. → 48h
+        "sla_hours": _sla_hours("UFC_SLA_HOURS", DAILY),
     },
     "overseer": {
         "label": "Project Overseer itself — this agent: the weekly-review runner, "
