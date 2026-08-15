@@ -2,6 +2,58 @@
   "entries": [
     {
       "closed_at": null,
+      "created_at": "2026-08-15T10:35:39+00:00",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "number": 26,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest",
+      "url": "https://github.com/AndyRBrett/overseer/issues/26"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-15T10:35:36+00:00",
+      "effort": "high",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 74,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "open",
+      "status": "open",
+      "title": "Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongside live odds",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/74"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-15T10:35:32+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 25,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/25"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-15T10:35:29+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 44,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/44"
+    },
+    {
+      "closed_at": null,
       "created_at": "2026-08-15T10:17:44+00:00",
       "effort": "high",
       "impact": "medium",
@@ -912,15 +964,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-15T10:36:01Z",
+  "generated": "2026-08-15T10:43:13Z",
   "totals": {
-    "delivery_rate": 0.815,
+    "delivery_rate": 0.759,
     "duplicate": 12,
-    "duplicate_rate": 0.182,
+    "duplicate_rate": 0.171,
     "in_flight": 0,
     "not_planned": 4,
-    "open": 6,
-    "proposed": 66,
+    "open": 10,
+    "proposed": 70,
     "shipped": 44
   }
 }
