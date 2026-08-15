@@ -1,26 +1,26 @@
 {
-  "generated": "2026-08-13T20:53:26Z",
+  "generated": "2026-08-15T00:37:43Z",
   "status": "completed",
-  "summary": "STALENESS ALERTS\n- coachvision \u2014 data 85.1h old, SLA 48h \u00b7 stale 1 cycle\n\n\ud83d\udccb Weekly Review \u2014 2026-08-13\n\nIssues Found\n- ufc-dashboard (#66): Scraper parse-failure on 2026-08-22 Hernandez vs Rodrigues \u2014 page fetches but 0 bouts extracted (bout_count 8), so event carries no odds; masked by 100% run success. Watch: UFC 330 line flagged stale <2 days out (not filed).\n- Note: coachvision is idle/stale (no footage ever ingested) but self-test passes \u2014 monitoring gap, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Signal-proximity telemetry panel (effort: low, impact: high): 0/10 signals acted; chart distance-to-trigger to see if market's quiet vs thresholds miscalibrated. No capital at risk. (#38)\n2. ufc-dashboard \u2014 Push line-movement alerts to Telegram/Discord (effort: low, impact: high): movement data already computed but stuck in JSON; add webhook sink w/ dedup for real-time odds tracking. (#67)\n3. overseer \u2014 Dead-man's-switch heartbeat alert (effort: low, impact: high): overseer ran 1\u00d7/7d (78h stale); independent freshness ping removes the SPOF that would silently blind all monitoring. (#17)\n4. crypto-trading \u2014 Walk-forward backtest + param-sweep harness (effort: high, impact: high): 90d P&L -793, Sharpe -2.71 is systematic; offline replay quantifies whether an edge exists before risking changes. (#39)\n5. coachvision \u2014 Bundled demo clip + auto report (effort: medium, impact: medium): reuse passing 77-frame fixture to auto-produce a sample report, lowering activation barrier and exercising the report path. (#21)\n6. ufc-dashboard \u2014 Per-bout CLV history + steam-move flags (effort: medium, impact: medium): persist timestamped odds to compute closing-line value and detect sharp moves. (#68)",
+  "summary": "STALENESS ALERTS\n- coachvision \u2014 data 112.8h old, SLA 48h \u00b7 stale 2 cycles\n\nIssues Found\n- coachvision: Pipeline is dead, not just idle \u2014 `last_run_at`/`generated_at` frozen at 2026-08-10 (age 112.8h, >2x the 48h SLA). Runner itself has stopped.\n- ufc-dashboard scraper: success_rate_7d = 0.74 (~13/50 runs failing) with a last_error on the most recent run \u2014 needs investigation.\n- overseer: Inconsistent project-slug usage \u2014 search runs under `coachvision` while `file_issue` uses `AndyRBrett/volleyball`. Risk of missed dedup / misfiled issues; should standardize on one slug.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Near-duplicate detection for propose_enhancement before filing (effort: medium, impact: high): Stops the pipeline's worst recurring failure \u2014 re-filing the same idea across weeks and burning owner triage time.\n2. crypto-trading \u2014 Auto-tune signal thresholds from historical signal_proximity percentiles (effort: medium, impact: medium/high): Market's been in a \"quiet\" zero-near-trigger regime for weeks with deeply negative Sharpe/Sortino; dynamic thresholds built on already-shipped telemetry could get real fills again.\n3. coachvision \u2014 Add cloud/camera-roll auto-sync for footage ingestion (effort: medium/high, impact: high): Zero real footage has ever been ingested despite watcher/onboarding/demo mode already shipped; this removes the last manual-move step blocking real adoption.\n4. ufc-dashboard \u2014 Backtest CLV/\"sharp\" flags against actual fight outcomes (effort: medium/high, impact: high): Turns already-shipped CLV/sharp classification from descriptive into a validated, predictive metric with rolling hit-rate/ROI.",
   "counts": {
-    "tools": 19,
-    "errors": 0,
-    "issues": 1,
-    "enhancements": 7
+    "tools": 14,
+    "errors": 2,
+    "issues": 0,
+    "enhancements": 0
   },
   "rollup": {
     "ok": 3,
     "total": 4,
-    "issues": 1,
-    "enhancements": 7,
-    "errors": 0,
+    "issues": 0,
+    "enhancements": 0,
+    "errors": 2,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "coachvision",
         "status": "stale",
-        "detail": "data 85.1h old, SLA 48h \u00b7 stale 1 cycle",
-        "cycles": 1,
+        "detail": "data 112.8h old, SLA 48h \u00b7 stale 2 cycles",
+        "cycles": 2,
         "nudge": true
       }
     ]
@@ -28,188 +28,204 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-08-13T20:53:26Z",
+      "last_ok": "2026-08-15T00:37:43Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "stale",
       "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-08-13T20:53:26Z",
+      "last_ok": "2026-08-15T00:37:43Z",
       "blind_cycles": 0,
-      "stale_cycles": 1,
-      "age_hours": 85.1,
+      "stale_cycles": 2,
+      "age_hours": 112.8,
       "sla_hours": 48
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-08-13T20:53:26Z",
+      "last_ok": "2026-08-15T00:37:43Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-08-13T20:53:26Z",
+      "last_ok": "2026-08-15T00:37:43Z",
       "blind_cycles": 0
     }
   },
+  "spend": {
+    "agents": [
+      {
+        "agent": "Bug-Hunter",
+        "model": "claude-opus-4-8",
+        "tier": "heavy",
+        "calls": 5,
+        "input": 10,
+        "output": 9061,
+        "cache_write": 16538,
+        "cache_read": 46361,
+        "usd": 0.3531
+      },
+      {
+        "agent": "Idea-Agent",
+        "model": "claude-sonnet-5",
+        "tier": "light",
+        "calls": 2,
+        "input": 4,
+        "output": 2345,
+        "cache_write": 11336,
+        "cache_read": 4228,
+        "usd": 0.079
+      },
+      {
+        "agent": "Reviewer",
+        "model": "claude-sonnet-5",
+        "tier": "light",
+        "calls": 2,
+        "input": 3,
+        "output": 2077,
+        "cache_write": 4203,
+        "cache_read": 2439,
+        "usd": 0.0477
+      }
+    ],
+    "priced": true,
+    "heavy_model": "claude-opus-4-8",
+    "total_usd": 0.4797,
+    "baseline_usd": 0.5642,
+    "saved_usd": 0.0844,
+    "saved_pct": 15.0
+  },
   "timeline": [
     {
-      "ts": "20:50:21",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "I'm checking the status across all four projects simultaneously."
-    },
-    {
-      "ts": "20:50:22",
+      "ts": "00:34:36",
       "agent": "Bug-Hunter",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:50:24",
+      "ts": "00:34:37",
       "agent": "Bug-Hunter",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:50:27",
+      "ts": "00:34:40",
       "agent": "Bug-Hunter",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'Update UFC Fight Cards', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/31853809693', 'at': '2026-08-15T00:30:05+00:00'}"
     },
     {
-      "ts": "20:50:29",
+      "ts": "00:34:42",
       "agent": "Bug-Hunter",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:50:56",
+      "ts": "00:35:26",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "Looking at the trading bot first\u2014it's running fine with no errors despite the negative P&L, which is just a reflection of the strategy's performance rather than a technical issue. Now checking the volleyball coaching app, which shows as id\u2026",
-      "text_full": "Looking at the trading bot first\u2014it's running fine with no errors despite the negative P&L, which is just a reflection of the strategy's performance rather than a technical issue. Now checking the volleyball coaching app, which shows as idle and stale despite being marked as okay. The coachvision pipeline hasn't generated a status update in 85 hours, exceeding the 48-hour SLA, but this appears to be expected idle behavior since no footage has ever been ingested and the self-test passes. The staleness is a consequence of inactivity rather than a failure. Moving on to the UFC scraper, which has been running consistently over the past week with a perfect success rate and no recent errors. However, there's a confirmed parse failure for a specific event on August 22nd where the scraper expected bout data but found none, causing the event to be marked as a parse failure despite the overall run-level success rate being 100%. Additionally, there are two stale events in the data \u2014 UFC 330 and the Nurmagomedov fight \u2014 where odds haven't been updated since August 11th despite the events being upcoming. The parse failure is the clearest bug to report, though the stale event data might indicate the scraper isn't refreshing certain events properly. Looking at the Overseer tool itself, it's running weekly with a 100% success rate and no errors, though the last run was about 78 hours ago. The tool appears to be functioning normally without any stale flags or issues reported. For the CoachVision staleness concern, the status file hasn't been updated in 85 hours against a 48-hour SLA, but this might be a monitoring gap rather than an actual problem since there's no footage to process. The main bug I need to file is the UFC parse failure, so let me check if there are existing issues for that first."
+      "text": "Looking at the crypto trading bot project\u2014it was generated recently about 5 hours ago and meets the SLA window. There are no actual errors; the negative P&L and poor Sharpe ratio reflect strategy performance rather than bugs, and I can see\u2026",
+      "text_full": "Looking at the crypto trading bot project\u2014it was generated recently about 5 hours ago and meets the SLA window. There are no actual errors; the negative P&L and poor Sharpe ratio reflect strategy performance rather than bugs, and I can see that issue #39 addressing the walk-forward backtest diagnostic was already shipped. For coachvision, the situation is different\u2014the status file is over 112 hours old, well past the 48-hour SLA, and the stale flag is set to true. The pipeline hasn't regenerated its status since August 10th despite being a regularly scheduled job. Even though the project itself is idle with no incoming footage, the fact that the status file isn't being updated on schedule suggests the pipeline execution itself may have stopped running. This is exactly what issue #6 was designed to catch by separating last_run_at from last_footage_at. Since last_run_at is now stale, it indicates a genuine pipeline execution failure rather than just idle data. I should check existing issues to avoid duplicating this bug report. Now looking at the UFC dashboard, which shows a 74% success rate over the past week\u2014meaning 26% of runs failed\u2014and the most recent error timestamp is from August 15th. So the stale events and parse failures are actually working as designed\u2014those flags were added in recent releases to handle exactly this scenario. The real question is whether that 74% success rate represents a regression or if it's just normal variance without a baseline to compare against. The last error timestamp matching the most recent run suggests the latest attempt itself failed, which could be part of that pattern. The 74% success rate might be normal for a scraper hitting unreliable sources, but the timing of the last error matching the last run is worth noting. What's more concerning is that the UFC 330 event happening today has stale odds from four days ago\u2014no updates since August 11th\u2014which could break closing line tracking right before fight night, even if the scrap\u2026"
     },
     {
-      "ts": "20:50:56",
+      "ts": "00:35:26",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (error)",
+      "text": "Tool 'search_existing_issues' failed: Validation Failed: 422 {\"message\": \"Validation Failed\", \"errors\": [{\"message\": \"The listed users and repositories cannot be searched either because the resources\u2026"
+    },
+    {
+      "ts": "00:35:26",
       "agent": "Bug-Hunter",
       "label": "search_existing_issues (search)",
       "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
     },
     {
-      "ts": "20:50:56",
+      "ts": "00:35:27",
       "agent": "Bug-Hunter",
       "label": "search_existing_issues (search)",
       "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
     },
     {
-      "ts": "20:51:07",
-      "agent": "Bug-Hunter",
-      "label": "file_issue (bug)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Scraper parse failure for 2026-08-22 Hernandez vs Rodrigues: expected bouts, got none (#66)"
-    },
-    {
-      "ts": "20:51:27",
+      "ts": "00:35:43",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I've filed the bug report and now I'm putting together the summary. The stale UFC events caught my attention, but the line movement stayed consistent so they're not clear indicators. I'll note them anyway and wrap up the investigation."
+      "text": "The search tool for the coachvision/volleyball repo returned a 422 error, so I can't search for existing issues there to check for duplicates. The read tool worked fine, but without search capability, I'm stuck \u2014 the instructions say not t\u2026",
+      "text_full": "The search tool for the coachvision/volleyball repo returned a 422 error, so I can't search for existing issues there to check for duplicates. The read tool worked fine, but without search capability, I'm stuck \u2014 the instructions say not to file if a matching open issue exists, but I have no way to verify that now. Looking at the ALREADY ON RECORD list, coachvision has shipped items around idle/staleness detection, but nothing that's an open bug about the pipeline actually being stale. The error message suggests I might not have permission to file there either, which makes me reconsider whether this is even a confirmed bug I should report. Actually, the data itself is telling the story: coachvision's status is from 2026-08-10, which is older than the overseer's last run on 2026-08-13. The stale flag with 112.8 hours of age exceeds the 48-hour SLA twice over \u2014 this is exactly the staleness signal that issue #6 was designed to catch. The volleyball repo search is failing with a 422 error, which might be a permission or validation issue specific to that repo. Since I can't search for duplicates there, filing risks creating a duplicate, but this is a genuine confirmed bug with no matching open issue in the records. Let me try a simpler search query to see if it's the repo itself or just the query that's problematic."
     },
     {
-      "ts": "20:51:30",
+      "ts": "00:35:43",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (error)",
+      "text": "Tool 'search_existing_issues' failed: Validation Failed: 422 {\"message\": \"Validation Failed\", \"errors\": [{\"message\": \"The listed users and repositories cannot be searched either because the resources\u2026"
+    },
+    {
+      "ts": "00:35:50",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "I'm noticing a discrepancy in the repository naming\u2014the instructions reference \"AndyRBrett/volleyball\" as the correct slug, but searches keep failing on it, while the existing records show \"AndyRBrett/coachvision\" being used inconsistently\u2026",
+      "text_full": "I'm noticing a discrepancy in the repository naming\u2014the instructions reference \"AndyRBrett/volleyball\" as the correct slug, but searches keep failing on it, while the existing records show \"AndyRBrett/coachvision\" being used inconsistently across different contexts."
+    },
+    {
+      "ts": "00:35:50",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/coachvision: 0 match(es)"
+    },
+    {
+      "ts": "00:36:45",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "There's a conflict between the search results using the coachvision slug and the file_issue instructions that specify the volleyball repository. I need to reconsider whether the coachvision staleness is actually a bug worth reporting\u2014the m\u2026",
+      "text_full": "There's a conflict between the search results using the coachvision slug and the file_issue instructions that specify the volleyball repository. I need to reconsider whether the coachvision staleness is actually a bug worth reporting\u2014the metrics show it hasn't run since August 10th with a 112.8 hour age against a 48-hour SLA, and it's marked as idle, but I should verify if this is genuinely unexpected behavior or just expected inactivity. Looking at the data more carefully, the distinction between last_run_at and last_footage_at is intentional: it separates idle pipelines (running but no new footage) from dead pipelines (not running at all). Since last_run_at itself is stale, the coachvision pipeline has genuinely stopped executing\u2014this is the exact signal that issue #6 was designed to catch. This is a confirmed bug: the weekly self-test hasn't run in over 112 hours, well beyond the SLA threshold. For the repo slug, the instructions are explicit: coachvision maps to AndyRBrett/volleyball, so I should use that when calling file_issue, even though the search tool indexes it under coachvision. Now for UFC: the 74% success rate over 7 days means roughly 13 of 50 runs failed. The most recent run shows a last_error from the \"Update UFC Fight Cards\" workflow, but a subsequent run generated fresh data 3 minutes later, so the pipeline recovered. The recurring ~26% failure rate is a reliability concern worth filing as a bug. The parse-failure for this event shows 8 bouts parsed but zero odds captured \u2014 the system flagged it as \"odds missing on an announced card.\" Since the event is a week out, this could just be that odds haven't been released yet rather than a genuine bug. The error is noted in the data-quality logs, but it's probably expected behavior for a card without posted odds, so I won't file it as a bug. Now looking at the bigger picture: the UFC workflow has a 7-day success rate of 0.74, meaning it's failing about a quarter of the time. That's a real reliability is\u2026"
+    },
+    {
+      "ts": "00:36:47",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I should check the current state of the projects to inform my approach."
+      "text": "I'll review all four statuses to get a clearer picture of what we're working with."
     },
     {
-      "ts": "20:51:30",
+      "ts": "00:36:48",
       "agent": "Idea-Agent",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:51:31",
+      "ts": "00:36:49",
       "agent": "Idea-Agent",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:51:35",
+      "ts": "00:36:52",
       "agent": "Idea-Agent",
       "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'Update UFC Fight Cards', 'url': 'https://github.com/AndyRBrett/ufc-dashboard/actions/runs/31853809693', 'at': '2026-08-15T00:30:05+00:00'}"
     },
     {
-      "ts": "20:51:36",
+      "ts": "00:36:54",
       "agent": "Idea-Agent",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "20:52:28",
+      "ts": "00:37:22",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "Looking at the trading bot's performance metrics, the strategy is clearly broken\u2014negative returns, poor risk-adjusted metrics, and zero executed signals despite evaluating ten opportunities. I'm thinking through what's causing this: the co\u2026",
-      "text_full": "Looking at the trading bot's performance metrics, the strategy is clearly broken\u2014negative returns, poor risk-adjusted metrics, and zero executed signals despite evaluating ten opportunities. I'm thinking through what's causing this: the core strategy logic needs validation through backtesting, but there's also potential value in tracking near-miss signals to understand how close we're getting to execution thresholds. Building a sensitivity dashboard could reveal whether we're just slightly off on parameters or if the regime has fundamentally shifted. For the volleyball coaching tool, the real blocker is that no footage has ever been uploaded\u2014the pipeline works but there's no data flowing through it. I should focus on lowering friction: either add an onboarding demo with sample footage so users see the dashboard in action, or implement a watched folder that auto-ingests videos. Once that's solved, I could layer in rep counting and technique scoring to make the tool more valuable. The UFC alerts system is performing well, so I'm looking at enhancements like Discord notifications for significant line movements on main events, tracking historical closing-line value for sharp-money detection, and auto-detecting when new fight cards post. For the overseer itself, it's running infrequently and aging\u2014I should add a heartbeat monitor that alerts if it stops running, plus integrate notifications across Discord or Slack with a consolidated digest of all project statuses. Now I'm ranking these ideas by effort versus impact to pick the strongest ones to tackle first."
+      "text": "Thinking through some ideas for the crypto trading system\u2014the quiet market conditions with near_trigger staying at zero across all metrics suggest we need a different approach. I could explore adding a secondary strategy like mean-reversio\u2026",
+      "text_full": "Thinking through some ideas for the crypto trading system\u2014the quiet market conditions with near_trigger staying at zero across all metrics suggest we need a different approach. I could explore adding a secondary strategy like mean-reversion or market-neutral tactics that activate during low-volatility periods, or implement dynamic position sizing that adjusts based on the current volatility regime. Since the walk-forward backtest and signal proximity features are already in place, the next logical step would be setting up adaptive threshold tuning that learns from historical signal_proximity data to automatically calibrate thresholds. For the volleyball coaching platform, the core issue is that despite the auto-ingest watcher and onboarding nudges shipping, we're still not getting real footage ingested. The pivot to martial arts opens up new possibilities\u2014I could build out a technique classification taxonomy specific to martial arts, add multi-camera angle support for better analysis, or focus on reducing friction with a mobile quick-capture shortcut that makes it easier for users to submit footage on the fly. Actually, integrating with phone camera roll auto-upload through Google Photos or iCloud APIs could be the real unlock here\u2014it directly solves the zero real footage problem by removing the manual drop requirement, though the API integration work might be more involved than it initially seems. That's probably the highest-impact move for adoption. For the UFC dashboard, I'm thinking about how to surface the most critical issues\u2014parse failures and stale events should bubble up with better filtering and sorting by urgency. But there's also an opportunity to close the loop on the CLV-based sharp signal tracking by adding historical accuracy metrics that compare the dashboard's predictions against actual fight outcomes, which would let us compute real ROI backtesting instead of just tracking signals in isolation. For Overseer, the duplicate detection problem is act\u2026"
     },
     {
-      "ts": "20:52:31",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add \"signal proximity\" telemetry + dashboard panel showing how close each dormant signal came to firing (effort low, impact high)"
-    },
-    {
-      "ts": "20:52:35",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Build a walk-forward backtest + parameter-sweep harness to diagnose the negative Sharpe/Sortino (effort high, impact high)"
-    },
-    {
-      "ts": "20:52:38",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Push main-event line-movement alerts to a notification channel (Discord/Telegram) with CLV context (effort low, impact high)"
-    },
-    {
-      "ts": "20:52:41",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Track closing-line-value (CLV) history per bout and flag \"sharp\" vs \"square\" movement patterns (effort medium, impact medium)"
-    },
-    {
-      "ts": "20:52:44",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/volleyball \u2014 Ship a bundled demo clip + auto-generated coaching report so the pipeline shows value before real footage is added (effort medium, impact medium)"
-    },
-    {
-      "ts": "20:52:47",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add a dead-man's-switch heartbeat alert when the overseer itself misses its weekly run (effort low, impact high)"
-    },
-    {
-      "ts": "20:52:50",
-      "agent": "Idea-Agent",
-      "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Generate a unified weekly cross-project digest (Markdown + dashboard header) summarizing all four projects (effort medium, impact medium)"
-    },
-    {
-      "ts": "20:53:18",
+      "ts": "00:37:39",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "Looking at the issues and ideas, there's only one bug filed so far\u2014the UFC dashboard parse failure\u2014while the CoachVision staleness is more of a monitoring gap. For the ideas, I'm considering whether to keep the unified weekly cross-project\u2026",
-      "text_full": "Looking at the issues and ideas, there's only one bug filed so far\u2014the UFC dashboard parse failure\u2014while the CoachVision staleness is more of a monitoring gap. For the ideas, I'm considering whether to keep the unified weekly cross-project digest proposal since it overlaps with what the reviewer already does, but it's still a valid enhancement. The UFC parse bug and the line-movement alerts idea are separate concerns, so no need to consolidate them. Now I'm working through ranking the ideas. I'll focus on the strongest ones\u2014keeping the low-effort, high-impact ideas at the top, then the high-impact backtest work, and a few medium-priority items. The CoachVision demo clip makes sense given the pipeline visibility gap, and the CLV history tracking is medium priority. The overseer digest is somewhat meta but worth keeping. Let me finalize this into a clean digest."
+      "text": "I'm identifying the key issues: the coachvision pipeline is stale and breaching SLA, the UFC scraper has a concerning 0.74 success rate with recent errors, and there's a slug mismatch between the search functionality using coachvision and \u2026",
+      "text_full": "I'm identifying the key issues: the coachvision pipeline is stale and breaching SLA, the UFC scraper has a concerning 0.74 success rate with recent errors, and there's a slug mismatch between the search functionality using coachvision and the file_issue tool using the explicit AndyRBrett/volleyball path\u2014which points to an inconsistency in how the bug-hunter is accessing these resources. For enhancements, I'm prioritizing by impact and effort, with the overseer dedup improvement ranking highest since it directly addresses a recurring pain point with medium effort. Crypto-trading auto-tune comes next, followed by coachvision cloud sync\u2014which is actually more critical than the UFC dashboard backtest since the footage ingestion is completely blocking the project, even though both require medium-high effort."
     },
     {
-      "ts": "20:53:18",
+      "ts": "00:37:39",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
-    },
-    {
-      "ts": "20:53:26",
-      "agent": "Reviewer",
-      "label": "reasoning",
-      "text": "The tool came back as not_configured, but I've already called it once as instructed, so I won't retry it. The failure is environmental rather than something I can fix, so I'll just record what happened."
     }
   ]
 }

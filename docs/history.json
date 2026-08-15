@@ -295,6 +295,41 @@
           "score": 1.0
         }
       }
+    },
+    {
+      "date": "2026-08-15",
+      "generated": "2026-08-15T00:37:43Z",
+      "status": "completed",
+      "summary": "STALENESS ALERTS\n- coachvision \u2014 data 112.8h old, SLA 48h \u00b7 stale 2 cycles\n\nIssues Found\n- coachvision: Pipeline is dead, not just idle \u2014 `last_run_at`/`generated_at` frozen at 2026-08-10 (age 112.8h, >2x the 48h SLA). Runner itself has stopped.\n- ufc-dashboard scraper: success_rate_7d = 0.74 (~13/50 runs failing) with a last_error on the most recent run \u2014 needs investigation.\n- overseer: Inconsistent project-slug usage \u2014 search runs under `coachvision` while `file_issue` uses `AndyRBrett/volleyball`. Risk of missed dedup / misfiled issues; should standardize on one slug.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Near-duplicate detection for propose_enhancement before filing (effort: medium, impact: high): Stops the pipeline's worst recurring failure \u2014 re-filing the same idea across weeks and burning owner triage time.\n2. crypto-trading \u2014 Auto-tune signal thresholds from historical signal_proximity percentiles (effort: medium, impact: medium/high): Market's been in a \"quiet\" zero-near-trigger regime for weeks with deeply negative Sharpe/Sortino; dynamic thresholds built on already-shipped telemetry could get real fills again.\n3. coachvision \u2014 Add cloud/camera-roll auto-sync for footage ingestion (effort: medium/high, impact: high): Zero real footage has ever been ingested despite watcher/onboarding/demo mode already shipped; this removes the last manual-move step blocking real adoption.\n4. ufc-dashboard \u2014 Backtest CLV/\"sharp\" flags against actual fight outcomes (effort: medium/high, impact: high): Turns already-shipped CLV/sharp classification from descriptive into a validated, predictive metric with rolling hit-rate/ROI.",
+      "counts": {
+        "tools": 14,
+        "errors": 2,
+        "issues": 0,
+        "enhancements": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "stale",
+          "score": 0.25
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.4797,
+        "baseline_usd": 0.5642,
+        "saved_usd": 0.0844
+      }
     }
   ]
 }
