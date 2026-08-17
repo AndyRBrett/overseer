@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "closed_at": "2026-08-17T22:11:04+00:00",
+      "created_at": "2026-08-15T10:35:39+00:00",
+      "effort": "low",
+      "fix_ref": "PR #37",
+      "fix_sha": "f07a576",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/37",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implement-failed"
+      ],
+      "number": 26,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest",
+      "url": "https://github.com/AndyRBrett/overseer/issues/26"
+    },
+    {
       "closed_at": null,
       "created_at": "2026-08-17T19:55:18+00:00",
       "effort": "low",
@@ -82,25 +104,6 @@
       "status": "open",
       "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
       "url": "https://github.com/AndyRBrett/overseer/issues/32"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:35:39+00:00",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium",
-        "overseer:implement-failed"
-      ],
-      "number": 26,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest",
-      "url": "https://github.com/AndyRBrett/overseer/issues/26"
     },
     {
       "closed_at": null,
@@ -1093,15 +1096,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-17T21:44:52Z",
+  "generated": "2026-08-17T22:12:14Z",
   "totals": {
-    "delivery_rate": 0.698,
+    "delivery_rate": 0.714,
     "duplicate": 12,
     "duplicate_rate": 0.16,
     "in_flight": 0,
     "not_planned": 4,
-    "open": 15,
+    "open": 14,
     "proposed": 75,
-    "shipped": 44
+    "shipped": 45
   }
 }
