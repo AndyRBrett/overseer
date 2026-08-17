@@ -86,6 +86,16 @@ def test_an_issue_already_handed_over_is_not_handed_over_again():
     assert not ok and "already handed" in why
 
 
+def test_a_burned_issue_is_not_retried_but_says_how_to_re_queue():
+    # A failed attempt swaps overseer:implementing for this label. Both halves
+    # matter: without the swap the issue reads as in progress forever (filed and
+    # silently dropped), and without the exclusion Monday's run would retry an
+    # attempt that already burned its turn budget once, at full price.
+    ok, why = o.implementable(_entry(9, labels=[o.FAILED_LABEL]))
+    assert not ok
+    assert "previous attempt failed" in why and o.FAILED_LABEL in why
+
+
 def test_the_opt_out_label_is_honoured():
     ok, why = o.implementable(_entry(8, labels=[o.NO_IMPLEMENT_LABEL]))
     assert not ok and o.NO_IMPLEMENT_LABEL in why
