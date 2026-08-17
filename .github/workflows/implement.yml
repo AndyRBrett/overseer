@@ -30,6 +30,12 @@ on:
         description: "List every filed issue the gate rejected, with the reason"
         type: boolean
         default: false
+      tier:
+        description: "Model tier every attempt this run uses"
+        type: choice
+        default: light
+        options: [light, heavy]
+        required: false
 
 # Reads issues, writes a label, fires dispatches — all through
 # OVERSEER_GITHUB_TOKEN, which needs Actions: write on the target repos. The
@@ -69,14 +75,19 @@ jobs:
           # The gate. Both optional — defaults are 3 per run, effort:low only.
           OVERSEER_IMPLEMENT_MAX: ${{ vars.OVERSEER_IMPLEMENT_MAX }}
           OVERSEER_IMPLEMENT_EFFORT: ${{ vars.OVERSEER_IMPLEMENT_EFFORT }}
+          # The tier a SCHEDULED run uses — nobody is at the keyboard at 15:00
+          # Monday to be asked. A manual run gets the dropdown above instead.
+          OVERSEER_IMPLEMENT_TIER: ${{ vars.OVERSEER_IMPLEMENT_TIER }}
           # A scheduled run always dispatches; a manual one defaults to dry-run
           # so you can look before you fire.
           DRY_RUN: ${{ inputs.dry_run && 'yes' || '' }}
           LIMIT: ${{ inputs.limit }}
           EXPLAIN: ${{ inputs.explain && 'yes' || '' }}
+          TIER: ${{ inputs.tier }}
         run: |
           args=""
           [ -n "$DRY_RUN" ] && args="$args --dry-run"
           [ -n "$EXPLAIN" ] && args="$args --explain"
           [ -n "$LIMIT" ]   && args="$args --limit $LIMIT"
+          [ -n "$TIER" ]    && args="$args --tier $TIER"
           python scripts/dispatch_implement.py $args

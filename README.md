@@ -289,10 +289,50 @@ Two more things worth knowing before you turn the schedule on:
   built-in `GITHUB_TOKEN` doesn't trigger further workflows — GitHub's loop
   guard, not a bug here. It's why the agent runs the suite itself first. Pass a
   PAT as the action's `github_token` if you want normal CI on them too.
-- **The implementer is the expensive half.** The review is three short tool
-  loops; implementation is a full coding session per issue. It defaults to
-  `claude-sonnet-5` (`OVERSEER_IMPLEMENT_MODEL` to change it) and the cap is what
-  actually bounds the bill — three attempts a week, not thirty.
+- **The implementer is the expensive half, by a wide margin.** Measured on this
+  repo: the whole three-agent review costs **$0.34**, and one successful
+  implementation costs **$1.49** (54 turns). A week at the default cap is
+  therefore ~$4.80 — and the model tiering the section above is proud of saves
+  $0.10 of it. If you want to control spend, the cap and the tier are the only
+  levers that matter now.
+
+### Choosing the tier
+
+Every attempt runs on a **tier**, not a model name you type at the point of use:
+
+| Tier | Model | Set by |
+| --- | --- | --- |
+| `light` (default) | `claude-sonnet-5` | `OVERSEER_IMPLEMENT_MODEL` |
+| `heavy` | `claude-opus-4-8` | `OVERSEER_IMPLEMENT_HEAVY_MODEL` |
+
+Light is the measured working default — the first successful implementation ran
+on it and produced a real change to a 70KB module with tests. Reach for heavy on
+an issue you already know is hard, and expect several times the cost.
+
+You are asked which one **before anything runs**, on both manual entry points:
+*Actions → Implement a filed issue → Run workflow* has a **Model tier** dropdown,
+and so does *Hand filed issues to the implementer* (where it applies to every
+attempt that run). A **scheduled** Monday run has nobody to ask, so it uses
+`OVERSEER_IMPLEMENT_TIER` (default `light`).
+
+The dispatcher also prints what the run is about to cost before it fires:
+
+```
+[implement] tier: light
+[implement] estimate: 3 attempt(s) x ~$1.50 = ~$4.50 at the light tier
+```
+
+That figure is `OVERSEER_IMPLEMENT_COST_HINT` — the measured mean of a successful
+light-tier attempt here — so retune it once your own runs have a track record.
+
+**The tier is a name, never a model id, and that is a security property rather
+than a style choice.** It travels in a `repository_dispatch` payload, which
+arrives over the API, and the workflow interpolates the resolved model into the
+Claude CLI's arguments. If the payload could carry the model string, anyone able
+to fire a dispatch at your repo could choose what those arguments say. So
+`resolve_tier` refuses anything outside `light`/`heavy`, the workflow refuses it
+again, and the model ids themselves come from repo variables that only a writer
+can set.
 - **`--max-turns` is a real limit, and hitting it costs you the whole attempt.**
   The first run tried this repo on 40 turns, died at 41 having pushed nothing,
   and still billed $1.04 — a coding session that reads an issue, explores a

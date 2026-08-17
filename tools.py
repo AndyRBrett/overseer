@@ -628,6 +628,24 @@ IMPLEMENT_EFFORTS = tuple(
 # (examples/implementer/implement.yml).
 IMPLEMENT_EVENT = _env("OVERSEER_IMPLEMENT_EVENT", "overseer-implement")
 
+# Which model tier an attempt runs on. A NAME, never a model id: the tier rides
+# in a repository_dispatch payload, which arrives over the API, and the workflow
+# interpolates the resolved model into the Claude CLI's arguments. Anyone able to
+# fire a dispatch could otherwise choose what those arguments say. The workflow
+# maps name → model from its own repo variables and rejects anything not here.
+IMPLEMENT_TIERS = ("light", "heavy")
+
+# The default for a scheduled run, where nobody is at the keyboard to be asked.
+# Light is the measured working default: the first successful implementation ran
+# on it — 54 turns, $1.49, a real change to a 70KB module with tests passing.
+# Heavy is for an issue you already know is hard, and costs several times more.
+IMPLEMENT_TIER = (_env("OVERSEER_IMPLEMENT_TIER", "light") or "light").lower()
+
+# Measured mean of one successful attempt on the light tier in this repo. Used
+# only to print an estimate before dispatching, so a week's spend is visible
+# BEFORE the money goes rather than on next month's invoice.
+IMPLEMENT_COST_HINT = float(_env("OVERSEER_IMPLEMENT_COST_HINT", "1.50") or 1.50)
+
 # Applied to an issue once it has been handed over, so the next run doesn't hand
 # it over again. The linked PR is the second line of defence: once one exists the
 # entry reads `in_flight` and the gate excludes it regardless of labels.
@@ -733,7 +751,23 @@ def implementation_queue(ledger, limit=None, efforts=None):
             "eligible": sum(len(v) for v in by_repo.values()) + len(picks)}
 
 
-def dispatch_implementation(entry, event_type=None, dry_run=None):
+def resolve_tier(tier):
+    """Validate a tier NAME, falling back to the configured default.
+
+    Rejecting an unknown name rather than passing it on is the whole point: this
+    value ends up in a dispatch payload that the workflow turns into the model
+    the coding agent runs on. A typo must not silently become "no model", and a
+    value from outside this list must never reach the CLI's arguments.
+    """
+    name = (tier or IMPLEMENT_TIER or "light").strip().lower()
+    if name not in IMPLEMENT_TIERS:
+        print(f"[implement] WARNING: unknown tier '{tier}' — "
+              f"using '{IMPLEMENT_TIER}' (valid: {', '.join(IMPLEMENT_TIERS)})")
+        name = IMPLEMENT_TIER if IMPLEMENT_TIER in IMPLEMENT_TIERS else "light"
+    return name
+
+
+def dispatch_implementation(entry, event_type=None, dry_run=None, tier=None):
     """Hand ONE filed issue to the implementer workflow in its own repo.
 
     Two steps, in this order and no other: fire the repository_dispatch, then
@@ -749,6 +783,7 @@ def dispatch_implementation(entry, event_type=None, dry_run=None):
     """
     event_type = event_type or IMPLEMENT_EVENT
     dry_run = DRY_RUN if dry_run is None else dry_run
+    tier = resolve_tier(tier)
     slug, number = entry["repo"], entry["number"]
     payload = {
         "issue": number,
@@ -757,20 +792,22 @@ def dispatch_implementation(entry, event_type=None, dry_run=None):
         "kind": entry.get("kind", "bug"),
         "effort": entry.get("effort", ""),
         "impact": entry.get("impact", ""),
+        "tier": tier,
     }
     if dry_run:
         print(f"\n[DRY-RUN] would dispatch '{event_type}' to {slug}:")
         print(f"          issue: #{number} {payload['title']}")
         print(f"          kind : {payload['kind']} "
               f"(effort {payload['effort'] or '—'}, impact {payload['impact'] or '—'})")
+        print(f"          tier : {tier}")
         print(f"          then label it {IMPLEMENTING_LABEL}\n")
-        return {"status": "dry_run", "repo": slug, "number": number}
+        return {"status": "dry_run", "repo": slug, "number": number, "tier": tier}
 
     repo = _github().get_repo(slug)
     repo.create_repository_dispatch(event_type=event_type, client_payload=payload)
 
     result = {"status": "dispatched", "repo": slug, "number": number,
-              "event": event_type}
+              "event": event_type, "tier": tier}
     try:
         repo.get_issue(number).add_to_labels(IMPLEMENTING_LABEL)
     except Exception as exc:  # noqa: BLE001 — the work is already under way
