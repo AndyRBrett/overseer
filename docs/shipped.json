@@ -2,6 +2,69 @@
   "entries": [
     {
       "closed_at": null,
+      "created_at": "2026-08-17T19:55:18+00:00",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "number": 26,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Schedule the bundled self-test clip to run automatically every N days as a model-drift canary, tracking frames_processed/segment_count trend over time",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/26"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-17T19:55:15+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 45,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-17T19:55:11+00:00",
+      "effort": "low",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 76,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "open",
+      "status": "open",
+      "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-17T19:55:08+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "number": 33,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals",
+      "url": "https://github.com/AndyRBrett/overseer/issues/33"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-17T19:54:09+00:00",
+      "kind": "bug",
+      "number": 32,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
+      "url": "https://github.com/AndyRBrett/overseer/issues/32"
+    },
+    {
+      "closed_at": null,
       "created_at": "2026-08-15T10:35:39+00:00",
       "effort": "low",
       "impact": "medium",
@@ -964,15 +1027,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-17T19:55:45Z",
+  "generated": "2026-08-17T19:57:26Z",
   "totals": {
-    "delivery_rate": 0.759,
+    "delivery_rate": 0.698,
     "duplicate": 12,
-    "duplicate_rate": 0.171,
+    "duplicate_rate": 0.16,
     "in_flight": 0,
     "not_planned": 4,
-    "open": 10,
-    "proposed": 70,
+    "open": 15,
+    "proposed": 75,
     "shipped": 44
   }
 }
