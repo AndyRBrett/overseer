@@ -375,6 +375,11 @@ def _ledger_entry(issue, merged_only=True):
         match = next((l.split(":", 1)[1] for l in labels if l.startswith(f"{axis}:")), None)
         if match:
             entry[axis] = match
+    # Carried so the implementation gate can read control labels
+    # (overseer:implementing / overseer:no-implement) off the ledger instead of
+    # re-fetching every issue to ask.
+    if labels:
+        entry["labels"] = sorted(labels)
 
     if issue.state != "closed":
         # An open issue with work already on a branch is IN FLIGHT, not merely
@@ -584,6 +589,241 @@ def known_work_block(ledger, per_repo=12):
                      "open": "STILL OPEN", "duplicate": "closed as duplicate",
                      "not_planned": "closed, not planned"}.get(e["status"], e["status"])
             lines.append(f"  - #{e['number']} [{state}] {e['title']}")
+    return "\n".join(lines)
+
+
+# ── IMPLEMENTATION QUEUE ─────────────────────────────────────────────────
+# The pipeline proposes work every week and a human implements it — or, judging
+# by the ledger's own delivery rate, mostly doesn't. What closes that gap is not
+# a fourth reviewing agent but a DISPATCHER: pick a few already-filed issues and
+# hand each one to a coding agent running in the PROJECT'S OWN repo, where that
+# project's tests, dependencies and CI already live. Nothing in this module
+# writes code. It decides what is worth attempting, and refuses to attempt more
+# than a person can review.
+#
+# THE GATE IS THE DESIGN. "Implement everything filed" produces a PR queue
+# bigger than the digest it was meant to replace, and since shipped means MERGED
+# (see _ledger_entry), unreviewed PRs would park in `in_flight` forever while the
+# spend climbed — the delivery rate would get worse, not better. So:
+#
+#   - confirmed bugs, plus enhancements the Idea Agent itself labelled effort:low
+#   - only issues that are OPEN with no fix already in flight
+#   - at most OVERSEER_IMPLEMENT_MAX per run (default 3), round-robined across
+#     repos so one busy project cannot take every slot every week
+#   - a PR is where this stops. Nothing here merges anything.
+
+# Cap per dispatch run. Three is "a evening's review", not a throughput target;
+# raise it once the PRs are landing rather than piling up.
+IMPLEMENT_MAX = _int_env("OVERSEER_IMPLEMENT_MAX", 3) or 3
+
+# Which enhancement efforts may be attempted. Bugs are always eligible — a
+# confirmed bug is a defect with evidence attached, which is the easiest thing
+# to hand a coding agent and the thing you most want fixed. Set
+# OVERSEER_IMPLEMENT_EFFORT="low,medium" to widen it.
+IMPLEMENT_EFFORTS = tuple(
+    e.strip().lower() for e in _env("OVERSEER_IMPLEMENT_EFFORT", "low").split(",") if e.strip()
+)
+
+# repository_dispatch event the per-repo implementer workflow listens for
+# (examples/implementer/implement.yml).
+IMPLEMENT_EVENT = _env("OVERSEER_IMPLEMENT_EVENT", "overseer-implement")
+
+# Applied to an issue once it has been handed over, so the next run doesn't hand
+# it over again. The linked PR is the second line of defence: once one exists the
+# entry reads `in_flight` and the gate excludes it regardless of labels.
+IMPLEMENTING_LABEL = "overseer:implementing"
+
+# Your opt-out. Put this on anything you want to decide yourself.
+NO_IMPLEMENT_LABEL = "overseer:no-implement"
+
+_IMPACT_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+def implementable(entry, efforts=None):
+    """May the implementer attempt this ledger entry? -> (bool, reason).
+
+    The reason is returned even on success paths' counterparts because "why was
+    my issue skipped?" is the first question anyone asks of a gate, and a
+    dispatcher that can't answer it gets switched off.
+    """
+    efforts = IMPLEMENT_EFFORTS if efforts is None else efforts
+    labels = set(entry.get("labels") or ())
+
+    status = entry.get("status")
+    if status != "open":
+        # in_flight already has a PR open against it; shipped / duplicate /
+        # not_planned are finished. Only `open` is unclaimed work.
+        return False, f"status is {status}, not open"
+    if NO_IMPLEMENT_LABEL in labels:
+        return False, f"labelled {NO_IMPLEMENT_LABEL}"
+    if IMPLEMENTING_LABEL in labels:
+        return False, "already handed to the implementer"
+
+    if entry.get("kind") == "bug":
+        return True, "confirmed bug"
+
+    effort = (entry.get("effort") or "").lower()
+    if not effort:
+        # An enhancement with no effort label predates the labelling or failed to
+        # apply. Unsized work is exactly what this gate exists to keep out.
+        return False, "enhancement with no effort label"
+    if effort not in efforts:
+        return False, f"effort:{effort} (gate allows {', '.join(efforts) or 'nothing'})"
+    return True, f"enhancement, effort:{effort}"
+
+
+def _queue_sort_key(entry):
+    """Bugs before enhancements, higher impact first, then oldest first.
+
+    Age last but not never: without it a long-lived low-impact item is starved
+    forever by a steady drip of newer ones.
+    """
+    return (
+        0 if entry.get("kind") == "bug" else 1,
+        _IMPACT_RANK.get((entry.get("impact") or "").lower(), 3),
+        entry.get("created_at") or "",
+        entry.get("number") or 0,
+    )
+
+
+def implementation_queue(ledger, limit=None, efforts=None):
+    """What to attempt this run: {"picks": [...], "skipped": [...]}.
+
+    Pure function of a ledger — it makes no API calls, so the gate can be tested
+    and dry-run without touching GitHub.
+    """
+    limit = IMPLEMENT_MAX if limit is None else limit
+    by_repo, skipped = {}, []
+    for entry in (ledger or {}).get("entries", []):
+        ok, why = implementable(entry, efforts)
+        if ok:
+            by_repo.setdefault(entry["repo"], []).append(entry)
+        else:
+            skipped.append({"entry": entry, "reason": why})
+
+    for items in by_repo.values():
+        items.sort(key=_queue_sort_key)
+
+    # Round-robin across repos, best-first within each round. A project with
+    # twenty open bugs would otherwise take every slot every week and the other
+    # three would never see a PR — and the overseer, which files against itself
+    # most often, is exactly that project.
+    picks = []
+    while len(picks) < limit:
+        live = [r for r, items in by_repo.items() if items]
+        if not live:
+            break
+        for repo in sorted(live, key=lambda r: _queue_sort_key(by_repo[r][0])):
+            picks.append(by_repo[repo].pop(0))
+            if len(picks) >= limit:
+                break
+    return {"picks": picks, "skipped": skipped,
+            "eligible": sum(len(v) for v in by_repo.values()) + len(picks)}
+
+
+def dispatch_implementation(entry, event_type=None, dry_run=None):
+    """Hand ONE filed issue to the implementer workflow in its own repo.
+
+    Two steps, in this order and no other: fire the repository_dispatch, then
+    label the issue. A dispatch that fails — a token without Actions: write is
+    the likely cause — must leave the issue unlabelled so the next run retries
+    it. Labelling first would drop the issue on the floor silently, which is the
+    failure mode this whole project keeps being bitten by.
+
+    A label that fails to apply after a successful dispatch is reported rather
+    than raised: the work IS under way, and the PR it opens links the issue,
+    which moves the entry to `in_flight` and excludes it from the next queue
+    anyway. Belt and braces, in that order.
+    """
+    event_type = event_type or IMPLEMENT_EVENT
+    dry_run = DRY_RUN if dry_run is None else dry_run
+    slug, number = entry["repo"], entry["number"]
+    payload = {
+        "issue": number,
+        "title": entry.get("title", ""),
+        "url": entry.get("url", ""),
+        "kind": entry.get("kind", "bug"),
+        "effort": entry.get("effort", ""),
+        "impact": entry.get("impact", ""),
+    }
+    if dry_run:
+        print(f"\n[DRY-RUN] would dispatch '{event_type}' to {slug}:")
+        print(f"          issue: #{number} {payload['title']}")
+        print(f"          kind : {payload['kind']} "
+              f"(effort {payload['effort'] or '—'}, impact {payload['impact'] or '—'})")
+        print(f"          then label it {IMPLEMENTING_LABEL}\n")
+        return {"status": "dry_run", "repo": slug, "number": number}
+
+    repo = _github().get_repo(slug)
+    repo.create_repository_dispatch(event_type=event_type, client_payload=payload)
+
+    result = {"status": "dispatched", "repo": slug, "number": number,
+              "event": event_type}
+    try:
+        repo.get_issue(number).add_to_labels(IMPLEMENTING_LABEL)
+    except Exception as exc:  # noqa: BLE001 — the work is already under way
+        result["status"] = "dispatched_unlabelled"
+        result["label_error"] = str(exc)[:120]
+    return result
+
+
+def _parse_stamp(value):
+    """ISO timestamp -> aware datetime, or None. Ledger stamps only; never raises."""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def delivery_banner(ledger, days=7, now=None, limit=6):
+    """A plain-text IMPLEMENTED block for the foot of the weekly digest.
+
+    The answer to "so what did it actually build this week". Derived from the
+    ledger rather than from anything an agent said, for the same reason the
+    staleness banner is: a summary that depends on an LLM remembering to mention
+    something is a summary that will one day not mention it.
+
+    Returns "" when nothing shipped and nothing is in review, so a quiet week's
+    digest is left exactly as the Reviewer wrote it.
+    """
+    entries = (ledger or {}).get("entries", [])
+    if not entries:
+        return ""
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+
+    shipped, in_flight = [], []
+    for e in entries:
+        if e.get("status") == "shipped":
+            closed = _parse_stamp(e.get("closed_at"))
+            if closed and closed >= cutoff:
+                shipped.append(e)
+        elif e.get("status") == "in_flight":
+            in_flight.append(e)
+    if not shipped and not in_flight:
+        return ""
+
+    def _line(e):
+        where = f" ({e['fix_ref']})" if e.get("fix_ref") else ""
+        return f"- {e['repo'].split('/')[-1]} #{e['number']} — {e['title']}{where}"
+
+    shipped.sort(key=lambda e: e.get("closed_at") or "", reverse=True)
+    lines = [f"IMPLEMENTED (LAST {days} DAYS)"]
+    if shipped:
+        lines += [_line(e) for e in shipped[:limit]]
+        if len(shipped) > limit:
+            lines.append(f"- …and {len(shipped) - limit} more merged.")
+    else:
+        lines.append("- Nothing merged this week.")
+    if in_flight:
+        # Named, not just counted: an implementer whose PRs never get reviewed
+        # looks identical to one that never ran, and this is the line that tells
+        # the two apart.
+        lines.append(f"- {len(in_flight)} fix(es) awaiting review: "
+                     + ", ".join(f"{e['repo'].split('/')[-1]}#{e['number']}"
+                                 for e in in_flight[:limit]))
     return "\n".join(lines)
 
 
@@ -1235,10 +1475,18 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
                     # halted feed can't hide behind a quiet LLM summary (overseer
                     # #1 / issue #34). Prepending BEFORE the send means Telegram
                     # and the dashboard summary both carry it.
-                    banner = tracer.freshness_banner()
-                    if banner:
-                        base = block.input.get("text", "")
-                        block.input["text"] = f"{banner}\n\n{base}" if base else banner
+                    #
+                    # The foot of the digest gets the other deterministic block:
+                    # what the implementer actually landed since last week, read
+                    # off the ledger. Same reasoning — a "what shipped" section
+                    # that depends on an agent remembering to write it is one
+                    # that will eventually go quiet without anything failing.
+                    head = tracer.freshness_banner()
+                    tail = delivery_banner(getattr(tracer, "ledger", None))
+                    base = block.input.get("text", "")
+                    parts = [p for p in (head, base, tail) if p]
+                    if parts:
+                        block.input["text"] = "\n\n".join(parts)
                 func = TOOL_FUNCTIONS[block.name]
                 result = func(**block.input)
                 content = json.dumps(result)

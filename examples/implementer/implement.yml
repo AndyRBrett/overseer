@@ -1,0 +1,115 @@
+# Drop-in implementer for a project the overseer reviews.
+#
+# Copy this to .github/workflows/implement.yml IN YOUR PROJECT REPO (not in the
+# overseer). It listens for the `overseer-implement` dispatch that the overseer
+# fires at issues its review pipeline filed, implements one, and opens a pull
+# request. It never merges anything.
+#
+# WHY IT LIVES IN YOUR REPO. The agent needs your tests, your dependencies and
+# your conventions. Running it from the overseer's runner would mean installing
+# four unrelated codebases there and re-inventing four CI setups that already
+# work — and would need one cross-repo token with contents: write on everything.
+# This way each repo keeps its own key and its own blast radius.
+#
+# SETUP (once per repo):
+#   1. Add secret ANTHROPIC_API_KEY.
+#   2. Edit the "Set up the project" step below for your stack.
+#   3. Edit the test command in step 4 of the prompt.
+#   4. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
+#      Actions: write and Issues: write on this repo — otherwise the dispatch
+#      is rejected and the overseer reports it as a failed hand-over.
+#
+# NOTE ON CI: a pull request opened with the built-in GITHUB_TOKEN does not
+# trigger this repo's other workflows, so your normal PR checks will not run on
+# it. That is why the agent is told to run the suite itself before opening one.
+# To get CI on these PRs too, pass a PAT as `github_token` below instead.
+
+name: Implement a filed issue
+
+on:
+  repository_dispatch:
+    types: [overseer-implement]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to implement"
+        required: true
+        type: string
+
+permissions:
+  contents: write        # push the branch
+  pull-requests: write   # open the PR
+  issues: write          # comment when the issue can't be implemented
+
+concurrency:
+  group: implement-${{ github.event.client_payload.issue || inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # The dispatch payload arrives over the API, so it is input, not fact.
+      # Only the issue number is used, and only once it is proved to be a number;
+      # the agent reads the issue itself. Interpolating a payload-supplied title
+      # into the prompt would let whoever can fire a dispatch write that prompt.
+      - name: Validate the issue number
+        id: issue
+        env:
+          RAW: ${{ github.event.client_payload.issue || inputs.issue }}
+        run: |
+          case "$RAW" in
+            ''|*[!0-9]*) echo "::error title=Bad dispatch::'$RAW' is not an issue number"; exit 1 ;;
+          esac
+          echo "number=$RAW" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the agent branches and pushes
+
+      # ── EDIT ME ──────────────────────────────────────────────────────────
+      # Whatever your CI does to get a working tree. Python shown; swap for
+      # setup-node + npm ci, or delete if the repo needs nothing.
+      - name: Set up the project
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # ─────────────────────────────────────────────────────────────────────
+
+      - name: Implement it
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Implement GitHub issue #${{ steps.issue.outputs.number }} in this repository.
+
+            1. Read it first: `gh issue view ${{ steps.issue.outputs.number }} --comments`.
+               It was filed by Project Overseer's weekly review pipeline and its
+               body states the evidence the bug or idea rests on.
+            2. Check that evidence against the current code. If the issue is
+               already fixed, wrong, or no longer applies, do NOT invent work to
+               do — comment on the issue saying exactly that, and stop.
+            3. Otherwise make the smallest correct change that resolves it,
+               matching the surrounding code's style, naming and comment density.
+            4. Add or update tests that cover the change, then run this repo's
+               own test suite the way its CI does (read .github/workflows to see
+               how). Never weaken, skip, or delete a test to get it green.
+            5. With the suite passing, commit on a new branch named
+               `overseer/issue-${{ steps.issue.outputs.number }}`, push it, and open a pull
+               request with `gh pr create`. The body should say what changed and
+               why, note anything you deliberately left out, and end with
+               `Closes #${{ steps.issue.outputs.number }}`.
+            6. If you cannot get the suite passing, do not open a pull request.
+               Comment on the issue with what you tried and what blocked you.
+
+            Scope discipline: only what the issue asks for. No drive-by
+            refactors, no dependency bumps, no reformatting untouched code. Never
+            merge the pull request and never push to main.
+          claude_args: |
+            --max-turns 40
+            --model ${{ vars.OVERSEER_IMPLEMENT_MODEL || 'claude-sonnet-5' }}
+            --allowedTools Read,Edit,Write,Glob,Grep,Bash

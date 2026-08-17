@@ -6,6 +6,10 @@ issues on GitHub, send a digest to **Telegram**, and publish that digest to an
 **installable web app** (PWA) you can add to your phone's home screen and get a
 weekly push notification from.
 
+The issues it files don't have to wait for you, either: a gated handful of them
+are handed each week to a coding agent running in each project's own repo, which
+opens the pull request — see [Implementing what it files](#implementing-what-it-files).
+
 Everything is hosted by GitHub: the pipeline runs on **GitHub Actions** (weekly
 cron), the dashboard is served by **GitHub Pages** from `docs/`, and the push
 notification is sent by the same Action. No third-party servers.
@@ -187,6 +191,100 @@ apart from credential failures and handled by waiting:
 | Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (6h) | **fail** — six missed refreshes is a real outage, not a wobble |
 | Token expired / revoked (401) | **fail immediately**, never retried — a 401 will 401 again |
 
+## Implementing what it files
+
+The pipeline proposed work every week and a human implemented it — or, going by
+the ledger's own delivery rate, mostly didn't. The implementer closes that gap:
+each Monday, an hour after the review, a few of the issues just filed are handed
+to a coding agent that opens a pull request against them.
+
+**It is not a fourth agent in the pipeline.** The three review agents are
+`client.messages.create` tool-use loops with deliberately narrow tool lists —
+none of them can edit a file, run a test, or push a branch, and the weekly Action
+checks out the overseer, not the four projects. Making one of them write code
+would mean rebuilding a coding agent inside `tools.py` and installing four
+unrelated codebases on one runner. So the overseer keeps planning and *dispatches*
+the implementing:
+
+```
+weekly review files issues
+  └── implement.yml (Mon 15:00) — reads the ledger, applies the gate, picks ≤3
+        └── repository_dispatch → each project's OWN repo
+              └── implement.yml there — Claude Code branches, tests, opens a PR
+                    └── ledger-refresh.yml sees the PR merge → Shipped panel
+```
+
+The last line is the point: **the summary already existed and was empty.** The
+delivery ledger has always walked issue → linked PR → merged, so once something
+implements the issues, the Shipped panel and the digest's `IMPLEMENTED` block
+fill themselves in with no new bookkeeping.
+
+### The gate is the design
+
+"Implement everything filed" is the failure mode, not the goal. The Idea Agent
+files at least three ideas a week by design, across four repos; auto-PRing all of
+them produces a review queue bigger than the digest it replaced. And because
+*shipped means merged*, unreviewed PRs park in `in_flight` forever — the delivery
+rate would get **worse** while the spend climbed. So `tools.implementable` only
+lets through:
+
+| Rule | Why |
+|---|---|
+| Confirmed bugs, and enhancements the Idea Agent itself labelled `effort:low` | A bug is a defect with evidence attached — the easiest thing to hand an agent and the thing you most want fixed. Effort is the Idea Agent's own sizing, so the gate takes it at its word. `OVERSEER_IMPLEMENT_EFFORT=low,medium` widens it. |
+| `status: open` only | `in_flight` means a PR already exists; `shipped` / `duplicate` / `not_planned` are finished. |
+| ≤ `OVERSEER_IMPLEMENT_MAX` per run (default **3**) | Three is an evening's review, not a throughput target. Raise it once PRs are landing rather than piling up. |
+| Round-robin across repos | The overseer files against itself more than anything else and would otherwise take every slot every week. |
+| Never `overseer:no-implement` | Your opt-out. Label anything you want to decide yourself. |
+| Never twice | A dispatched issue gets `overseer:implementing`; if that label fails to apply, the PR's own link to the issue moves it to `in_flight` and the gate skips it anyway. |
+
+Against today's ledger — 75 filed issues — that selects **3**: two confirmed bugs
+and one `effort:low / impact:high` enhancement, one per repo. See for yourself,
+without dispatching anything:
+
+```bash
+python scripts/dispatch_implement.py --dry-run --explain
+```
+
+`--explain` prints every filed issue the gate rejected and the reason, because
+"why was my issue skipped?" is the first question anyone asks of a gate, and a
+dispatcher that can't answer it gets switched off.
+
+**A pull request is where this stops.** Nothing merges anything. The agent is
+told to run the project's own suite before opening a PR, never to weaken a test
+to get green, to stay inside the issue's scope, and — if the issue turns out to
+be already fixed or simply wrong — to say so in a comment and stop rather than
+invent work.
+
+### Wiring it up
+
+Each project repo gets a copy of `examples/implementer/implement.yml` (see that
+directory's README) plus its own `ANTHROPIC_API_KEY`. The overseer's own copy is
+`.github/workflows/implement-worker.yml`, already installed.
+
+**What this costs you in credentials, stated plainly:** `OVERSEER_GITHUB_TOKEN`
+now needs **Actions: write** alongside Issues: write on all four repos, so it can
+fire the dispatch. That is the only new scope on the shared token — the ability
+to *write code* stays in each repo with its own key and its own blast radius,
+rather than becoming one cross-repo PAT with `contents: write` on everything.
+That is the credential sprawl the July outage was made of, and this deliberately
+avoids it. A dispatch rejected for missing scope is reported as a failed
+hand-over and the issue is left unlabelled, so the next run retries it.
+
+Two more things worth knowing before you turn the schedule on:
+
+- **Your PR checks won't run on these PRs.** A pull request opened with the
+  built-in `GITHUB_TOKEN` doesn't trigger further workflows — GitHub's loop
+  guard, not a bug here. It's why the agent runs the suite itself first. Pass a
+  PAT as the action's `github_token` if you want normal CI on them too.
+- **The implementer is the expensive half.** The review is three short tool
+  loops; implementation is a full coding session per issue. It defaults to
+  `claude-sonnet-5` (`OVERSEER_IMPLEMENT_MODEL` to change it) and the cap is what
+  actually bounds the bill — three attempts a week, not thirty.
+
+The first run should be a manual one: **Actions → Hand filed issues to the
+implementer → Run workflow** defaults to dry-run, so you see the queue before
+anything fires.
+
 ### Failing loudly (credential preflight + heartbeat)
 
 Between 2026-07-20 and 2026-08-10 the weekly Action reported **success** four
@@ -256,7 +354,7 @@ Only the Anthropic key is required. Anything unset just makes that tool report
 | # | Thing | How to get it |
 |---|-------|---------------|
 | 1 | **Anthropic API key** | console.anthropic.com → API Keys → Create. The only required value. |
-| 2 | **GitHub token** (PAT) | github.com → Settings → Developer settings → Fine-grained tokens. Give it your 3 project repos with **Issues: Read and write**. |
+| 2 | **GitHub token** (PAT) | github.com → Settings → Developer settings → Fine-grained tokens. Give it your 3 project repos with **Issues: Read and write** — plus **Actions: Read and write** if you want the implementer to hand issues over. |
 | 3 | **Project repo slugs** | `owner/name` for each repo, so issues file in the right place. |
 | 4 | **Data source paths** | Where each project's data lives (see below). Skip any you don't have. |
 
@@ -360,6 +458,13 @@ listing each feed with how far past its SLA it is (`data 153h old, SLA 48h`) —
 prepended to the top of the digest **before it's sent**, so it leads both the
 Telegram message and the dashboard, independent of what the review agents wrote. A
 halted feed can no longer hide behind a quiet summary.
+
+The **foot** of the digest is machine-generated for the same reason: an
+`IMPLEMENTED (LAST 7 DAYS)` block listing what the implementer actually merged,
+plus what is still sitting in review, read straight off the delivery ledger. The
+Reviewer is never asked to write that section — a "what shipped" summary that
+depends on an agent remembering to include it is one that will eventually go
+quiet without anything failing.
 
 **Trends (week over week).** Each run also appends a small record to
 `docs/history.json` (per-project health score + issue/enhancement counts, capped

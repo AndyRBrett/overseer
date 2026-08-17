@@ -1,0 +1,98 @@
+name: Implement a filed issue
+
+# The overseer's copy of the implementer — the same workflow the three project
+# repos install from examples/implementer/implement.yml, with this repo's test
+# command filled in. It is the half that actually writes code, and it runs HERE
+# rather than in the dispatcher's runner so the change is built and tested
+# against this repo's own dependencies and suite.
+#
+# Triggered by the repository_dispatch that scripts/dispatch_implement.py fires
+# (or by hand, for one issue). It ends at a pull request: nothing in this
+# pipeline merges anything.
+
+on:
+  repository_dispatch:
+    types: [overseer-implement]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "Issue number to implement"
+        required: true
+        type: string
+
+permissions:
+  contents: write        # push the branch
+  pull-requests: write   # open the PR
+  issues: write          # comment when the issue can't be implemented
+
+# One run per issue. A duplicate dispatch (the label failed to apply, say)
+# should not produce two branches racing to fix the same thing.
+concurrency:
+  group: implement-${{ github.event.client_payload.issue || inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # The dispatch payload comes in over the API, so it is INPUT, not fact.
+      # Only the issue number is used, and only after it is proved to be a
+      # number — the agent reads the issue itself from GitHub. Interpolating a
+      # payload-supplied title straight into the prompt would let whoever can
+      # fire a dispatch write that prompt.
+      - name: Validate the issue number
+        id: issue
+        env:
+          RAW: ${{ github.event.client_payload.issue || inputs.issue }}
+        run: |
+          case "$RAW" in
+            ''|*[!0-9]*) echo "::error title=Bad dispatch::'$RAW' is not an issue number"; exit 1 ;;
+          esac
+          echo "number=$RAW" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the agent branches and pushes
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Implement it
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Implement GitHub issue #${{ steps.issue.outputs.number }} in this repository.
+
+            1. Read it first: `gh issue view ${{ steps.issue.outputs.number }} --comments`.
+               It was filed by this project's own review pipeline and its body
+               states the evidence the bug or idea rests on.
+            2. Check that evidence against the current code. If the issue is
+               already fixed, wrong, or no longer applies, do NOT invent work to
+               do — comment on the issue saying exactly that, and stop.
+            3. Otherwise make the smallest correct change that resolves it,
+               matching the surrounding code's style, naming and comment density.
+            4. Add or update tests that cover the change, then run the full suite:
+               `python -m pytest -q`. Never weaken, skip, or delete a test to get
+               it green.
+            5. With the suite passing, commit on a new branch named
+               `overseer/issue-${{ steps.issue.outputs.number }}`, push it, and open a pull
+               request with `gh pr create`. The body should say what changed and
+               why, note anything you deliberately left out, and end with
+               `Closes #${{ steps.issue.outputs.number }}`.
+            6. If you cannot get the suite passing, do not open a pull request.
+               Comment on the issue with what you tried and what blocked you.
+
+            Scope discipline: only what the issue asks for. No drive-by
+            refactors, no dependency bumps, no reformatting untouched code. Never
+            merge the pull request and never push to main.
+          claude_args: |
+            --max-turns 40
+            --model ${{ vars.OVERSEER_IMPLEMENT_MODEL || 'claude-sonnet-5' }}
+            --allowedTools Read,Edit,Write,Glob,Grep,Bash
