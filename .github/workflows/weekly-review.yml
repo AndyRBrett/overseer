@@ -114,16 +114,33 @@ jobs:
 
       - name: Publish digest to the web app
         if: steps.guard.outputs.should_run == 'true'
+        # The hourly ledger refresh commits to this same branch — at :20 and on
+        # every PR close — and the review takes ~4½ minutes between checkout and
+        # push. When one lands inside that window the push is rejected, and
+        # since "Send push notification" is the step after this one, a lost race
+        # costs the notification as well as the publish. ledger-refresh.yml has
+        # carried this retry for exactly that reason; this is the other half.
+        #
+        # -X theirs reads backwards: during a rebase "theirs" is the commit
+        # being replayed — ours. That is the resolution we want on a collision,
+        # because these three files are regenerated whole by a run that just
+        # read GitHub, so the fresher complete file wins over a merge of two.
         run: |
           if git diff --quiet -- docs/digest.json docs/history.json docs/shipped.json; then
             echo "No digest change to publish."
-          else
-            git config user.name  "overseer-bot"
-            git config user.email "overseer-bot@users.noreply.github.com"
-            git add docs/digest.json docs/history.json docs/shipped.json
-            git commit -m "Weekly digest $(date -u +%Y-%m-%d)"
-            git push
+            exit 0
           fi
+          git config user.name  "overseer-bot"
+          git config user.email "overseer-bot@users.noreply.github.com"
+          git add docs/digest.json docs/history.json docs/shipped.json
+          git commit -m "Weekly digest $(date -u +%Y-%m-%d)"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs --autostash origin main && git push && exit 0
+            git rebase --abort || true
+            echo "publish failed (attempt $i) — remote moved; retrying"
+            sleep $((i * 5))
+          done
+          exit 1
 
       - name: Send push notification
         if: steps.guard.outputs.should_run == 'true'

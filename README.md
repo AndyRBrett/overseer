@@ -223,6 +223,14 @@ Any other exit code fails on the first attempt, because retrying a dead
 credential only delays the diagnosis. A `weekly-review` concurrency group keeps
 a catch-up from joining a run that is still retrying.
 
+Both workflows also retry a *rejected push*. They commit to `main` from a
+checkout they may hold for minutes, and the hourly ledger refresh writes at :20
+and on every PR close, so either can find the remote has moved. For the review
+that costs more than the file: `Send push notification` is the step after the
+publish, so a lost race would drop the notification too. Collisions resolve in
+favour of the run doing the pushing — these files are regenerated whole from a
+fresh GitHub read, so the newer complete file beats a merge of two.
+
 **2. Heartbeat** (`scripts/heartbeat.py`, its own daily workflow). A job cannot
 detect its own failure to start, so this runs separately and asks two things:
 *did the review run* (is `docs/digest.json` still advancing?) and *did it see

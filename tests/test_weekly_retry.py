@@ -162,11 +162,35 @@ def test_guard_survives_a_missing_digest_file(monkeypatch, tmp_path):
     assert output.read_text(encoding="utf-8").strip() == "should_run=true"
 
 
+WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
+
+
 def test_catchup_schedules_match_the_workflow():
     # A cron in the workflow but not in CATCHUP_SCHEDULES runs unguarded, which
     # is a duplicate review every Monday. Cheap to assert, easy to forget.
-    workflow = (Path(__file__).resolve().parent.parent
-                / ".github" / "workflows" / "weekly-review.yml").read_text(encoding="utf-8")
+    workflow = (WORKFLOWS / "weekly-review.yml").read_text(encoding="utf-8")
     crons = {line.split("cron:")[1].strip().strip('"')
              for line in workflow.splitlines() if "- cron:" in line}
     assert crons == {PRIMARY} | wg.CATCHUP_SCHEDULES
+
+
+def test_both_publishers_retry_a_rejected_push():
+    # Both workflows commit docs/ to main, so either can have the remote move
+    # under it — the hourly ledger refresh writes at :20 and on every PR close,
+    # and the review holds its checkout for ~4½ minutes. For the review the
+    # stakes are higher than a missed file: "Send push notification" is the step
+    # after the publish, so a lost race costs the notification too.
+    for name in ("weekly-review.yml", "ledger-refresh.yml"):
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        assert "git pull --rebase" in text, f"{name} publishes without a rebase"
+        assert "for i in 1 2 3" in text, f"{name} does not retry a rejected push"
+
+
+def test_the_review_wins_a_collision_on_the_files_it_regenerates():
+    # digest/history/shipped are written whole by a run that just read GitHub,
+    # so a collision is resolved by taking the fresher complete file rather than
+    # merging two. During a rebase that is `-X theirs` — "theirs" being the
+    # commit under replay, i.e. ours. Drop it and a same-minute collision fails
+    # the rebase instead of resolving it.
+    text = (WORKFLOWS / "weekly-review.yml").read_text(encoding="utf-8")
+    assert "git pull --rebase -X theirs" in text
