@@ -6,6 +6,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 26,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
@@ -19,6 +24,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 45,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
@@ -32,6 +42,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 76,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "open",
@@ -45,6 +60,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 33,
       "repo": "AndyRBrett/overseer",
       "state": "open",
@@ -69,6 +89,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 26,
       "repo": "AndyRBrett/overseer",
       "state": "open",
@@ -82,6 +107,11 @@
       "effort": "high",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 74,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "open",
@@ -95,6 +125,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 25,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
@@ -108,6 +143,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 44,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
@@ -121,6 +161,11 @@
       "effort": "high",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 24,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
@@ -134,6 +179,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 25,
       "repo": "AndyRBrett/overseer",
       "state": "open",
@@ -147,6 +197,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 42,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
@@ -160,6 +215,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 41,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
@@ -173,6 +233,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 73,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "open",
@@ -1027,7 +1092,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-17T20:47:46Z",
+  "generated": "2026-08-17T21:23:20Z",
   "totals": {
     "delivery_rate": 0.698,
     "duplicate": 12,
