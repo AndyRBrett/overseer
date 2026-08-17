@@ -473,6 +473,12 @@ Reviewer is never asked to write that section — a "what shipped" summary that
 depends on an agent remembering to include it is one that will eventually go
 quiet without anything failing.
 
+Right below it, an `AGING BACKLOG (OPEN OVER 60 DAYS)` block lists open
+enhancement ideas that have sat untriaged past that threshold, straight off the
+same ledger's `created_at` — so idea rot is visible alongside pipeline
+staleness instead of only showing up as a growing pile of "STILL OPEN" lines in
+the known-work block agents see.
+
 **Trends (week over week).** Each run also appends a small record to
 `docs/history.json` (per-project health score + issue/enhancement counts, capped
 to the last ~26 runs). The dashboard turns it into inline sparklines — one per

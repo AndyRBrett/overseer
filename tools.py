@@ -839,6 +839,50 @@ def delivery_banner(ledger, days=7, now=None, limit=6):
     return "\n".join(lines)
 
 
+def aging_backlog_banner(ledger, days=60, now=None, limit=6):
+    """An AGING BACKLOG block for the foot of the weekly digest (overseer #26).
+
+    delivery_banner answers "what shipped"; this answers "what's been sitting
+    untouched" — open enhancement ideas the Idea agent proposed and nobody has
+    triaged. Derived from the ledger's own created_at, so idea rot shows up
+    without depending on an agent remembering to mention it, same reasoning as
+    the other deterministic blocks here.
+
+    Returns "" when nothing open has aged past `days`.
+    """
+    entries = (ledger or {}).get("entries", [])
+    if not entries:
+        return ""
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+
+    aged = []
+    for e in entries:
+        if e.get("status") != "open" or e.get("kind") != "enhancement":
+            continue
+        created = _parse_stamp(e.get("created_at"))
+        if created and created <= cutoff:
+            aged.append((e, created))
+    if not aged:
+        return ""
+
+    aged.sort(key=lambda pair: pair[1])
+    reference = now or datetime.now(timezone.utc)
+
+    def _line(e, created):
+        age_days = (reference - created).days
+        return f"- {e['repo'].split('/')[-1]} #{e['number']} — {e['title']} ({age_days}d open)"
+
+    # No '>' or ':' in the heading — the dashboard's formatDigest treats an
+    # ALL-CAPS line as a section heading (docs/app.js) and its regex excludes
+    # both, so a heading using either would silently degrade to body text.
+    lines = [f"AGING BACKLOG (OPEN OVER {days} DAYS)"]
+    lines.append(f"- {len(aged)} item(s) untriaged.")
+    lines += [_line(e, created) for e, created in aged[:limit]]
+    if len(aged) > limit:
+        lines.append(f"- …and {len(aged) - limit} more.")
+    return "\n".join(lines)
+
+
 # ── CREDENTIAL PREFLIGHT ─────────────────────────────────────────────────
 # Why this exists: four consecutive weekly runs (2026-07-20 → 2026-08-10)
 # reported SUCCESS in the Actions tab while every GitHub tool call inside them
@@ -1488,13 +1532,16 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
                     # #1 / issue #34). Prepending BEFORE the send means Telegram
                     # and the dashboard summary both carry it.
                     #
-                    # The foot of the digest gets the other deterministic block:
-                    # what the implementer actually landed since last week, read
-                    # off the ledger. Same reasoning — a "what shipped" section
-                    # that depends on an agent remembering to write it is one
-                    # that will eventually go quiet without anything failing.
+                    # The foot of the digest gets two other deterministic blocks:
+                    # what the implementer actually landed since last week, and
+                    # how long open enhancement ideas have sat untriaged — both
+                    # read off the ledger. Same reasoning — a section that
+                    # depends on an agent remembering to write it is one that
+                    # will eventually go quiet without anything failing.
                     head = tracer.freshness_banner()
-                    tail = delivery_banner(getattr(tracer, "ledger", None))
+                    ledger = getattr(tracer, "ledger", None)
+                    tail = "\n\n".join(p for p in (
+                        delivery_banner(ledger), aging_backlog_banner(ledger)) if p)
                     base = block.input.get("text", "")
                     parts = [p for p in (head, base, tail) if p]
                     if parts:
