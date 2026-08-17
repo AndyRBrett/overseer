@@ -168,7 +168,24 @@ expensive per-issue timeline lookup only runs for entries still in motion — 9 
 
 It refuses to publish a ledger emptier than the live one: entries don't vanish,
 so a collapse to zero means a bad credential or an unconfigured environment, and
-blanking the panel would destroy the record it exists to keep.
+blanking the panel would destroy the record it exists to keep. The same rule
+applies to partial losses — if a repo errored mid-walk *and* the ledger came
+back shorter than the published one, the run declines to publish rather than
+dropping that project's history from the panel.
+
+**A GitHub outage is not a failure of this workflow.** Running hourly against an
+API that serves the occasional 503 means the odd run simply can't read; on
+2026-08-17 nine seconds of 503s on `/user` turned into a red workflow and a
+failure email for a panel that was 45 minutes old and refreshed normally an hour
+later. So transient failures (5xx, rate limiting, connection errors) are told
+apart from credential failures and handled by waiting:
+
+| Situation | Result |
+|---|---|
+| GitHub 5xx / unreachable | retried 3× with backoff (`OVERSEER_PREFLIGHT_ATTEMPTS`, `OVERSEER_PREFLIGHT_BACKOFF`) |
+| Still unreachable, panel fresh | **skip, exit 0** with a `::warning` on the run — the next hourly run retries |
+| Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (6h) | **fail** — six missed refreshes is a real outage, not a wobble |
+| Token expired / revoked (401) | **fail immediately**, never retried — a 401 will 401 again |
 
 ### Failing loudly (credential preflight + heartbeat)
 
@@ -188,6 +205,7 @@ and that each configured repo is actually reachable with it:
 | Token expired / revoked (401) | **abort with a non-zero exit** before spending API budget |
 | Token reaches *some* repos | warn by name, continue — those projects go unreviewed |
 | Token reaches *no* repos | **abort** — a review that reads nothing isn't a review |
+| GitHub itself unreachable (5xx / network) | retried with backoff, then `status: "unavailable"` with `transient: True` — still fatal for the weekly review, but reported as an outage rather than a bad token |
 
 **2. Heartbeat** (`scripts/heartbeat.py`, its own daily workflow). A job cannot
 detect its own failure to start, so this runs separately and asks two things:
