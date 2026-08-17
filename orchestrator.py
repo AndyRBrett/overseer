@@ -26,6 +26,13 @@ import agent_reviewer
 import tools
 from tracer import RunTracer
 
+# Exit code for "GitHub was unreachable, try again shortly" — sysexits.h's
+# EX_TEMPFAIL. The weekly workflow retries on exactly this code and fails on any
+# other, so a nine-second API outage doesn't cost a whole week's review while a
+# dead credential still stops the run on the first attempt. Nothing has been
+# spent at this point: the preflight runs before the first agent.
+EX_TEMPFAIL = 75
+
 
 def run_pipeline(dry_run=False):
     if dry_run:
@@ -49,6 +56,15 @@ def run_pipeline(dry_run=False):
         for slug, state in (check.get("repos") or {}).items():
             if state != "ok":
                 print(f"[preflight]   - {slug}: {state}")
+    if check.get("transient"):
+        # GitHub, not the token. Exit on a code the workflow knows to retry
+        # rather than telling the on-call to regenerate a healthy credential —
+        # which is exactly what this said during the 2026-08-17 outage.
+        print("\n*** DEFERRED: GitHub is unreachable, so this review would read "
+              "nothing. The credential was never rejected — nothing to fix.\n"
+              f"*** {check['detail']}\n"
+              f"*** Exiting {EX_TEMPFAIL} (EX_TEMPFAIL) so the run is retried.\n")
+        raise SystemExit(EX_TEMPFAIL)
     if check.get("fatal"):
         raise SystemExit(
             "\n*** ABORTED: the GitHub credential is unusable, so this review "
