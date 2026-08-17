@@ -207,6 +207,22 @@ and that each configured repo is actually reachable with it:
 | Token reaches *no* repos | **abort** — a review that reads nothing isn't a review |
 | GitHub itself unreachable (5xx / network) | retried with backoff, then `status: "unavailable"` with `transient: True` — still fatal for the weekly review, but reported as an outage rather than a bad token |
 
+**1b. Retrying a review that hit an outage.** Aborting is right, but a *weekly*
+job that aborts has to wait a week — on 2026-08-17 the review died at 14:15 on
+nine seconds of 503s, so there was no digest and no push notification, and the
+next scheduled attempt was seven days out. The orchestrator now exits **75**
+(`EX_TEMPFAIL`) for a transient preflight, and only for that, which the workflow
+keys on in two layers:
+
+| Layer | Covers | Cost when nothing is wrong |
+|---|---|---|
+| In-job retry — 3 attempts, 2 then 4 minutes apart | an outage lasting minutes | nothing; the preflight runs before the first agent, so a deferred attempt spends no budget |
+| Catch-up crons at 16:00 and 18:00 UTC Monday | an outage lasting hours | a checkout and a file read — `scripts/weekly_guard.py` skips them once today's digest is published |
+
+Any other exit code fails on the first attempt, because retrying a dead
+credential only delays the diagnosis. A `weekly-review` concurrency group keeps
+a catch-up from joining a run that is still retrying.
+
 **2. Heartbeat** (`scripts/heartbeat.py`, its own daily workflow). A job cannot
 detect its own failure to start, so this runs separately and asks two things:
 *did the review run* (is `docs/digest.json` still advancing?) and *did it see
@@ -395,6 +411,8 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
   happening, or completes while blind (stdlib only, no token)
 - `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
+- `scripts/weekly_guard.py` — lets the Monday catch-up runs no-op once the
+  review has published, so retrying a missed week costs nothing in a healthy one
 - `scripts/delete-merged-branches.sh` — cleanup of branches already merged into
   `main` across all four repos; dry-run by default, `--go` to apply. Runnable
   from a phone via the **Clean up merged branches** Action (Actions tab → Run

@@ -1,19 +1,47 @@
 name: Weekly Project Review
 
+# THE ONCE-A-WEEK PROBLEM. On 2026-08-17 this fired into nine seconds of 503s
+# from api.github.com, aborted at the credential preflight, and the next attempt
+# was seven days away — no digest, no push notification, and nothing that said
+# so. A workflow that runs hourly can shrug off an outage; one that runs weekly
+# cannot. Two layers now cover that, both keyed on the orchestrator exiting 75
+# (EX_TEMPFAIL) for "GitHub was unreachable" and any other code for real
+# failures, so a dead credential still stops on the first attempt:
+#
+#   1. in-job retries — three attempts over ~6 minutes, for an outage measured
+#      in minutes. Cheap: the preflight runs before the first agent, so a
+#      deferred attempt has spent nothing.
+#   2. catch-up crons at 16:00 and 18:00 UTC, for an outage measured in hours.
+#      They no-op unless today's digest is missing (scripts/weekly_guard.py), so
+#      a healthy Monday costs a checkout and a file read.
+
 on:
   schedule:
     # 14:00 UTC every Monday. Adjust to taste (cron is in UTC).
     - cron: "0 14 * * 1"
+    # Catch-ups. These do nothing unless the 14:00 run failed to publish.
+    - cron: "0 16 * * 1"
+    - cron: "0 18 * * 1"
   workflow_dispatch: {}   # allow manual runs from the Actions tab
 
 # Needed so the run can commit the updated digest back into docs/ (GitHub Pages).
 permissions:
   contents: write
 
+# The catch-ups exist to cover a missed run, not to race one that is still
+# going: a 14:00 run retrying its way through an outage must not be joined by
+# the 16:00 attempt. Not cancel-in-progress — the running review is the one with
+# the budget already spent.
+concurrency:
+  group: weekly-review
+  cancel-in-progress: false
+
 jobs:
   overseer:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The pipeline itself takes ~4 minutes; the rest is headroom for the retry
+    # backoff (~6 min) plus a slow model call.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -22,9 +50,19 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - run: pip install -r requirements.txt
+      # Only the catch-up crons ask this question. The 14:00 run and any manual
+      # dispatch are the review — they always proceed.
+      - name: Is today's digest still missing?
+        id: guard
+        env:
+          FIRED_BY_SCHEDULE: ${{ github.event.schedule }}
+        run: python scripts/weekly_guard.py
+
+      - if: steps.guard.outputs.should_run == 'true'
+        run: pip install -r requirements.txt
 
       - name: Run overseer pipeline
+        if: steps.guard.outputs.should_run == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
@@ -45,9 +83,37 @@ jobs:
           # tool reports "not_configured" and the run still succeeds if unset).
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python orchestrator.py
+        # Exit 75 (EX_TEMPFAIL) means GitHub was unreachable and nothing was
+        # spent, so wait and try again. Every other non-zero code is a real
+        # failure and fails the step immediately — retrying a dead credential
+        # just delays the diagnosis. `set +e` around the call is what lets the
+        # code be inspected at all: under `bash -e` the step would die on the
+        # first non-zero exit, and an `if` wrapper reports the *construct's*
+        # status (0 when no branch runs), not the pipeline's.
+        run: |
+          for attempt in 1 2 3; do
+            set +e
+            python orchestrator.py
+            code=$?
+            set -e
+            if [ "$code" -eq 0 ]; then
+              exit 0
+            fi
+            if [ "$code" -ne 75 ]; then
+              echo "Pipeline failed with exit $code — not a retryable failure."
+              exit "$code"
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              wait=$((attempt * 120))
+              echo "::notice title=Review deferred::GitHub unreachable on attempt $attempt; retrying in ${wait}s."
+              sleep "$wait"
+            fi
+          done
+          echo "::error title=Review abandoned::GitHub was unreachable across 3 attempts."
+          exit 75
 
       - name: Publish digest to the web app
+        if: steps.guard.outputs.should_run == 'true'
         run: |
           if git diff --quiet -- docs/digest.json docs/history.json docs/shipped.json; then
             echo "No digest change to publish."
@@ -60,6 +126,7 @@ jobs:
           fi
 
       - name: Send push notification
+        if: steps.guard.outputs.should_run == 'true'
         env:
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
