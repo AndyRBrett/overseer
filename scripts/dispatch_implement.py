@@ -19,10 +19,11 @@ What this never does: merge anything. A PR is where the automation stops and you
 start.
 
 Usage:
-    python scripts/dispatch_implement.py             # dispatch up to the cap
-    python scripts/dispatch_implement.py --dry-run   # show the queue, fire nothing
-    python scripts/dispatch_implement.py --limit 1   # override the cap
-    python scripts/dispatch_implement.py --explain   # also list what was skipped, and why
+    python scripts/dispatch_implement.py               # dispatch up to the cap
+    python scripts/dispatch_implement.py --dry-run     # show the queue, fire nothing
+    python scripts/dispatch_implement.py --limit 1     # override the cap
+    python scripts/dispatch_implement.py --tier heavy  # run the attempts on the heavy model
+    python scripts/dispatch_implement.py --explain     # also list what was skipped, and why
 
 Exit codes: 0 when the queue was read (including an empty queue — a week with
 nothing eligible is a normal week), 1 when the ledger could not be built or every
@@ -67,6 +68,12 @@ def main():
                              "from OVERSEER_IMPLEMENT_MAX)")
     parser.add_argument("--explain", action="store_true",
                         help="list every filed issue the gate rejected, with the reason")
+    parser.add_argument("--tier", choices=tools.IMPLEMENT_TIERS, default=None,
+                        help=f"model tier each attempt runs on (default "
+                             f"{tools.IMPLEMENT_TIER}, from OVERSEER_IMPLEMENT_TIER). "
+                             "A name, not a model id — the workflow maps it to a model "
+                             "from its own variables, so a dispatch can never choose "
+                             "what the coding agent runs.")
     args = parser.parse_args()
 
     check = tools.preflight_github()
@@ -97,10 +104,12 @@ def main():
 
     queue = tools.implementation_queue(ledger, limit=args.limit)
     picks, skipped = queue["picks"], queue["skipped"]
+    tier = tools.resolve_tier(args.tier)
 
     print(f"[implement] gate: bugs + effort:{'/'.join(tools.IMPLEMENT_EFFORTS)} · "
           f"cap {args.limit if args.limit is not None else tools.IMPLEMENT_MAX} per run · "
           f"{queue['eligible']} eligible of {len(ledger['entries'])} filed")
+    print(f"[implement] tier: {tier}")
 
     if args.explain:
         for item in skipped:
@@ -110,11 +119,18 @@ def main():
         print("[implement] nothing to hand over this run.")
         return 0
 
+    # Say what this is about to cost BEFORE spending it. An implementation is
+    # ~4x the whole review pipeline, so the run's price is the thing worth
+    # knowing at dispatch time — and on a dry run it is the whole point.
+    hint = tools.IMPLEMENT_COST_HINT * len(picks)
+    print(f"[implement] estimate: {len(picks)} attempt(s) x ~${tools.IMPLEMENT_COST_HINT:.2f} "
+          f"= ~${hint:.2f} at the light tier (measured mean; heavy costs several times more)")
+
     failures = 0
     for entry in picks:
         print(f"[implement] -> {describe(entry)}")
         try:
-            result = tools.dispatch_implementation(entry, dry_run=args.dry_run)
+            result = tools.dispatch_implementation(entry, dry_run=args.dry_run, tier=tier)
         except Exception as exc:  # noqa: BLE001 — one bad repo must not stop the rest
             failures += 1
             print(f"[implement]    FAILED: {exc}", file=sys.stderr)
@@ -126,7 +142,8 @@ def main():
                   f"{tools.IMPLEMENTING_LABEL}: {result.get('label_error')}",
                   file=sys.stderr)
         elif result["status"] == "dispatched":
-            print(f"[implement]    dispatched '{result['event']}' to {result['repo']}")
+            print(f"[implement]    dispatched '{result['event']}' to {result['repo']} "
+                  f"({result['tier']} tier)")
 
     if failures and failures == len(picks):
         print(f"[implement] ABORT: all {failures} dispatch(es) failed. A token without "

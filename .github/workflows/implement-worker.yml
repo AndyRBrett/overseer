@@ -19,6 +19,12 @@ on:
         description: "Issue number to implement"
         required: true
         type: string
+      tier:
+        description: "Model tier for this attempt"
+        type: choice
+        default: light
+        options: [light, heavy]
+        required: false
 
 permissions:
   contents: write        # push the branch
@@ -50,6 +56,32 @@ jobs:
             ''|*[!0-9]*) echo "::error title=Bad dispatch::'$RAW' is not an issue number"; exit 1 ;;
           esac
           echo "number=$RAW" >> "$GITHUB_OUTPUT"
+
+      # Tier NAME in, model id out. The name may come from a repository_dispatch
+      # payload — i.e. over the API — and the model is interpolated into the
+      # Claude CLI's arguments, so anything not on this list is refused rather
+      # than passed through. The model ids themselves come from repo variables,
+      # which only someone with write access can set.
+      - name: Choose the model tier
+        id: model
+        env:
+          RAW: ${{ github.event.client_payload.tier || inputs.tier }}
+          DEFAULT_TIER: ${{ vars.OVERSEER_IMPLEMENT_TIER || 'light' }}
+          LIGHT_MODEL: ${{ vars.OVERSEER_IMPLEMENT_MODEL || 'claude-sonnet-5' }}
+          HEAVY_MODEL: ${{ vars.OVERSEER_IMPLEMENT_HEAVY_MODEL || 'claude-opus-4-8' }}
+        run: |
+          tier="${RAW:-$DEFAULT_TIER}"
+          case "$tier" in
+            light|heavy) ;;
+            *) echo "::warning title=Unknown tier::'$tier' is not a tier; using light"; tier=light ;;
+          esac
+          case "$tier" in
+            heavy) model="$HEAVY_MODEL" ;;
+            *)     model="$LIGHT_MODEL" ;;
+          esac
+          echo "tier=$tier"   >> "$GITHUB_OUTPUT"
+          echo "model=$model" >> "$GITHUB_OUTPUT"
+          echo "Running issue #${{ steps.issue.outputs.number }} on the $tier tier ($model)" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/checkout@v4
         with:
@@ -104,7 +136,7 @@ jobs:
           # produces no PR and no comment has spent money for no output.
           claude_args: |
             --max-turns 150
-            --model ${{ vars.OVERSEER_IMPLEMENT_MODEL || 'claude-sonnet-5' }}
+            --model ${{ steps.model.outputs.model }}
             --allowedTools Read,Edit,Write,Glob,Grep,Bash
           # Puts Claude's own report in the run's Step Summary. The SDK output is
           # hidden by default, so without this a failure is a one-line error with

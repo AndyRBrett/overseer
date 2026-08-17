@@ -216,6 +216,35 @@ def test_a_failed_label_is_reported_but_not_fatal(monkeypatch):
     assert "Issues: write" in result["label_error"]
 
 
+def test_the_tier_rides_along_in_the_payload(monkeypatch):
+    repo = _FakeRepo()
+    _stub_github(monkeypatch, repo)
+    result = o.dispatch_implementation(_entry(15), dry_run=False, tier="heavy")
+
+    assert result["tier"] == "heavy"
+    assert repo.dispatches[0][1]["tier"] == "heavy"
+
+
+def test_an_unknown_tier_falls_back_instead_of_travelling(monkeypatch):
+    # THE INJECTION TEST. The tier crosses a repository_dispatch — i.e. arrives
+    # over the API — and the workflow turns it into the --model argument the
+    # coding agent runs on. A name that isn't a known tier must never reach that
+    # argument, so it is replaced here and refused again in the workflow.
+    repo = _FakeRepo()
+    _stub_github(monkeypatch, repo)
+    result = o.dispatch_implementation(
+        _entry(16), dry_run=False, tier="opus --dangerously-skip-permissions")
+
+    assert result["tier"] in o.IMPLEMENT_TIERS
+    assert repo.dispatches[0][1]["tier"] in o.IMPLEMENT_TIERS
+
+
+def test_no_tier_means_the_configured_default():
+    assert o.resolve_tier(None) == o.IMPLEMENT_TIER
+    assert o.resolve_tier("HEAVY") == "heavy"   # case and padding are forgiven
+    assert o.resolve_tier("  light ") == "light"
+
+
 def test_dry_run_touches_nothing(monkeypatch):
     repo = _FakeRepo()
     _stub_github(monkeypatch, repo)
