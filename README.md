@@ -237,6 +237,7 @@ lets through:
 | Never `overseer:no-implement` | Your opt-out. Label anything you want to decide yourself. |
 | Never twice | A dispatched issue gets `overseer:implementing`; if that label fails to apply, the PR's own link to the issue moves it to `in_flight` and the gate skips it anyway. |
 | Never a burned issue | A failed attempt swaps that label for `overseer:implement-failed` and says so on the issue. Both halves matter: without the swap the issue reads as in progress forever — filed and silently dropped — and without the exclusion Monday's run would retry an attempt that already spent its turn budget once. Remove the label to re-queue it. |
+| Unless it wasn't the issue's fault | An attempt that died because the Anthropic key was out of credit is handed back **clean** and retried next run. Benching those would quietly retire every issue picked while the balance was dry — three a week, each needing a manual label removal to come back. |
 
 Against today's ledger — 75 filed issues — that selects **3**: two confirmed bugs
 and one `effort:low / impact:high` enhancement, one per repo. See for yourself,
@@ -270,6 +271,17 @@ rather than becoming one cross-repo PAT with `contents: write` on everything.
 That is the credential sprawl the July outage was made of, and this deliberately
 avoids it. A dispatch rejected for missing scope is reported as a failed
 hand-over and the issue is left unlabelled, so the next run retries it.
+
+**One setting has to be on, per repo.** *Settings → Actions → General → Workflow
+permissions → "Allow GitHub Actions to create and approve pull requests"*. It is
+off by default, and it fails late and quietly: the run does all the work, pushes
+the branch, and only then gets
+`GitHub Actions is not permitted to create or approve pull requests` from
+`gh pr create` — after which the job still reports **success** with no PR to show
+for it. The first green run on this repo ended exactly there, with the finished
+work sitting on `overseer/issue-26`. The agent is told to comment on the issue
+when it can't open a PR, so the work isn't lost, but flip the setting first in
+every repo you install the implementer into.
 
 Two more things worth knowing before you turn the schedule on:
 
