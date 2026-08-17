@@ -99,6 +99,10 @@ def run_pipeline(dry_run=False):
     try:
         ledger = tools.delivery_ledger()
         known_work = tools.known_work_block(ledger)
+        # Also the source of the digest's IMPLEMENTED block — what the
+        # implementer landed since last week, appended to the Reviewer's summary
+        # by run_agent. Handed over on the tracer so run_agent can reach it.
+        tracer.ledger = ledger
         t = ledger["totals"]
         print(f"[ledger] {t['proposed']} filed · {t['shipped']} shipped · "
               f"{t['in_flight']} in flight · {t['open']} open · "

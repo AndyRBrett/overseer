@@ -1,0 +1,82 @@
+name: Hand filed issues to the implementer
+
+# The step the pipeline was missing. The weekly review files issues; this hands a
+# few of them to a coding agent running in each project's OWN repo, which opens a
+# PR. It implements nothing itself — it reads the delivery ledger, applies the
+# gate (confirmed bugs + effort:low enhancements, capped), and fires a
+# repository_dispatch per pick. See scripts/dispatch_implement.py.
+#
+# It runs an hour AFTER the weekly review rather than as its last step, for the
+# same reason ledger-refresh.yml is its own workflow: this is pure GitHub work
+# with no Anthropic key and no model calls, and a failure here must not take the
+# review — the expensive part, already paid for — down with it.
+
+on:
+  schedule:
+    # 15:00 UTC Monday — one hour after the 14:00 review, so this week's issues
+    # are filed and the ledger has them.
+    - cron: "0 15 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Show the queue without dispatching anything"
+        type: boolean
+        default: true
+      limit:
+        description: "Override how many issues to hand over"
+        type: string
+        default: ""
+      explain:
+        description: "List every filed issue the gate rejected, with the reason"
+        type: boolean
+        default: false
+
+# Reads issues, writes a label, fires dispatches — all through
+# OVERSEER_GITHUB_TOKEN, which needs Actions: write on the target repos. The
+# job's own GITHUB_TOKEN needs nothing.
+permissions:
+  contents: read
+
+# One dispatcher at a time. Two overlapping runs would read the same ledger and
+# hand the same issues over twice, because the label that prevents that is only
+# applied after the dispatch.
+concurrency:
+  group: implement-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Pick and dispatch
+        env:
+          # Needs Issues: write (to label) AND Actions: write (to dispatch) on
+          # every repo listed below, including this one.
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+          # The gate. Both optional — defaults are 3 per run, effort:low only.
+          OVERSEER_IMPLEMENT_MAX: ${{ vars.OVERSEER_IMPLEMENT_MAX }}
+          OVERSEER_IMPLEMENT_EFFORT: ${{ vars.OVERSEER_IMPLEMENT_EFFORT }}
+          # A scheduled run always dispatches; a manual one defaults to dry-run
+          # so you can look before you fire.
+          DRY_RUN: ${{ inputs.dry_run && 'yes' || '' }}
+          LIMIT: ${{ inputs.limit }}
+          EXPLAIN: ${{ inputs.explain && 'yes' || '' }}
+        run: |
+          args=""
+          [ -n "$DRY_RUN" ] && args="$args --dry-run"
+          [ -n "$EXPLAIN" ] && args="$args --explain"
+          [ -n "$LIMIT" ]   && args="$args --limit $LIMIT"
+          python scripts/dispatch_implement.py $args
