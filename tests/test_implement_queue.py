@@ -281,6 +281,65 @@ def test_the_banner_survives_a_missing_ledger():
     assert o.delivery_banner({"entries": []}) == ""
 
 
+# ── THE AGING BACKLOG (overseer #26) ────────────────────────────────────
+
+def _open_enhancement(number, days_old, **kw):
+    stamp = (_NOW - timedelta(days=days_old)).isoformat()
+    return _entry(number, kind="enhancement", status="open", created=stamp, **kw)
+
+
+def test_an_old_open_enhancement_is_reported():
+    ledger = {"entries": [_open_enhancement(42, 95, title="Dead capital warning")]}
+    banner = o.aging_backlog_banner(ledger, now=_NOW)
+    assert banner.startswith("AGING BACKLOG (OPEN OVER 60 DAYS)")
+    assert "overseer #42 — Dead capital warning (95d open)" in banner
+
+
+def test_a_recent_open_enhancement_is_not_reported():
+    ledger = {"entries": [_open_enhancement(1, 10)]}
+    assert o.aging_backlog_banner(ledger, now=_NOW) == ""
+
+
+def test_only_open_enhancements_count_toward_the_backlog():
+    # Bugs and non-open issues are tracked elsewhere (implementable / delivery
+    # banner); this section is specifically about untriaged IDEAS piling up.
+    ledger = {"entries": [
+        _entry(1, kind="bug", status="open",
+               created=(_NOW - timedelta(days=90)).isoformat()),
+        _entry(2, kind="enhancement", status="shipped",
+               created=(_NOW - timedelta(days=90)).isoformat(),
+               closed=(_NOW - timedelta(days=1)).isoformat()),
+    ]}
+    assert o.aging_backlog_banner(ledger, now=_NOW) == ""
+
+
+def test_the_banner_counts_and_caps_the_list():
+    ledger = {"entries": [_open_enhancement(n, 61 + n) for n in range(1, 9)]}
+    banner = o.aging_backlog_banner(ledger, now=_NOW, limit=6)
+    assert "- 8 item(s) untriaged." in banner
+    assert banner.count(" open)") == 6
+    assert "…and 2 more." in banner
+
+
+def test_the_aging_banner_heading_renders_as_a_heading_on_the_dashboard():
+    # Same contract as delivery_banner's heading: the dashboard's formatDigest
+    # (docs/app.js) treats an ALL-CAPS line as a section header.
+    import re
+    from pathlib import Path
+
+    header = o.aging_backlog_banner(
+        {"entries": [_open_enhancement(1, 61)]}, now=_NOW).splitlines()[0]
+    app_js = Path(__file__).resolve().parent.parent / "docs" / "app.js"
+    pattern = re.search(r"\^\[A-Z\]\[(.+?)\]\*\$", app_js.read_text(encoding="utf-8"))
+    assert pattern, "docs/app.js no longer has the heading regex this test pins"
+    assert re.match(rf"^[A-Z][{pattern.group(1)}]*$", header)
+
+
+def test_the_aging_banner_survives_a_missing_ledger():
+    assert o.aging_backlog_banner(None) == ""
+    assert o.aging_backlog_banner({"entries": []}) == ""
+
+
 # ── THE WIRING ───────────────────────────────────────────────────────────
 
 class _StubMessages:
@@ -327,15 +386,18 @@ def test_the_digest_the_reviewer_sends_carries_the_implemented_block(tmp_path, m
 
     t = RunTracer(jsonl_path=str(tmp_path / "x.jsonl"), html_path=str(tmp_path / "x.html"))
     t.heavy_model = o.MODEL
-    t.ledger = {"entries": [_shipped(1, 1, title="Retry the push", fix_ref="PR #34")]}
+    t.ledger = {"entries": [_shipped(1, 1, title="Retry the push", fix_ref="PR #34"),
+                            _open_enhancement(2, 61, title="Dead capital warning")]}
 
     o.run_agent(_StubClient(), agent="Reviewer", system="s",
                 tool_names=["send_telegram_summary"], user_message="go", tracer=t)
 
     assert "Issues Found" in sent["text"]
     assert "IMPLEMENTED (LAST 7 DAYS)" in sent["text"]
-    # The Reviewer's own words come first; the machine-generated record follows.
-    assert sent["text"].index("Issues Found") < sent["text"].index("IMPLEMENTED")
+    assert "AGING BACKLOG (OPEN OVER 60 DAYS)" in sent["text"]
+    # The Reviewer's own words come first, then what shipped, then what's aged.
+    assert (sent["text"].index("Issues Found") < sent["text"].index("IMPLEMENTED")
+            < sent["text"].index("AGING BACKLOG"))
     assert t.digest_text == sent["text"]   # what the dashboard and push notification read
 
 
