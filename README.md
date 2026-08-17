@@ -272,6 +272,17 @@ That is the credential sprawl the July outage was made of, and this deliberately
 avoids it. A dispatch rejected for missing scope is reported as a failed
 hand-over and the issue is left unlabelled, so the next run retries it.
 
+**One setting has to be on, per repo.** *Settings → Actions → General → Workflow
+permissions → "Allow GitHub Actions to create and approve pull requests"*. It is
+off by default, and it fails late and quietly: the run does all the work, pushes
+the branch, and only then gets
+`GitHub Actions is not permitted to create or approve pull requests` from
+`gh pr create` — after which the job still reports **success** with no PR to show
+for it. The first green run on this repo ended exactly there, with the finished
+work sitting on `overseer/issue-26`. The agent is told to comment on the issue
+when it can't open a PR, so the work isn't lost, but flip the setting first in
+every repo you install the implementer into.
+
 Two more things worth knowing before you turn the schedule on:
 
 - **Your PR checks won't run on these PRs.** A pull request opened with the

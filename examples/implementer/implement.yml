@@ -12,6 +12,10 @@
 # This way each repo keeps its own key and its own blast radius.
 #
 # SETUP (once per repo):
+#   0. Settings → Actions → General → Workflow permissions → tick "Allow GitHub
+#      Actions to create and approve pull requests". Off by default, and it
+#      fails LATE: the run does all the work, pushes the branch, and only then
+#      can't open the PR — while still reporting success.
 #   1. Add secret ANTHROPIC_API_KEY.
 #   2. Edit the "Set up the project" step below for your stack.
 #   3. Edit the test command in step 4 of the prompt.

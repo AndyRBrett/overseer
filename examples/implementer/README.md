@@ -7,6 +7,11 @@ Copy `implement.yml` into `.github/workflows/` **in your project repo** (not in
 the overseer), then:
 
 1. Add an `ANTHROPIC_API_KEY` secret to that repo.
+1. Turn on **Settings → Actions → General → Workflow permissions → "Allow GitHub
+   Actions to create and approve pull requests"**. Off by default, and it fails
+   late: the run implements the issue, runs your tests, pushes the branch, and
+   only then gets `GitHub Actions is not permitted to create or approve pull
+   requests` — with the job still reporting success and no PR to show for it.
 2. Edit the *"Set up the project"* step for your stack (Python shown; swap in
    `setup-node` + `npm ci`, or delete it if nothing is needed).
 3. In the **overseer** repo, give `OVERSEER_GITHUB_TOKEN` **Actions: write** and
