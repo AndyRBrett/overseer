@@ -24,6 +24,7 @@ status the agent notes and works around, so the pipeline always runs end to end.
 
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -600,6 +601,72 @@ def _http_status(exc):
     return getattr(exc, "status", None)
 
 
+# How hard the preflight tries before calling GitHub unreachable. A 5xx from
+# api.github.com is usually seconds long, and PyGithub's own retries give up
+# inside ten seconds — too fast to ride out even a brief wobble.
+PREFLIGHT_ATTEMPTS = int(os.getenv("OVERSEER_PREFLIGHT_ATTEMPTS", "3"))
+PREFLIGHT_BACKOFF_SECONDS = float(os.getenv("OVERSEER_PREFLIGHT_BACKOFF", "5"))
+
+# Network-level failures arrive with no HTTP status at all — requests wraps the
+# exhausted urllib3 retry as a ConnectionError whose text names the real cause.
+_TRANSIENT_MARKERS = (
+    "max retries exceeded", "too many 5", "connection aborted",
+    "connection reset", "connection refused", "connection error",
+    "timed out", "timeout", "temporarily unavailable", "bad gateway",
+    "service unavailable", "server error", "remote end closed",
+)
+_TRANSIENT_EXCEPTIONS = {
+    "connectionerror", "connectiontimeout", "connectionresetterror",
+    "maxretryerror", "newconnectionerror", "readtimeout", "readtimeouterror",
+    "retryerror", "timeout", "timeouterror",
+}
+
+
+def _is_transient(exc):
+    """True when a call failed because GitHub was briefly unavailable.
+
+    The distinction that matters everywhere below: a 401 means the credential is
+    dead and a human has to fix it, while a 503 means api.github.com had a bad
+    minute and the next run will be fine. Treating the second like the first is
+    how a nine-second outage turns into a red workflow and a failure email.
+    """
+    status = _http_status(exc)
+    if status is not None:
+        return int(status) in (429, 502, 503, 504) or 500 <= int(status) < 600
+    names = {cls.__name__.lower() for cls in type(exc).__mro__}
+    if names & _TRANSIENT_EXCEPTIONS:
+        return True
+    text = str(exc).lower()
+    return any(marker in text for marker in _TRANSIENT_MARKERS)
+
+
+def _authenticated_login():
+    """Log in, riding out transient GitHub failures.
+
+    Returns (login, error). `error` is None on success; otherwise it is the
+    preflight report for a credential that is genuinely broken, or for a GitHub
+    that stayed unreachable across every attempt.
+    """
+    for attempt in range(1, max(PREFLIGHT_ATTEMPTS, 1) + 1):
+        try:
+            return _github().get_user().login, None
+        except Exception as exc:  # noqa: BLE001 — auth failure surfaces as 401
+            status = _http_status(exc)
+            if not _is_transient(exc):
+                hint = ("token is expired or revoked — regenerate it and update "
+                        "the OVERSEER_GITHUB_TOKEN repo secret") if status == 401 else str(exc)
+                return None, {"status": "error", "fatal": True,
+                              "detail": f"GitHub auth failed ({status}): {hint}"}
+            if attempt >= max(PREFLIGHT_ATTEMPTS, 1):
+                return None, {
+                    "status": "unavailable", "fatal": True, "transient": True,
+                    "detail": f"GitHub API unreachable after {attempt} attempt(s) "
+                              f"({status}): {exc}. The credential was never "
+                              f"rejected — this is GitHub, not the token.",
+                }
+            time.sleep(PREFLIGHT_BACKOFF_SECONDS * attempt)
+
+
 def preflight_github():
     """Validate the GitHub credential and per-repo reach before the agents run.
 
@@ -617,6 +684,10 @@ def preflight_github():
       "error"          the token is present but rejected, or some repo is
                        unreachable; `fatal` is True when NO repo is reachable,
                        which is the case where a run is worthless.
+      "unavailable"    GitHub itself could not be reached (5xx / network) on
+                       every attempt. Also fatal — nothing can be read — but
+                       carries `transient: True`, because the fix is to wait
+                       rather than to touch the credential.
     """
     if not (os.getenv("OVERSEER_GITHUB_TOKEN") or os.getenv("GITHUB_TOKEN")):
         return {"status": "not_configured",
@@ -624,18 +695,13 @@ def preflight_github():
                           "will report not_configured.",
                 "fatal": False}
 
-    try:
-        login = _github().get_user().login
-    except Exception as exc:  # noqa: BLE001 — auth failure surfaces as 401
-        status = _http_status(exc)
-        hint = ("token is expired or revoked — regenerate it and update the "
-                "OVERSEER_GITHUB_TOKEN repo secret") if status == 401 else str(exc)
-        return {"status": "error", "detail": f"GitHub auth failed ({status}): {hint}",
-                "fatal": True}
+    login, error = _authenticated_login()
+    if error:
+        return error
 
     # Per-repo reach. A fine-grained PAT scoped to only some of the projects
     # authenticates fine but 404s on the ones it was not granted.
-    repos, unreachable = {}, []
+    repos, unreachable, transient = {}, [], []
     for key in REVIEW_PROJECTS:
         slug = PROJECTS[key].get("repo")
         if not slug:
@@ -645,9 +711,22 @@ def preflight_github():
             repos[slug] = "ok"
         except Exception as exc:  # noqa: BLE001
             code = _http_status(exc)
-            repos[slug] = f"unreachable ({code}): the token may not include this repo"
+            if _is_transient(exc):
+                repos[slug] = f"unreachable ({code}): GitHub is not answering"
+                transient.append(slug)
+            else:
+                repos[slug] = f"unreachable ({code}): the token may not include this repo"
             unreachable.append(slug)
 
+    # An outage looks exactly like a badly scoped token from here — same failed
+    # reads, opposite remedy. Only call it a scope problem when at least one
+    # repo failed for a reason that is not GitHub being down.
+    if unreachable and len(unreachable) == len(repos) and len(transient) == len(unreachable):
+        return {"status": "unavailable", "login": login, "repos": repos,
+                "transient": True, "fatal": True,
+                "detail": f"Authenticated as {login}, but GitHub answered none of "
+                          f"the {len(repos)} configured repos. Treating this as an "
+                          f"outage, not a credential problem."}
     if unreachable and len(unreachable) == len(repos):
         return {"status": "error", "login": login, "repos": repos,
                 "detail": f"Token authenticates as {login} but reaches none of "

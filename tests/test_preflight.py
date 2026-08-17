@@ -6,6 +6,8 @@ that before an agent starts, and to distinguish it from the subtler case of a
 token that authenticates but was regenerated without one of the project repos.
 """
 
+import time
+
 import pytest
 
 import tools as o
@@ -17,19 +19,31 @@ class _FakeUser:
 
 class _FakeGithub:
     """Stand-in for the PyGithub client: `bad` is the set of repo slugs that
-    should raise, mimicking a token not granted those repos."""
+    should raise, mimicking a token not granted those repos.
 
-    def __init__(self, bad=(), auth_status=None):
+    `auth_error` raises on get_user for `auth_flaps` calls before succeeding —
+    0 flaps and a set error means it never recovers. `repo_error` overrides what
+    a `bad` repo raises, so an outage can be told from a scoping mistake.
+    """
+
+    def __init__(self, bad=(), auth_status=None, auth_error=None, auth_flaps=0,
+                 repo_error=None):
         self.bad, self.auth_status = set(bad), auth_status
+        self.auth_error, self.auth_flaps = auth_error, auth_flaps
+        self.repo_error = repo_error
+        self.user_calls = 0
 
     def get_user(self):
+        self.user_calls += 1
         if self.auth_status:
             raise _GithubError(self.auth_status)
+        if self.auth_error and (not self.auth_flaps or self.user_calls <= self.auth_flaps):
+            raise self.auth_error
         return _FakeUser()
 
     def get_repo(self, slug):
         if slug in self.bad:
-            raise _GithubError(404)
+            raise self.repo_error or _GithubError(404)
         return object()
 
 
@@ -37,6 +51,22 @@ class _GithubError(Exception):
     def __init__(self, status):
         super().__init__(f"{status} error")
         self.status = status
+
+
+def _outage():
+    """The 2026-08-17 failure verbatim: requests' ConnectionError after urllib3
+    burned its retries on 503s. Note the absence of any HTTP status."""
+    return ConnectionError(
+        "HTTPSConnectionPool(host='api.github.com', port=443): Max retries "
+        "exceeded with url: /user (Caused by ResponseError('too many 503 "
+        "error responses'))"
+    )
+
+
+@pytest.fixture(autouse=True)
+def no_sleeping(monkeypatch):
+    """Retry backoff without the wall-clock cost."""
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
 
 
 @pytest.fixture
@@ -102,6 +132,75 @@ def test_token_reaching_no_repos_is_fatal(wired):
     assert result["status"] == "error"
     assert result["fatal"] is True
     assert "reaches none" in result["detail"]
+
+
+def test_transient_classification():
+    # 5xx and rate limiting are GitHub having a moment; 401/403/404 are ours.
+    assert o._is_transient(_outage()) is True
+    assert o._is_transient(_GithubError(503)) is True
+    assert o._is_transient(_GithubError(502)) is True
+    assert o._is_transient(_GithubError(429)) is True
+    assert o._is_transient(TimeoutError("timed out")) is True
+    assert o._is_transient(_GithubError(401)) is False
+    assert o._is_transient(_GithubError(404)) is False
+    assert o._is_transient(RuntimeError("No GitHub token.")) is False
+
+
+def test_brief_outage_is_retried_and_recovers(wired, monkeypatch):
+    # The whole point of the retry: PyGithub gives up ~9s into a 503 wobble,
+    # which is shorter than the wobble.
+    monkeypatch.setattr(o, "PREFLIGHT_ATTEMPTS", 3)
+    client = _FakeGithub(auth_error=_outage(), auth_flaps=2)
+    wired(client)
+    result = o.preflight_github()
+    assert result["status"] == "ok"
+    assert client.user_calls == 3
+
+
+def test_sustained_outage_is_unavailable_not_a_credential_error(wired, monkeypatch):
+    # THE REGRESSION TEST for 2026-08-17: every job failed on api.github.com
+    # 503s and the log blamed "GitHub auth failed", pointing the on-call at a
+    # token that was never the problem.
+    monkeypatch.setattr(o, "PREFLIGHT_ATTEMPTS", 2)
+    client = _FakeGithub(auth_error=_outage())
+    wired(client)
+    result = o.preflight_github()
+    assert result["status"] == "unavailable"
+    assert result["transient"] is True
+    assert result["fatal"] is True, "a run that cannot read GitHub still can't proceed"
+    assert client.user_calls == 2
+    assert "expired or revoked" not in result["detail"]
+
+
+def test_expired_token_is_not_retried(wired, monkeypatch):
+    # A 401 will 401 again. Retrying it just delays the real diagnosis.
+    monkeypatch.setattr(o, "PREFLIGHT_ATTEMPTS", 3)
+    client = _FakeGithub(auth_status=401)
+    wired(client)
+    assert o.preflight_github()["fatal"] is True
+    assert client.user_calls == 1
+
+
+def test_outage_on_every_repo_is_not_reported_as_a_scoping_problem(wired):
+    # Authenticated fine, then every repo read 503s. Same symptom as a token
+    # scoped to nothing, opposite fix — so it must not read as the latter.
+    wired(_FakeGithub(bad=["A/crypto-trading", "A/coachvision",
+                           "A/ufc-dashboard", "A/overseer"],
+                      repo_error=_GithubError(503)))
+    result = o.preflight_github()
+    assert result["status"] == "unavailable"
+    assert result["transient"] is True
+    assert "outage" in result["detail"]
+
+
+def test_one_repo_down_still_warns_by_name(wired):
+    # A partial outage is indistinguishable from a partial scope and both are
+    # non-fatal, so the existing warning path is the right one.
+    result_client = _FakeGithub(bad=["A/overseer"], repo_error=_GithubError(503))
+    wired(result_client)
+    result = o.preflight_github()
+    assert result["fatal"] is False
+    assert "A/overseer" in result["detail"]
 
 
 def test_unconfigured_repos_are_skipped(wired, monkeypatch):

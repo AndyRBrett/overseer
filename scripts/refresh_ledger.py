@@ -18,9 +18,18 @@ Usage:
     python scripts/refresh_ledger.py --full     # re-walk every issue
     python scripts/refresh_ledger.py --dry-run  # report, write nothing
 
-Exit codes: 0 always on a successful read (whether or not anything changed);
-1 only when the ledger could not be built at all, so a broken credential fails
-the workflow instead of quietly publishing an empty scoreboard.
+Exit codes: 0 on a successful read (whether or not anything changed), and on a
+run skipped because GitHub was briefly unreachable while the published ledger is
+still fresh; 1 when the ledger could not be built at all, so a broken credential
+fails the workflow instead of quietly publishing an empty scoreboard.
+
+A GitHub outage is NOT a broken credential. This runs hourly against an API that
+serves the odd 503, and a run that cannot read is not a run that read something
+wrong — the published file simply stands for another hour. Failing those runs
+means a red workflow and a failure email for a wobble that fixed itself before
+anyone opened the log. So a transient failure skips, and only a ledger that has
+gone stale past LEDGER_MAX_STALE_HOURS (i.e. the outage is no longer brief) is
+allowed to fail the workflow.
 """
 
 from __future__ import annotations
@@ -29,10 +38,17 @@ import argparse
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tools  # noqa: E402
+
+# How long the panel may coast on its last good read before a skipped refresh
+# becomes a real alarm. The cron is hourly, so this is six consecutive misses —
+# long enough to ride out any GitHub incident worth the name, short enough that
+# a genuinely stuck refresh still surfaces the same day.
+MAX_STALE_HOURS = float(os.getenv("LEDGER_MAX_STALE_HOURS", "6"))
 
 
 def load_published(path):
@@ -41,6 +57,43 @@ def load_published(path):
             return json.load(f)
     except (FileNotFoundError, ValueError):
         return None
+
+
+def published_age_hours(published, now=None):
+    """Hours since the published ledger was written, or None if undatable.
+
+    None is not 'fresh'. A ledger we cannot date is one we cannot vouch for, and
+    the caller treats it as too stale to coast on.
+    """
+    stamp = (published or {}).get("generated")
+    if not stamp:
+        return None
+    try:
+        written = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return None
+    return ((now or datetime.now(timezone.utc)) - written).total_seconds() / 3600
+
+
+def skip_or_fail(reason, published):
+    """Exit code for a run that could not read GitHub properly.
+
+    Skips (0) while the published ledger is still fresh, fails (1) once it is
+    not. Either way the panel keeps its last good state — the only question is
+    whether this run is worth waking anyone for.
+    """
+    age = published_age_hours(published)
+    if age is not None and age <= MAX_STALE_HOURS:
+        print(f"[ledger] SKIP: {reason} Published ledger is {age:.1f}h old "
+              f"(limit {MAX_STALE_HOURS:g}h) — leaving it in place for the next run.")
+        if os.getenv("GITHUB_ACTIONS"):
+            print(f"::warning title=Ledger refresh skipped::{reason} "
+                  f"Panel is {age:.1f}h old; the next hourly run will retry.")
+        return 0
+    stale = "never published" if age is None else f"{age:.1f}h old"
+    print(f"[ledger] ABORT: {reason} Published ledger is {stale}, past the "
+          f"{MAX_STALE_HOURS:g}h limit — the panel is going stale.", file=sys.stderr)
+    return 1
 
 
 def diff_statuses(before, after):
@@ -72,6 +125,9 @@ def main():
     published = load_published(path)
 
     check = tools.preflight_github()
+    if check.get("transient"):
+        # GitHub was down, not the token. Nothing to fix and nothing to publish.
+        return skip_or_fail(f"GitHub is unreachable: {check['detail']}", published)
     if check.get("fatal"):
         print(f"[ledger] ABORT: {check['detail']}", file=sys.stderr)
         return 1
@@ -92,6 +148,16 @@ def main():
     if not ledger["entries"] and ledger.get("errors"):
         print(f"[ledger] ABORT: no entries read; errors: {ledger['errors']}", file=sys.stderr)
         return 1
+
+    # The partial version of the same rule. Preflight can pass and a repo still
+    # fail mid-walk — delivery_ledger swallows that into `errors` and returns
+    # what it got, which for this script would mean committing a panel with one
+    # project's history quietly missing. A shrunken ledger plus a read error is
+    # a bad read, not a shorter backlog.
+    if ledger.get("errors") and len(ledger["entries"]) < had:
+        return skip_or_fail(
+            f"read {len(ledger['entries'])} entries against {had} published, "
+            f"with errors: {ledger['errors']}.", published)
 
     moved = diff_statuses(published, ledger)
     t = ledger["totals"]
