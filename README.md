@@ -237,6 +237,7 @@ lets through:
 | Never `overseer:no-implement` | Your opt-out. Label anything you want to decide yourself. |
 | Never twice | A dispatched issue gets `overseer:implementing`; if that label fails to apply, the PR's own link to the issue moves it to `in_flight` and the gate skips it anyway. |
 | Never a burned issue | A failed attempt swaps that label for `overseer:implement-failed` and says so on the issue. Both halves matter: without the swap the issue reads as in progress forever — filed and silently dropped — and without the exclusion Monday's run would retry an attempt that already spent its turn budget once. Remove the label to re-queue it. |
+| Unless it wasn't the issue's fault | An attempt that died because the Anthropic key was out of credit is handed back **clean** and retried next run. Benching those would quietly retire every issue picked while the balance was dry — three a week, each needing a manual label removal to come back. |
 
 Against today's ledger — 75 filed issues — that selects **3**: two confirmed bugs
 and one `effort:low / impact:high` enhancement, one per repo. See for yourself,
