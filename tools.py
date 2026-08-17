@@ -636,6 +636,16 @@ IMPLEMENTING_LABEL = "overseer:implementing"
 # Your opt-out. Put this on anything you want to decide yourself.
 NO_IMPLEMENT_LABEL = "overseer:no-implement"
 
+# Swapped in for IMPLEMENTING_LABEL when an attempt fails (the implementer
+# workflow does this in an `if: failure()` step). Without it a failed run left
+# the issue marked as handed-over forever: no PR, no retry, no signal beyond a
+# red workflow — a filed issue silently burned, which is precisely the failure
+# shape the rest of this project exists to prevent. It excludes the issue from
+# the queue rather than re-queueing it, because an attempt that ran out of turns
+# or couldn't get the suite passing will usually do the same thing again on
+# Monday, at full price. Remove the label to put it back in the queue.
+FAILED_LABEL = "overseer:implement-failed"
+
 _IMPACT_RANK = {"high": 0, "medium": 1, "low": 2}
 
 
@@ -658,6 +668,8 @@ def implementable(entry, efforts=None):
         return False, f"labelled {NO_IMPLEMENT_LABEL}"
     if IMPLEMENTING_LABEL in labels:
         return False, "already handed to the implementer"
+    if FAILED_LABEL in labels:
+        return False, f"a previous attempt failed (remove {FAILED_LABEL} to re-queue)"
 
     if entry.get("kind") == "bug":
         return True, "confirmed bug"

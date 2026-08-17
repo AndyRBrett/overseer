@@ -236,6 +236,7 @@ lets through:
 | Round-robin across repos | The overseer files against itself more than anything else and would otherwise take every slot every week. |
 | Never `overseer:no-implement` | Your opt-out. Label anything you want to decide yourself. |
 | Never twice | A dispatched issue gets `overseer:implementing`; if that label fails to apply, the PR's own link to the issue moves it to `in_flight` and the gate skips it anyway. |
+| Never a burned issue | A failed attempt swaps that label for `overseer:implement-failed` and says so on the issue. Both halves matter: without the swap the issue reads as in progress forever — filed and silently dropped — and without the exclusion Monday's run would retry an attempt that already spent its turn budget once. Remove the label to re-queue it. |
 
 Against today's ledger — 75 filed issues — that selects **3**: two confirmed bugs
 and one `effort:low / impact:high` enhancement, one per repo. See for yourself,
@@ -280,6 +281,12 @@ Two more things worth knowing before you turn the schedule on:
   loops; implementation is a full coding session per issue. It defaults to
   `claude-sonnet-5` (`OVERSEER_IMPLEMENT_MODEL` to change it) and the cap is what
   actually bounds the bill — three attempts a week, not thirty.
+- **`--max-turns` is a real limit, and hitting it costs you the whole attempt.**
+  The first run tried this repo on 40 turns, died at 41 having pushed nothing,
+  and still billed $1.04 — a coding session that reads an issue, explores a
+  codebase, edits, tests and opens a PR does not fit in 40. It is 150 now, which
+  raises the ceiling on what one attempt can cost as well as what it can finish.
+  Watch the first few runs' reports before raising it further.
 
 The first run should be a manual one: **Actions → Hand filed issues to the
 implementer → Run workflow** defaults to dry-run, so you see the queue before
