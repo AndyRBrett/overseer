@@ -1,53 +1,51 @@
 {
-  "generated": "2026-08-15T10:36:01Z",
+  "generated": "2026-08-17T19:55:45Z",
   "status": "completed",
-  "summary": "STALENESS ALERTS\n- coachvision \u2014 data 122.8h old, SLA 48h \u00b7 stale 5 cycles\n\nIssues Found\n- coachvision: pipeline still frozen since 2026-08-10 (now 122.8h old, breaches 48h SLA) \u2014 already tracked as open #23, no new bug filed (duplicate condition).\n- No other new bugs this week. crypto-trading, ufc-dashboard, and overseer all healthy (fresh runs, no errors). Known non-bugs: crypto-trading's negative P&L/Sharpe (tracked in #41/#42), ufc-dashboard's odds_budget_exhausted (#73, expected state).\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Enhancement-backlog aging tracker (effort: low, impact: medium): Cheap addition to the digest that surfaces untriaged ideas sitting 60+ days, making backlog rot visible alongside pipeline staleness.\n2. crypto-trading \u2014 Transaction-cost-aware signal gate (effort: medium, impact: high): Directly targets the root cause of the ongoing negative P&L/Sharpe -2.29 by suppressing trades whose edge doesn't clear real fees+slippage.\n3. coachvision \u2014 Cloud/action-camera auto-import connector (effort: medium, impact: high): Likely fixes the real reason footage never gets ingested (manual copy friction) \u2014 more impactful than just tracking the staleness.\n4. ufc-dashboard \u2014 Fighter-history/style-matchup predictive overlay (effort: high, impact: high): Valuable new signal (model vs market probability divergence) but biggest lift \u2014 good next-quarter candidate, not urgent.",
+  "summary": "Issues Found\n- overseer: Weekly Project Review workflow failed on its latest run (run 32038432010); success_rate_7d dropped to 0.833 (#32 filed). This is a fresh failure, not a stale dead-man's-switch dup.\n- All other projects (crypto-trading, coachvision, ufc-dashboard) are healthy or expected-idle this week \u2014 no new bugs. Note: coachvision's previously-filed frozen-status issue (#23) has recovered with fresh telemetry.\n\nTop Enhancement Ideas (ranked)\n1. ufc-dashboard \u2014 Surface odds_budget_exhausted as banner + chat alert (effort: low, impact: high): cheap fix to stop silently degraded odds freshness from going unnoticed.\n2. crypto-trading \u2014 Rolling-risk circuit breaker on trailing Sharpe/Sortino (effort: medium, impact: high): auto-throttles sizing when 30d risk-adjusted returns stay deeply negative (currently -2.54/-3.43), addressing real capital risk.\n3. overseer \u2014 Semantic-similarity dedup before filing proposals (effort: medium, impact: high): stops backlog bloat from duplicate enhancement filings going forward.\n4. coachvision \u2014 Scheduled self-test canary with drift tracking (effort: low, impact: medium): cheap ongoing regression check while footage ingestion is idle.",
   "counts": {
-    "tools": 13,
+    "tools": 12,
     "errors": 0,
-    "issues": 0,
+    "issues": 1,
     "enhancements": 4
   },
   "rollup": {
     "ok": 3,
     "total": 4,
-    "issues": 0,
+    "issues": 1,
     "enhancements": 4,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "coachvision",
-        "status": "stale",
-        "detail": "data 122.8h old, SLA 48h \u00b7 stale 5 cycles",
-        "cycles": 5,
-        "nudge": true
+        "status": "idle",
+        "detail": "no recent activity \u00b7 idle 1 cycle",
+        "cycles": 1,
+        "nudge": false
       }
     ]
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-08-15T10:36:01Z",
+      "last_ok": "2026-08-17T19:55:45Z",
       "blind_cycles": 0
     },
     "coachvision": {
-      "status": "stale",
-      "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-08-15T10:36:01Z",
+      "status": "idle",
+      "reason": "read OK but no recent activity",
+      "last_ok": "2026-08-17T19:55:45Z",
       "blind_cycles": 0,
-      "stale_cycles": 5,
-      "age_hours": 122.8,
-      "sla_hours": 48
+      "idle_cycles": 1
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-08-15T10:36:01Z",
+      "last_ok": "2026-08-17T19:55:45Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-08-15T10:36:01Z",
+      "last_ok": "2026-08-17T19:55:45Z",
       "blind_cycles": 0
     }
   },
@@ -58,23 +56,23 @@
         "agent": "Bug-Hunter",
         "model": "claude-opus-4-8",
         "tier": "heavy",
-        "calls": 2,
-        "input": 4,
-        "output": 2684,
-        "cache_write": 12643,
-        "cache_read": 4247,
-        "usd": 0.1483
+        "calls": 3,
+        "input": 6,
+        "output": 3486,
+        "cache_write": 13524,
+        "cache_read": 23787,
+        "usd": 0.1836
       },
       {
         "agent": "Idea-Agent",
         "model": "claude-sonnet-5",
         "tier": "light",
-        "calls": 3,
-        "input": 6,
-        "output": 3665,
-        "cache_write": 16141,
-        "cache_read": 17072,
-        "usd": 0.1206
+        "calls": 2,
+        "input": 4,
+        "output": 3755,
+        "cache_write": 14421,
+        "cache_read": 10779,
+        "usd": 0.1136
       },
       {
         "agent": "Reviewer",
@@ -82,121 +80,122 @@
         "tier": "light",
         "calls": 2,
         "input": 3,
-        "output": 1404,
-        "cache_write": 4274,
-        "cache_read": 3101,
-        "usd": 0.038
+        "output": 1633,
+        "cache_write": 4151,
+        "cache_read": 2848,
+        "usd": 0.0409
       }
     ],
     "priced": true,
     "heavy_model": "claude-opus-4-8",
-    "total_usd": 0.3069,
-    "baseline_usd": 0.4127,
-    "saved_usd": 0.1058,
-    "saved_pct": 25.6
+    "total_usd": 0.3382,
+    "baseline_usd": 0.4412,
+    "saved_usd": 0.103,
+    "saved_pct": 23.4
   },
   "timeline": [
     {
-      "ts": "10:34:05",
-      "agent": "Bug-Hunter",
+      "ts": "19:53:35",
+      "agent": "Telemetry",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "10:34:06",
-      "agent": "Bug-Hunter",
+      "ts": "19:53:35",
+      "agent": "Telemetry",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "10:34:09",
-      "agent": "Bug-Hunter",
+      "ts": "19:53:35",
+      "agent": "Telemetry",
       "label": "read_ufc_scraper_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "10:34:11",
-      "agent": "Bug-Hunter",
+      "ts": "19:53:35",
+      "agent": "Telemetry",
       "label": "read_overseer_status (investigate)",
-      "text": "ok"
+      "text": "ok \u2014 {'workflow': 'Weekly Project Review', 'url': 'https://github.com/AndyRBrett/overseer/actions/runs/32038432010', 'at': '2026-08-17T14:15:52+00:00'}"
     },
     {
-      "ts": "10:34:44",
+      "ts": "19:53:56",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "Looking at the crypto trading system, it's operating normally with recent signals evaluated and no new bugs despite the negative P&L. The coachvision service is showing concerning signs though\u2014it's marked as idle and stale with an age of o\u2026",
-      "text_full": "Looking at the crypto trading system, it's operating normally with recent signals evaluated and no new bugs despite the negative P&L. The coachvision service is showing concerning signs though\u2014it's marked as idle and stale with an age of over 122 hours, which matches the exact issue that's still open. For UFC, the 92% success rate is acceptable and there's no persistent error pattern, so that's not a confirmed bug. But I'm noticing a significant line movement alert with a 610 magnitude shift on the de Ridder vs Dolidze fight, which could indicate a fighter swap or bout replacement that needs investigation. Overseer is running healthy at 100% success. The only confirmed stale issue is coachvision #23, which is already open and tracked. I should verify there are no new bugs to file beyond what's already on record."
+      "text": "Looking at the telemetry data, the trading bot is running fine\u2014it's within its SLA window and the lack of trades is just a quiet market condition, not a bug. The coachvision project though has a real issue: it's idle with no footage ever p\u2026",
+      "text_full": "Looking at the telemetry data, the trading bot is running fine\u2014it's within its SLA window and the lack of trades is just a quiet market condition, not a bug. The coachvision project though has a real issue: it's idle with no footage ever processed, and there's already a tracked issue about its status being frozen. Now checking the UFC dashboard\u2014it's running smoothly with a perfect success rate and fresh data, though the odds API budget is exhausted. That's flagged as an enhancement request already. But I'm noticing something odd: there's an alert showing massive line movement of 610 for one event, yet that same event shows zero line movement in the events list. That's a data inconsistency I need to investigate further. Moving to Overseer, the weekly project review workflow has a success rate of 0.833 over the last 7 days\u2014one of six runs failed. The most recent run at 14:15:52 failed, which is worth looking into and potentially filing as a bug. Let me search existing issues to see if there's already a report about failed overseer runs, since the ones I see (#13, #17) are about missing runs rather than failed ones."
     },
     {
-      "ts": "10:34:46",
+      "ts": "19:53:56",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/overseer: 0 match(es)"
+    },
+    {
+      "ts": "19:53:57",
+      "agent": "Bug-Hunter",
+      "label": "search_existing_issues (search)",
+      "text": "searched AndyRBrett/ufc-dashboard: 1 match(es)"
+    },
+    {
+      "ts": "19:54:08",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "The overseer workflow failed on its last run with the success rate dropping to 0.833, so I need to file a bug for that. For the UFC issue, the odds_budget_exhausted problem is already covered by an existing enhancement and isn't actually b\u2026",
+      "text_full": "The overseer workflow failed on its last run with the success rate dropping to 0.833, so I need to file a bug for that. For the UFC issue, the odds_budget_exhausted problem is already covered by an existing enhancement and isn't actually broken, so I'll skip filing that one."
+    },
+    {
+      "ts": "19:54:09",
+      "agent": "Bug-Hunter",
+      "label": "file_issue (bug)",
+      "text": "AndyRBrett/overseer \u2014 Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833 (#32)"
+    },
+    {
+      "ts": "19:54:27",
+      "agent": "Bug-Hunter",
+      "label": "reasoning",
+      "text": "Coachvision #23 has recovered\u2014it was frozen since mid-August but just generated fresh data on the 17th. The trading bot and UFC systems are both running smoothly with no issues."
+    },
+    {
+      "ts": "19:55:08",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I should check what's currently happening with each project to get a clearer picture."
+      "text": "Thinking through some additional feature ideas for the trading bot beyond what's already tracked\u2014things like multi-timeframe confirmation to strengthen signals, a dead capital warning system that could trigger an automatic kill-switch if d\u2026",
+      "text_full": "Thinking through some additional feature ideas for the trading bot beyond what's already tracked\u2014things like multi-timeframe confirmation to strengthen signals, a dead capital warning system that could trigger an automatic kill-switch if drawdown persists (since the equity's been flat around 49k for weeks with negative returns), paper-trading mode to test strategies safely, or alerts when there's been no trading activity for a stretch of time. For the bot specifically, I'm leaning toward an automated capital de-risking circuit breaker that scales position sizes or pauses trading when the trailing 30-day Sharpe ratio stays negative\u2014distinct from the existing volatility thresholds, correlation guard, and transaction-cost gate already in the backlog. For coachvision, since it's been idle with no footage ingested yet, I could add a multi-clip batch dashboard to visualize the ingestion funnel, or maybe a technique-tagging taxonomy that lets coaches define custom scoring rubrics per belt level, which would be more useful than just another staleness alert. For the self-test angle, I'm thinking of scheduling the demo pipeline to run weekly as a canary check for model drift and regression detection\u2014tracking frames processed over time to catch degradation even when no new footage arrives. That extends the existing one-off self-test into continuous monitoring. On the UFC side, I notice the telemetry already flags when the odds budget is exhausted, so surfacing that explicitly in the dashboard with alerting would be straightforward and valuable. For the Overseer, I'm considering adding semantic similarity checking to automatically deduplicate ideas before they're filed, since managing a large backlog of proposals is exactly the problem I'm facing right now. Let me settle on four concrete ideas ranked by effort and impact: dedup via embedding similarity for the Overseer, surfacing the odds_budget_exhausted flag as a dashboard alert, adding a circuit breaker for the trading bot \u2026"
     },
     {
-      "ts": "10:34:46",
-      "agent": "Idea-Agent",
-      "label": "read_trading_bot_log (investigate)",
-      "text": "ok"
-    },
-    {
-      "ts": "10:34:47",
-      "agent": "Idea-Agent",
-      "label": "read_volleyball_results (investigate)",
-      "text": "ok"
-    },
-    {
-      "ts": "10:34:51",
-      "agent": "Idea-Agent",
-      "label": "read_ufc_scraper_status (investigate)",
-      "text": "ok"
-    },
-    {
-      "ts": "10:34:52",
-      "agent": "Idea-Agent",
-      "label": "read_overseer_status (investigate)",
-      "text": "ok"
-    },
-    {
-      "ts": "10:35:28",
-      "agent": "Idea-Agent",
-      "label": "reasoning",
-      "text": "I'm looking at the crypto trading performance data\u2014signals evaluated but none acted on, quiet market conditions, and negative returns. The existing ideas around correlation guards and volatility-scaled thresholds are already captured, so I\u2026",
-      "text_full": "I'm looking at the crypto trading performance data\u2014signals evaluated but none acted on, quiet market conditions, and negative returns. The existing ideas around correlation guards and volatility-scaled thresholds are already captured, so I'm thinking about a regime-classification model that could pause trading during these low-signal periods to avoid unnecessary fees eating into returns. For Coachvision, the core issue is that despite shipping auto-ingest and demo mode, no footage has actually been ingested. There are already 23 open ideas around the pipeline, so instead of proposing another fix for that, I'm considering whether adding mobile app integration for direct footage uploads or expanding the technique library to cover multiple martial arts styles would unlock actual usage. The stronger angle though is integrating with common action camera APIs like GoPro to automatically pull footage from the cloud\u2014that's low effort, high impact, and directly solves the idle problem by removing the friction of manual file drops. It's distinct from the watcher that's already shipped. For the UFC dashboard, the odds budget is exhausted and there are pending card events, but the ideas here overlap with existing work on adaptive budget allocation. Instead, I could propose building an Elo and style-matchup predictive model that layers over each bout using historical fighter data, displayed alongside the odds\u2014that's medium to high effort but high impact. Or simpler: a weekly push notification digest summarizing upcoming cards and fight completeness. On the Overseer side, attention scoring is already open, so I'm thinking about anomaly detection trend charts showing week-over-week comparisons, or something more meta like automating GitHub issue creation directly from enhancement proposals to close the feedback loop. Actually, here's a better angle for Overseer: tracking enhancement-idea backlog aging and surfacing stale items that have been open for over 60 days in a weekly dige\u2026"
-    },
-    {
-      "ts": "10:35:31",
+      "ts": "19:55:10",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage (effort medium, impact high)"
+      "text": "AndyRBrett/overseer \u2014 Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals (effort medium, impact high)"
     },
     {
-      "ts": "10:35:34",
+      "ts": "19:55:13",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/coachvision \u2014 Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher (effort medium, impact high)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit (effort low, impact high)"
     },
     {
-      "ts": "10:35:38",
+      "ts": "19:55:17",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongside live odds (effort high, impact high)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold (effort medium, impact high)"
     },
     {
-      "ts": "10:35:41",
+      "ts": "19:55:20",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest (effort low, impact medium)"
+      "text": "AndyRBrett/coachvision \u2014 Schedule the bundled self-test clip to run automatically every N days as a model-drift canary, tracking frames_processed/segment_count trend over time (effort low, impact medium)"
     },
     {
-      "ts": "10:35:57",
+      "ts": "19:55:40",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "The coachvision staleness issue is a duplicate of #23, so I'll surface it in Issues Found as an ongoing problem rather than a new bug. Since there are no newly confirmed bugs this week, I'll note that nothing fresh came in but mention the \u2026",
-      "text_full": "The coachvision staleness issue is a duplicate of #23, so I'll surface it in Issues Found as an ongoing problem rather than a new bug. Since there are no newly confirmed bugs this week, I'll note that nothing fresh came in but mention the coachvision pipeline freeze as a known open issue that's already being tracked. Now I'm looking at the improvement ideas and ranking them by effort and impact. The overseer backlog aging tracker is low effort with medium impact, so that goes first. Then the crypto-trading cost-gate and coachvision auto-import are both medium effort with high impact, so they follow. The ufc-dashboard predictive overlay is high effort but also high impact, so it rounds out the list last."
+      "text": "I've got one confirmed bug from overseer this week. Looking at the enhancement ideas ranked by effort and impact, the ufc-dashboard stands out as the clear priority with low effort and high impact, followed by coachvision. For the medium-e\u2026",
+      "text_full": "I've got one confirmed bug from overseer this week. Looking at the enhancement ideas ranked by effort and impact, the ufc-dashboard stands out as the clear priority with low effort and high impact, followed by coachvision. For the medium-effort options, overseer and crypto-trading are both high-impact, so the ordering between them is flexible. Impact should be the primary sorting criterion, with effort as a tiebreaker. So the final ranking is: ufc-dashboard first (low effort, high impact), then crypto-trading and overseer (both medium effort, high impact), and coachvision last (low effort, medium impact)."
     },
     {
-      "ts": "10:35:57",
+      "ts": "19:55:40",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"

@@ -330,6 +330,41 @@
         "baseline_usd": 0.4127,
         "saved_usd": 0.1058
       }
+    },
+    {
+      "date": "2026-08-17",
+      "generated": "2026-08-17T19:55:45Z",
+      "status": "completed",
+      "summary": "Issues Found\n- overseer: Weekly Project Review workflow failed on its latest run (run 32038432010); success_rate_7d dropped to 0.833 (#32 filed). This is a fresh failure, not a stale dead-man's-switch dup.\n- All other projects (crypto-trading, coachvision, ufc-dashboard) are healthy or expected-idle this week \u2014 no new bugs. Note: coachvision's previously-filed frozen-status issue (#23) has recovered with fresh telemetry.\n\nTop Enhancement Ideas (ranked)\n1. ufc-dashboard \u2014 Surface odds_budget_exhausted as banner + chat alert (effort: low, impact: high): cheap fix to stop silently degraded odds freshness from going unnoticed.\n2. crypto-trading \u2014 Rolling-risk circuit breaker on trailing Sharpe/Sortino (effort: medium, impact: high): auto-throttles sizing when 30d risk-adjusted returns stay deeply negative (currently -2.54/-3.43), addressing real capital risk.\n3. overseer \u2014 Semantic-similarity dedup before filing proposals (effort: medium, impact: high): stops backlog bloat from duplicate enhancement filings going forward.\n4. coachvision \u2014 Scheduled self-test canary with drift tracking (effort: low, impact: medium): cheap ongoing regression check while footage ingestion is idle.",
+      "counts": {
+        "tools": 12,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 4
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.3382,
+        "baseline_usd": 0.4412,
+        "saved_usd": 0.103
+      }
     }
   ]
 }
