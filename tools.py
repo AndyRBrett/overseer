@@ -561,6 +561,12 @@ def write_ledger(ledger, path=None):
     path = path or LEDGER_PATH
     payload = dict(ledger)
     payload["generated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Ride along with the ledger so the dashboard's implementer panel refreshes
+    # on the hourly ledger job — no extra workflow, no model calls, and it
+    # cannot disagree with the gate because it IS the gate.
+    queue = queue_state(ledger)
+    if queue:
+        payload["queue"] = queue
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, sort_keys=True)
         f.write("\n")
@@ -765,6 +771,63 @@ def resolve_tier(tier):
               f"using '{IMPLEMENT_TIER}' (valid: {', '.join(IMPLEMENT_TIERS)})")
         name = IMPLEMENT_TIER if IMPLEMENT_TIER in IMPLEMENT_TIERS else "light"
     return name
+
+
+def queue_state(ledger, limit=None, efforts=None):
+    """What the implementer will do next, shaped for the dashboard.
+
+    Computed HERE and published with the ledger rather than worked out in the
+    dashboard's JavaScript, for the same reason the digest's blocks are: the
+    gate is one set of rules, and a second copy in app.js would drift from this
+    one the first time the rules changed — leaving the panel confidently
+    describing a queue the dispatcher would never produce.
+
+    Three questions, which are the three the panel answers: what is queued for
+    the next run, what is being worked on now, and what is stuck waiting on a
+    human. Returns None when there is no ledger, so the card stays hidden.
+    """
+    if not ledger or not ledger.get("entries"):
+        return None
+    limit = IMPLEMENT_MAX if limit is None else limit
+    queue = implementation_queue(ledger, limit=limit, efforts=efforts)
+
+    keep = ("repo", "number", "title", "kind", "effort", "impact", "url",
+            "fix_ref", "fix_url")
+
+    def _slim(entry):
+        return {k: entry[k] for k in keep if entry.get(k) is not None}
+
+    # In flight covers both halves of "under way": an issue the dispatcher has
+    # handed over (labelled, no branch yet) and one whose fix is already open in
+    # review. Showing only the second would make a just-dispatched issue vanish
+    # for the ten minutes the agent takes to push.
+    in_flight, benched = [], []
+    for entry in ledger["entries"]:
+        status = entry.get("status")
+        # Only LIVE work. These labels are never cleaned off a closed issue, so
+        # keying on the label alone would keep reporting overseer#26 as benched
+        # for the rest of its life — it failed once on a dry API key, then
+        # shipped. A settled outcome is the ledger's story to tell, not this
+        # panel's.
+        if status not in ("open", "in_flight"):
+            continue
+        labels = set(entry.get("labels") or ())
+        if FAILED_LABEL in labels:
+            benched.append(_slim(entry))
+        elif status == "in_flight" or IMPLEMENTING_LABEL in labels:
+            in_flight.append(_slim(entry))
+
+    return {
+        "cap": limit,
+        "efforts": list(efforts or IMPLEMENT_EFFORTS),
+        "tier": IMPLEMENT_TIER,
+        "cost_hint": IMPLEMENT_COST_HINT,
+        "eligible": queue["eligible"],
+        "next": [_slim(e) for e in queue["picks"]],
+        "in_flight": in_flight,
+        "benched": benched,
+        "failed_label": FAILED_LABEL,
+    }
 
 
 def dispatch_implementation(entry, event_type=None, dry_run=None, tier=None):

@@ -37,6 +37,28 @@ def _ts(hours_ago=1):
     return (datetime.now(timezone.utc) - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _earlier_today(hours_ago=1):
+    """A timestamp from earlier TODAY in UTC.
+
+    Not the same thing as `_ts(hours_ago)`, and the difference made this suite
+    go red for two hours every night: run at 01:10 UTC, "two hours ago" is
+    yesterday, so a test meaning "today's digest is already published" was
+    quietly asserting that YESTERDAY's counts as today's — the exact thing
+    test_yesterdays_digest_does_not_count_as_today exists to forbid. Clamped to
+    just after midnight so the stamp never leaves the current UTC day.
+    """
+    now = datetime.now(timezone.utc)
+    stamp = now - timedelta(hours=hours_ago)
+    if stamp.date() != now.date():
+        stamp = now.replace(hour=0, minute=1, second=0, microsecond=0)
+    return stamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _digest_today(hours_ago=1, status="completed"):
+    """A digest published earlier today — what the catch-up guard must skip."""
+    return dict(_digest(hours_ago, status), generated=_earlier_today(hours_ago))
+
+
 def _digest(hours_ago=1, status="completed"):
     return {"generated": _ts(hours_ago), "status": status,
             "counts": {"tools": 20, "errors": 0}}
@@ -101,7 +123,7 @@ def test_manual_dispatch_always_runs():
 def test_catchup_skips_when_today_already_published():
     # The common case by far: the 14:00 run worked, so 16:00 and 18:00 cost a
     # checkout and a file read instead of a second full pipeline.
-    run, reason = wg.should_run(CATCHUP, _digest(hours_ago=2))
+    run, reason = wg.should_run(CATCHUP, _digest_today(hours_ago=2))
     assert run is False
     assert "already published" in reason
 
@@ -141,7 +163,7 @@ def test_yesterdays_digest_does_not_count_as_today(monkeypatch):
 
 def test_guard_writes_the_workflow_output(monkeypatch, tmp_path, capsys):
     digest_path = tmp_path / "digest.json"
-    digest_path.write_text(json.dumps(_digest(hours_ago=2)), encoding="utf-8")
+    digest_path.write_text(json.dumps(_digest_today(hours_ago=2)), encoding="utf-8")
     output = tmp_path / "github_output"
     monkeypatch.setattr(wg, "DIGEST_PATH", str(digest_path))
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))

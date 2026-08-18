@@ -315,6 +315,16 @@ and so does *Hand filed issues to the implementer* (where it applies to every
 attempt that run). A **scheduled** Monday run has nobody to ask, so it uses
 `OVERSEER_IMPLEMENT_TIER` (default `light`).
 
+The dashboard carries the same picture. An **Implementer** panel sits under
+Shipped and answers the three questions the ledger can't: what the next run will
+attempt (and what it will cost), what is under way right now, and what is
+stalled waiting on you. Its figures come from a `queue` block the ledger
+publishes (`tools.queue_state`) rather than from rules re-implemented in
+`app.js` — a second copy of the gate there would drift from the dispatcher's the
+first time the rules changed, and describe a queue that never runs. It rides
+along with the hourly ledger refresh, so the panel is live without a second
+workflow or a single model call.
+
 The dispatcher also prints what the run is about to cost before it fires:
 
 ```

@@ -411,6 +411,70 @@ function renderShipped(ledger) {
   $("shipped").innerHTML = head + groups;
 }
 
+// Implementer — the queue between "proposed" and "shipped".
+//
+// The Shipped panel is a record of what happened; this is the only view of what
+// is ABOUT to happen, which is the half you can still change your mind about.
+// Every figure comes from the `queue` block the ledger publishes
+// (tools.queue_state), never from rules re-implemented here — a second copy of
+// the gate in this file would drift from the dispatcher's and describe a queue
+// that never runs.
+function renderImplementer(q) {
+  if (!q) return;
+  $("implementer-card").style.display = "";
+
+  const n = (a) => (a || []).length;
+  const cost = (q.cost_hint || 0) * n(q.next);
+
+  // Lead with the two numbers worth acting on: what the next run will attempt,
+  // and what it will cost. The gate that produced them goes underneath.
+  const head =
+    `<div class="stat-hero"><b>${n(q.next)}</b> queued for the next run` +
+    (cost ? ` · <span class="hero-pct">~$${cost.toFixed(2)}</span>` : "") + `</div>` +
+    `<div class="sub">bugs + effort:${escapeHtml((q.efforts || []).join("/"))}` +
+    ` · cap ${q.cap} per run · ${q.eligible} eligible · ` +
+    `${escapeHtml(q.tier || "light")} tier</div>`;
+
+  const row = (e, badge, cls) => {
+    const sizing = [e.effort && `effort:${e.effort}`, e.impact && `impact:${e.impact}`]
+      .filter(Boolean).join(" · ");
+    const fix = e.fix_url
+      ? ` · <a href="${escapeHtml(e.fix_url)}" target="_blank" rel="noopener" class="fix">${escapeHtml(e.fix_ref || "fix")}</a>`
+      : "";
+    return `<div class="prow">
+      <div>
+        <div class="pname"><span class="rc ${cls}">${badge}</span>
+          <a href="${escapeHtml(e.url || "#")}" target="_blank" rel="noopener">${escapeHtml(e.title || "")}</a></div>
+        <div class="pmeta">${escapeHtml((e.repo || "").split("/").pop())} #${e.number}` +
+          `${sizing ? " · " + escapeHtml(sizing) : ""}${fix}</div>
+      </div>
+    </div>`;
+  };
+
+  const section = (title, items, badge, cls, empty) =>
+    n(items)
+      ? `<div class="qgroup"><div class="pmeta qhead">${title}</div>` +
+        items.map((e) => row(e, badge, cls)).join("") + `</div>`
+      : (empty ? `<div class="qgroup"><div class="pmeta qhead">${title}</div>` +
+                 `<div class="pmeta dim">${empty}</div></div>` : "");
+
+  // "Nothing queued" has two very different meanings and the panel must not
+  // blur them: an empty backlog is success, while a backlog full of work the
+  // gate won't touch is a setting you may want to change.
+  const nothing = q.eligible
+    ? "Nothing left to pick this run — the eligible items are already under way."
+    : "Nothing eligible: everything filed is either bigger than the effort gate, " +
+      "already under way, or done.";
+
+  $("implementer").innerHTML = head +
+    section("Next run", q.next, "queued", "", nothing) +
+    section("Under way", q.in_flight, "building", "warn") +
+    section("Needs you", q.benched, "stalled", "bad",  "") +
+    (n(q.benched)
+      ? `<div class="pmeta dim">Remove the <code>${escapeHtml(q.failed_label || "")}</code>` +
+        ` label to put these back in the queue.</div>` : "");
+}
+
 // Model spend — what the run cost, and what the two-tier split saved.
 //
 // The pipeline runs three agents; only the Bug-Hunter's calls are consequential
@@ -504,6 +568,7 @@ async function loadDigest() {
 
     renderGenerated(d);
     renderShipped(ledger);
+  renderImplementer(ledger && ledger.queue);
     renderSpend(d.spend, runs);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
