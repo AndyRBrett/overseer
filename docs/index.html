@@ -159,6 +159,17 @@
           background: #334155; color: #cbd5e1; white-space: nowrap; }
     .rc.ok { background: #064e3b; color: #6ee7b7; }
     .rc.warn { background: #713f12; color: #fde68a; }
+    /* Implementer panel: a stalled attempt is the one state that needs a person,
+       so it gets the only red badge on the page rather than another amber one
+       nobody distinguishes from "in progress". */
+    .rc.bad { background: #7f1d1d; color: #fecaca; }
+    /* Group headings inside the implementer panel. Uppercased so the three
+       buckets read as sections at a glance on a phone, without stealing the
+       weight of a real .section-label. */
+    .qgroup { margin-top: 12px; }
+    .qhead { text-transform: uppercase; letter-spacing: .04em; font-weight: 600;
+             margin-bottom: 2px; }
+    .pmeta.dim { opacity: .72; }
     /* Shipped panel (delivery ledger). Non-shipped rows are dimmed so the
        delivered work reads first, and the decision line is set apart so a
        "why we didn't" is visible without opening the issue. */
@@ -290,6 +301,11 @@
     <div class="card" id="shipped-card" style="display:none">
       <div class="section-label">Shipped (what came of the proposals)</div>
       <div id="shipped"></div>
+    </div>
+
+    <div class="card" id="implementer-card" style="display:none">
+      <div class="section-label">Implementer (what it builds next)</div>
+      <div id="implementer"></div>
     </div>
 
     <div class="card" id="spend-card" style="display:none">

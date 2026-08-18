@@ -440,3 +440,63 @@ def test_a_run_without_a_ledger_sends_the_digest_unchanged(tmp_path, monkeypatch
                 tool_names=["send_telegram_summary"], user_message="go", tracer=t)
 
     assert sent["text"] == "Issues Found\n- none"
+
+
+# ── THE DASHBOARD PANEL ──────────────────────────────────────────────────
+
+def test_the_queue_panel_reports_what_the_next_run_will_attempt():
+    ledger = {"entries": [_entry(1), _entry(2, repo="A/ufc"),
+                          _entry(3, kind="enhancement", effort="high")]}
+    q = o.queue_state(ledger, limit=3)
+    assert [e["number"] for e in q["next"]] == [1, 2]
+    assert q["cap"] == 3 and q["tier"] == o.IMPLEMENT_TIER
+    assert q["eligible"] == 2
+
+
+def test_work_already_handed_over_shows_as_under_way_before_a_pr_exists():
+    # The dispatcher labels an issue the moment it hands it over, and the agent
+    # takes ten minutes to push. Keying "under way" on the linked PR alone would
+    # make a just-dispatched issue vanish from the panel for that whole window.
+    ledger = {"entries": [_entry(4, labels=[o.IMPLEMENTING_LABEL]),
+                          _entry(5, status="in_flight", fix_ref="PR #9")]}
+    q = o.queue_state(ledger)
+    assert {e["number"] for e in q["in_flight"]} == {4, 5}
+
+
+def test_a_failed_label_on_settled_work_is_not_reported_as_stalled():
+    # THE ONE THAT BIT ME. These labels are never cleaned off a closed issue, so
+    # keying on the label alone kept reporting overseer#26 as needing attention
+    # after it had failed once on a dry API key and then shipped.
+    ledger = {"entries": [_shipped(26, 1, labels=[o.FAILED_LABEL]),
+                          _entry(27, labels=[o.FAILED_LABEL])]}
+    q = o.queue_state(ledger)
+    assert [e["number"] for e in q["benched"]] == [27]
+
+
+def test_the_panel_is_hidden_rather_than_empty_without_a_ledger():
+    assert o.queue_state(None) is None
+    assert o.queue_state({"entries": []}) is None
+
+
+def test_the_published_ledger_carries_the_queue_for_the_dashboard(tmp_path):
+    # The panel refreshes on the hourly ledger job precisely because the queue
+    # rides along in the same file — no second workflow, no model calls.
+    import json
+    path = tmp_path / "shipped.json"
+    o.write_ledger({"entries": [_entry(1)], "totals": {}}, str(path))
+    assert json.loads(path.read_text())["queue"]["next"][0]["number"] == 1
+
+
+def test_the_dashboard_renders_the_queue_it_is_given():
+    # No JS test runner here, so pin the seam instead: app.js must render into an
+    # element index.html actually has, and must read the published queue block
+    # rather than re-deriving the gate (a second copy would drift from
+    # tools.implementable and describe a queue that never runs).
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    app = (root / "docs" / "app.js").read_text(encoding="utf-8")
+    page = (root / "docs" / "index.html").read_text(encoding="utf-8")
+
+    assert "renderImplementer(ledger && ledger.queue)" in app
+    for element in ("implementer-card", "implementer"):
+        assert f'id="{element}"' in page, f"app.js writes to #{element}; index.html lacks it"
