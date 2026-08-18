@@ -17,6 +17,11 @@ notification is sent by the same Action. No third-party servers.
 Every run also produces a visual report (`overseer_report.html`, uploaded as an
 Actions artifact) showing each agent's reasoning and every tool call.
 
+Working on the code? **`CLAUDE.md`** is the orientation file — the invariants
+that must not be broken, the gotchas that have already cost a week or a bill,
+and what a run actually costs. It is written for whoever (or whatever) picks
+this up next.
+
 ## Design — three agents, separated concerns
 
 The work is split across three sequential agents (orchestrated by
