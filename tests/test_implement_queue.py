@@ -500,3 +500,19 @@ def test_the_dashboard_renders_the_queue_it_is_given():
     assert "renderImplementer(ledger && ledger.queue)" in app
     for element in ("implementer-card", "implementer"):
         assert f'id="{element}"' in page, f"app.js writes to #{element}; index.html lacks it"
+
+
+def test_the_spend_panel_says_what_it_leaves_out():
+    # The implementer runs in another repo, so none of its spend reaches this
+    # panel's token counts — and it is ~4x the review. Unsaid, "$0.34 this run"
+    # reads as the week's bill when the week is nearer $4.80, which is the panel
+    # flattering itself. Pinned because the omission is invisible: every number
+    # on the panel stays correct while the impression it leaves does not.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    app = (root / "docs" / "app.js").read_text(encoding="utf-8")
+    page = (root / "docs" / "index.html").read_text(encoding="utf-8")
+
+    assert "Excludes the implementer" in app
+    assert "renderSpend(d.spend, runs, ledger && ledger.queue)" in app
+    assert "Model spend (the review run)" in page, "the title must scope itself to the run"

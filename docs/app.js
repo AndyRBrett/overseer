@@ -484,7 +484,7 @@ function renderImplementer(q) {
 // rather than an assertion. It stays hidden on older digests that predate the
 // accounting, and on any run whose model isn't in the rate card — a confident
 // $0.00 would be worse than showing nothing.
-function renderSpend(spend, runs) {
+function renderSpend(spend, runs, queue) {
   if (!spend || !spend.agents || !spend.agents.length) return;
   $("spend-card").style.display = "";
 
@@ -537,7 +537,26 @@ function renderSpend(spend, runs) {
     run's token counts — Anthropic's invoice is the authority. The baseline reprices the
     same tokens at ${escapeHtml(spend.heavy_model || "the heavy model")}.</div>`;
 
-  $("spend").innerHTML = head + rows + note;
+  // The implementer is the expensive half and it does NOT run in this process:
+  // it runs in each project's own repo, so none of its spend reaches this
+  // panel's token counts. Left unsaid, "$0.34 this run" reads as the week's
+  // bill when the week is nearer $4.80 — a panel flattering itself, which is
+  // the one thing the ledger's rules forbid. The figure is labelled an estimate
+  // because it is one: everything else here is measured, and mixing the two
+  // silently would be worse than leaving it out.
+  const queued = (queue && queue.next && queue.next.length) || 0;
+  let outside = "";
+  if (queued) {
+    outside = `<div class="spend-note">Excludes the implementer, which runs in each
+      project's own repo: about <b>${usd((queue.cost_hint || 0) * queued)}</b> more for the
+      ${queued} attempt${queued === 1 ? "" : "s"} queued in the Implementer panel —
+      estimated from measured runs, not from billed tokens.</div>`;
+  } else if (queue) {
+    outside = `<div class="spend-note">Excludes the implementer, which runs in each
+      project's own repo. Nothing is queued, so this is the week's model spend.</div>`;
+  }
+
+  $("spend").innerHTML = head + rows + note + outside;
 }
 
 async function loadDigest() {
@@ -568,8 +587,8 @@ async function loadDigest() {
 
     renderGenerated(d);
     renderShipped(ledger);
-  renderImplementer(ledger && ledger.queue);
-    renderSpend(d.spend, runs);
+    renderImplementer(ledger && ledger.queue);
+    renderSpend(d.spend, runs, ledger && ledger.queue);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};
