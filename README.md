@@ -82,6 +82,13 @@ Three knobs, all optional:
   A name matching no agent is reported at startup rather than silently ignored —
   a typo here would quietly demote the Bug-Hunter.
 
+**The panel scopes itself to the review run, and says so.** The implementer
+runs in each project's own repo, so none of its spend reaches these token
+counts — and it is ~4x the review. Left unsaid, "$0.34 this run" reads as the
+week's bill when the week is nearer $4.80. The panel therefore names what it
+excludes, with the queued attempts' estimated cost, labelled as an estimate
+because everything else on it is measured.
+
 **The saving is measured, not asserted.** Every response's token usage is
 recorded per agent, and each run's digest carries a `spend` block that the
 dashboard renders as a **Model spend** panel: what each agent cost, the run
