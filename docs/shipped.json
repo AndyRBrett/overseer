@@ -1096,7 +1096,44 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-17T23:42:23Z",
+  "generated": "2026-08-18T01:17:49Z",
+  "queue": {
+    "benched": [],
+    "cap": 3,
+    "cost_hint": 1.5,
+    "efforts": [
+      "low"
+    ],
+    "eligible": 5,
+    "failed_label": "overseer:implement-failed",
+    "in_flight": [],
+    "next": [
+      {
+        "kind": "bug",
+        "number": 23,
+        "repo": "AndyRBrett/coachvision",
+        "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/23"
+      },
+      {
+        "kind": "bug",
+        "number": 32,
+        "repo": "AndyRBrett/overseer",
+        "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
+        "url": "https://github.com/AndyRBrett/overseer/issues/32"
+      },
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 73,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
+      }
+    ],
+    "tier": "light"
+  },
   "totals": {
     "delivery_rate": 0.714,
     "duplicate": 12,
