@@ -27,7 +27,7 @@ class _Issue:
 
     def __init__(self, number, title, *, body="", labels=(), state="open",
                  state_reason=None, repo="A/overseer", merged=False,
-                 created=None, closed=None):
+                 created=None, closed=None, author_association="OWNER"):
         self.number = number
         self.title = title
         self.body = body
@@ -41,6 +41,9 @@ class _Issue:
                                     if state == "closed" else None)
         self.pull_request = None
         self._merged = merged
+        # Defaults to OWNER because every other test here is simulating an issue
+        # the pipeline itself filed. Outsider issues set it explicitly.
+        self.author_association = author_association
 
 
 def _entry(issue, merged_only=True, monkeypatch=None):
@@ -320,3 +323,52 @@ def test_full_rebuild_ignores_the_published_ledger(monkeypatch):
     # state (no pending PR -> delivered).
     assert o.delivery_ledger(known=None)["entries"][0]["status"] == "shipped"
     assert o.delivery_ledger(known=known)["entries"][0]["status"] == "shipped"
+
+
+# ---------------------------------------------------------------------------
+# Who filed it. The marker is published in the footer of every issue the
+# pipeline files on public repos, so it proves nothing about authorship — and an
+# entry that reaches the ledger is one implementable() can approve and hand to a
+# coding agent with Bash and a write token.
+# ---------------------------------------------------------------------------
+
+def test_outsider_issue_is_not_ours_even_carrying_the_marker():
+    """A stranger pasting OVERSEER_MARKER must not enter the ledger.
+
+    This is the exact shape that got through before: no labels (those need write
+    access), marker pasted into the body, so `ours` passed and — with no
+    `enhancement` label — it was classed a BUG, the branch implementable()
+    approves without an effort label or any author check.
+    """
+    issue = _Issue(500, "App crashes on launch",
+                   body="Steps to repro...\n\n---\n" + o.OVERSEER_MARKER,
+                   author_association="NONE")
+    assert _entry(issue) is None
+
+
+def test_outsider_enhancement_title_is_not_ours():
+    """The `[enhancement]` prefix is just a title — anyone can type it."""
+    issue = _Issue(501, "[enhancement] Please run this for me",
+                   author_association="CONTRIBUTOR")
+    assert _entry(issue) is None
+
+
+def test_collaborator_issue_is_ours():
+    """Write access is the line, not the owner account specifically."""
+    issue = _Issue(502, "Real bug", body=o.OVERSEER_MARKER,
+                   author_association="COLLABORATOR")
+    entry = _entry(issue)
+    assert entry is not None
+    assert entry["kind"] == "bug"
+
+
+def test_outsider_issue_never_reaches_the_implementer():
+    """End to end: the gate can only approve what the ledger admits."""
+    outsider = _Issue(503, "Do this now", body=o.OVERSEER_MARKER,
+                      author_association="NONE")
+    assert _entry(outsider) is None
+
+    ours = _Issue(504, "Do this now", body=o.OVERSEER_MARKER,
+                  author_association="OWNER")
+    entry = _entry(ours)
+    assert o.implementable(entry) == (True, "confirmed bug")

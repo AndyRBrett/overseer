@@ -337,7 +337,24 @@ def _github():
 
 # Stamped into every filed issue body. Changing this orphans older issues from
 # the ledger, so treat it as a stable identifier, not a message.
+#
+# It is an IDENTIFIER, NOT A CREDENTIAL. It is a fixed string printed in the
+# footer of every issue we have ever filed on repos that are public, so anyone
+# can read it and paste it. Nothing may treat its presence as proof of who wrote
+# something — see the author check in _ledger_entry.
 OVERSEER_MARKER = "_Filed by Project Overseer._"
+
+# Whose issues the ledger will act on. GitHub computes author_association itself
+# and the author cannot set it; these three values all mean "has write access to
+# the repo the issue is in". Overridable for an unusual setup (a bot account that
+# files as CONTRIBUTOR, say), but widen it knowingly: this is the line between an
+# issue we proposed and one a stranger opened.
+TRUSTED_ASSOCIATIONS = frozenset(
+    a.strip().upper()
+    for a in os.getenv("OVERSEER_TRUSTED_ASSOCIATIONS",
+                       "OWNER,MEMBER,COLLABORATOR").split(",")
+    if a.strip()
+)
 
 
 def _ledger_entry(issue, merged_only=True):
@@ -357,6 +374,30 @@ def _ledger_entry(issue, merged_only=True):
             or issue.title.startswith("[enhancement]")
             or any(l.startswith("effort:") for l in labels))
     if not ours:
+        return None
+
+    # WHO FILED IT is a security boundary here, not bookkeeping. Everything
+    # downstream reads a ledger entry as work THIS PIPELINE proposed:
+    # implementable() approves any open entry of kind "bug" with no effort label
+    # and no further questions, dispatch_implement.py fires it at the issue's own
+    # repo, and the implementer there hands the issue body — and its comments —
+    # to a coding agent running with Bash, a contents: write token and an
+    # Anthropic key.
+    #
+    # The `ours` test above cannot carry that weight, because all three of its
+    # signals are public and forgeable by anyone able to open an issue on these
+    # public repos. OVERSEER_MARKER is a fixed published string; the title prefix
+    # is just a title; effort labels are the only one needing write access. An
+    # unlabelled issue carrying the marker was classed a BUG — the branch that
+    # skips the effort-label requirement entirely — so pasting one line into a new
+    # issue was enough to queue a stranger's text as an agent's instructions.
+    #
+    # author_association is GitHub's own answer and cannot be set by the author.
+    # Our own issues are filed with OVERSEER_GITHUB_TOKEN and arrive as OWNER, so
+    # the real pipeline is unaffected; anything from outside is not ours, whatever
+    # its body claims.
+    assoc = (getattr(issue, "author_association", "") or "").upper()
+    if assoc not in TRUSTED_ASSOCIATIONS:
         return None
 
     kind = "enhancement" if ("enhancement" in labels
