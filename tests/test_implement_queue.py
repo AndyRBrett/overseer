@@ -254,7 +254,19 @@ def test_dry_run_touches_nothing(monkeypatch):
 
 # ── THE SUMMARY ──────────────────────────────────────────────────────────
 
-_NOW = datetime(2026, 8, 17, 12, 0, tzinfo=timezone.utc)
+# Anchored to the RUN, not to a date someone typed. Most tests below hand this
+# straight back as `now=_NOW`, so a frozen value looks harmless — but
+# test_the_digest_the_reviewer_sends_carries_the_implemented_block goes through
+# run_agent, and run_agent calls delivery_banner(ledger) with no `now`, i.e.
+# against the real clock. With a hard-coded _NOW those two clocks drift apart by
+# one day per day until a fixture written as "shipped 1 day ago" is more than 7
+# real days old and silently falls out of the window.
+#
+# That is not hypothetical: _NOW was 2026-08-17, and this suite went red on
+# 2026-08-23 with no code change between the last green run and the red one —
+# the fixture had simply aged past the boundary overnight. Deriving _NOW from
+# now() keeps fixture ages honest however long the file sits there.
+_NOW = datetime.now(timezone.utc)
 
 
 def _shipped(number, days_ago, **kw):
