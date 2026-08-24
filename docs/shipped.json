@@ -76,6 +76,9 @@
       "closed_at": null,
       "created_at": "2026-08-24T14:34:17+00:00",
       "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
       "number": 50,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
@@ -181,6 +184,9 @@
       "closed_at": null,
       "created_at": "2026-08-17T19:54:09+00:00",
       "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
       "number": 32,
       "repo": "AndyRBrett/overseer",
       "state": "open",
@@ -336,6 +342,9 @@
       "closed_at": null,
       "created_at": "2026-08-15T10:05:15+00:00",
       "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
       "number": 23,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
@@ -1482,7 +1491,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-24T15:04:44Z",
+  "generated": "2026-08-24T15:59:44Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1490,16 +1499,15 @@
     "efforts": [
       "low"
     ],
-    "eligible": 7,
+    "eligible": 4,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [],
-    "next": [
+    "in_flight": [
       {
         "kind": "bug",
-        "number": 23,
-        "repo": "AndyRBrett/coachvision",
-        "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/23"
+        "number": 50,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
       },
       {
         "kind": "bug",
@@ -1510,10 +1518,39 @@
       },
       {
         "kind": "bug",
-        "number": 50,
+        "number": 23,
+        "repo": "AndyRBrett/coachvision",
+        "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/23"
+      }
+    ],
+    "next": [
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 73,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
+      },
+      {
+        "effort": "low",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 26,
+        "repo": "AndyRBrett/coachvision",
+        "title": "Schedule the bundled self-test clip to run automatically every N days as a model-drift canary, tracking frames_processed/segment_count trend over time",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/26"
+      },
+      {
+        "effort": "low",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 51,
         "repo": "AndyRBrett/crypto-trading",
-        "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
+        "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
       }
     ],
     "tier": "light"
