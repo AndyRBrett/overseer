@@ -266,6 +266,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 18,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -279,6 +284,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 7,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -292,6 +302,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 16,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -305,6 +320,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 20,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -318,6 +338,11 @@
       "effort": "high",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 14,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -331,6 +356,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 13,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -344,6 +374,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 19,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -360,6 +395,11 @@
       "fix_url": "https://github.com/AndyRBrett/coachvision/pull/22",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 21,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -373,6 +413,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 51,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -386,6 +431,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 22,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -402,6 +452,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 26,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -418,6 +473,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 52,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -431,6 +491,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 21,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -447,6 +512,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 67,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -460,6 +530,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 36,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -473,6 +548,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 31,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -486,6 +566,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 28,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -499,6 +584,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 30,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -512,6 +602,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 35,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -525,6 +620,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 27,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -541,6 +641,11 @@
       "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/40",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 39,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -557,6 +662,11 @@
       "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/40",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 38,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -570,6 +680,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 68,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -583,6 +698,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 14,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -596,6 +716,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 12,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -609,6 +734,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 9,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -622,6 +752,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 11,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -635,6 +770,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 17,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -648,6 +788,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 15,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -664,6 +809,11 @@
       "fix_url": "https://github.com/AndyRBrett/overseer/pull/21",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 13,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -680,6 +830,11 @@
       "fix_url": "https://github.com/AndyRBrett/overseer/pull/21",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 8,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -693,6 +848,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 6,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -706,6 +866,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 20,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -719,6 +884,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 19,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -732,6 +902,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 18,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -745,6 +920,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 17,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -761,6 +941,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/16",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 15,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -777,6 +962,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/13",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 12,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -793,6 +983,11 @@
       "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/11",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 10,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -806,6 +1001,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 11,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -819,6 +1019,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 10,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -832,6 +1037,11 @@
       "effort": "high",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 9,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -845,6 +1055,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 8,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -861,6 +1076,11 @@
       "fix_url": "https://github.com/AndyRBrett/coachvision/pull/7",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 6,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -877,6 +1097,11 @@
       "fix_url": "https://github.com/AndyRBrett/coachvision/pull/5",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 4,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -893,6 +1118,11 @@
       "fix_url": "https://github.com/AndyRBrett/coachvision/pull/3",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 2,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -909,6 +1139,11 @@
       "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/19",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 18,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -925,6 +1160,11 @@
       "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/17",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 16,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -938,6 +1178,11 @@
       "effort": "medium",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 25,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -951,6 +1196,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 24,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -964,6 +1214,11 @@
       "effort": "medium",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 23,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -977,6 +1232,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 22,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -993,6 +1253,11 @@
       "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/21",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 20,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -1006,6 +1271,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 5,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -1019,6 +1289,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 4,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -1032,6 +1307,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 15,
       "repo": "AndyRBrett/crypto-trading",
       "state": "closed",
@@ -1045,6 +1325,11 @@
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 9,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "closed",
@@ -1058,6 +1343,11 @@
       "effort": "low",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 1,
       "repo": "AndyRBrett/coachvision",
       "state": "closed",
@@ -1069,8 +1359,16 @@
       "closed_at": "2026-06-19T18:48:17+00:00",
       "created_at": "2026-06-19T18:24:11+00:00",
       "effort": "medium",
+      "fix_ref": "PR #38",
+      "fix_sha": "63b17d4",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/38",
       "impact": "medium",
       "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
       "number": 2,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -1087,6 +1385,11 @@
       "fix_url": "https://github.com/AndyRBrett/overseer/commit/8dff12915635b148faa24b0513c7e317f2a48b92",
       "impact": "high",
       "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
       "number": 1,
       "repo": "AndyRBrett/overseer",
       "state": "closed",
@@ -1096,7 +1399,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-24T14:07:41Z",
+  "generated": "2026-08-24T14:35:53Z",
   "queue": {
     "benched": [],
     "cap": 3,

@@ -365,6 +365,41 @@
         "baseline_usd": 0.4412,
         "saved_usd": 0.103
       }
+    },
+    {
+      "date": "2026-08-24",
+      "generated": "2026-08-24T14:35:53Z",
+      "status": "completed",
+      "summary": "Issues Found\n- crypto-trading: Equity curve froze at exactly 49205.23 for ~25h (Aug 18\u201319) while ETH/SOL positions were open and market was live \u2014 silent stale mark-to-market read, no error logged (filed as #50).\n- coachvision, ufc-dashboard, overseer: all healthy this week \u2014 no new bugs. (coachvision's prior freeze #23 is resolved; ufc-dashboard staleness is expected due to odds_budget_exhausted, already tracked; overseer's earlier success-rate dip has not recurred.)\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Per-asset PnL/drawdown attribution (BTC/ETH/SOL) (effort: low, impact: medium): Cheapest way to find out if 90d drawdown is one asset dragging the book or a broad strategy issue.\n2. coachvision \u2014 Mobile quick-upload endpoint (PWA/iOS Shortcut) (effort: medium, impact: high): Pipeline works but has never ingested footage \u2014 this targets the actual bottleneck (capture friction), not the pipeline itself.\n3. overseer \u2014 CI end-to-end dry-run of the weekly pipeline (effort: medium, impact: high): Runs all four tools + digest gen against fixtures per PR, catching integration failures unit tests miss.\n4. ufc-dashboard \u2014 Correlated multi-bet (parlay) risk calculator (effort: medium, impact: medium): New analytical layer on existing odds/CLV data, not urgent but useful.\n\nIMPLEMENTED (LAST 7 DAYS)\n- overseer #26 \u2014 Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest (PR #37)",
+      "counts": {
+        "tools": 12,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 4
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.4128,
+        "baseline_usd": 0.5193,
+        "saved_usd": 0.1065
+      }
     }
   ]
 }
