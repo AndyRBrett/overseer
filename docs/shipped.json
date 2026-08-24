@@ -1,6 +1,17 @@
 {
   "entries": [
     {
+      "closed_at": "2026-08-24T16:22:02+00:00",
+      "created_at": "2026-08-15T10:05:15+00:00",
+      "kind": "bug",
+      "number": 23,
+      "repo": "AndyRBrett/coachvision",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/23"
+    },
+    {
       "closed_at": null,
       "created_at": "2026-08-24T14:35:24+00:00",
       "effort": "medium",
@@ -331,17 +342,6 @@
       "status": "open",
       "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:05:15+00:00",
-      "kind": "bug",
-      "number": 23,
-      "repo": "AndyRBrett/coachvision",
-      "state": "open",
-      "status": "open",
-      "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
-      "url": "https://github.com/AndyRBrett/coachvision/issues/23"
     },
     {
       "closed_at": "2026-08-13T22:00:58+00:00",
@@ -1482,7 +1482,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-24T16:06:38Z",
+  "generated": "2026-08-24T16:30:44Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1490,17 +1490,10 @@
     "efforts": [
       "low"
     ],
-    "eligible": 7,
+    "eligible": 6,
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "next": [
-      {
-        "kind": "bug",
-        "number": 23,
-        "repo": "AndyRBrett/coachvision",
-        "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/23"
-      },
       {
         "kind": "bug",
         "number": 32,
@@ -1514,6 +1507,15 @@
         "repo": "AndyRBrett/crypto-trading",
         "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
         "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
+      },
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 73,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
       }
     ],
     "tier": "light"
@@ -1523,8 +1525,8 @@
     "duplicate": 12,
     "duplicate_rate": 0.15,
     "in_flight": 0,
-    "not_planned": 4,
-    "open": 19,
+    "not_planned": 5,
+    "open": 18,
     "proposed": 80,
     "shipped": 45
   }
