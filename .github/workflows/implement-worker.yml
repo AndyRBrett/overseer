@@ -1,14 +1,11 @@
 name: Implement a filed issue
 
-# The overseer's copy of the implementer — the same workflow the three project
-# repos install from examples/implementer/implement.yml, with this repo's test
-# command filled in. It is the half that actually writes code, and it runs HERE
-# rather than in the dispatcher's runner so the change is built and tested
-# against this repo's own dependencies and suite.
+# The overseer's own implementer. Everything it does lives in the reusable
+# workflow next door (implementer.yml) — this file exists to say which repo,
+# which toolchain, and which test command. So does each project repo's copy.
 #
-# Triggered by the repository_dispatch that scripts/dispatch_implement.py fires
-# (or by hand, for one issue). It ends at a pull request: nothing in this
-# pipeline merges anything.
+# Triggered by the repository_dispatch that scripts/dispatch_implement.py fires,
+# or by hand for one issue. It ends at a pull request: nothing merges anything.
 
 on:
   repository_dispatch:
@@ -29,7 +26,7 @@ on:
 permissions:
   contents: write        # push the branch
   pull-requests: write   # open the PR
-  issues: write          # comment when the issue can't be implemented
+  issues: write          # comment / close / label when it can't be implemented
 
 # One run per issue. A duplicate dispatch (the label failed to apply, say)
 # should not produce two branches racing to fix the same thing.
@@ -39,218 +36,13 @@ concurrency:
 
 jobs:
   implement:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      # The dispatch payload comes in over the API, so it is INPUT, not fact.
-      # Only the issue number is used, and only after it is proved to be a
-      # number — the agent reads the issue itself from GitHub. Interpolating a
-      # payload-supplied title straight into the prompt would let whoever can
-      # fire a dispatch write that prompt.
-      - name: Validate the issue number
-        id: issue
-        env:
-          RAW: ${{ github.event.client_payload.issue || inputs.issue }}
-        run: |
-          case "$RAW" in
-            ''|*[!0-9]*) echo "::error title=Bad dispatch::'$RAW' is not an issue number"; exit 1 ;;
-          esac
-          echo "number=$RAW" >> "$GITHUB_OUTPUT"
-
-      # WHO WROTE THE ISSUE decides whether an agent may act on it.
-      #
-      # Everything below treats the issue text as this agent's instructions: the
-      # prompt's first step is `gh issue view <n> --comments`, and the agent runs
-      # with Bash, contents: write and an Anthropic key. On a public repo anyone
-      # can open an issue and anyone can comment on one, so without this check
-      # that text is written by whoever showed up.
-      #
-      # The dispatcher is not a substitute for this. The overseer now checks
-      # author_association before an issue enters its ledger, but that guard
-      # lives in another process and another repo, and this workflow answers to
-      # more than the ledger: a workflow_dispatch, or a repository_dispatch from
-      # anyone holding a token with actions: write here, reaches the agent
-      # without the ledger being consulted at all. This is the check that is
-      # actually in the path every time.
-      #
-      # author_association is GitHub's own answer and cannot be set by the
-      # author: OWNER/MEMBER/COLLABORATOR all mean write access to this repo.
-      # Pipeline-filed issues arrive as OWNER, so the legitimate path is
-      # unaffected. Anything else stops here, before a paid token is spent.
-      - name: Refuse issues from untrusted authors
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          ISSUE: ${{ steps.issue.outputs.number }}
-        run: |
-          # One REST read, NOT `gh issue view --json authorAssociation`: that
-          # field does not exist on `gh issue view`, so the command exits 1 with
-          # a list of the valid ones and this guard then refuses every issue —
-          # including the pipeline's own. It shipped that way to four repos and
-          # killed three dispatches at this gate on 2026-08-24. The REST issue
-          # object does carry author_association, and `gh api` resolves it from
-          # an explicit path, so it also works before the repo is checked out.
-          meta=$(gh api "repos/$GITHUB_REPOSITORY/issues/$ISSUE" \
-                   --jq '.author_association + " " + .user.login')
-          assoc=${meta%% *}
-          author=${meta#* }
-          # Fail CLOSED: a guard that cannot read the issue must not wave it
-          # through on the assumption that silence means safety.
-          if [ -z "$assoc" ]; then
-            echo "::error title=Could not read the issue::No author_association for issue #$ISSUE — refusing rather than guessing."
-            exit 1
-          fi
-          case "$assoc" in
-            OWNER|MEMBER|COLLABORATOR)
-              echo "Issue #$ISSUE was filed by $author ($assoc) — trusted."
-              ;;
-            *)
-              echo "::error title=Untrusted issue author::Issue #$ISSUE was filed by $author ($assoc), who does not have write access to this repository. Refusing to hand attacker-controllable text to a coding agent."
-              exit 1
-              ;;
-          esac
-
-      # Tier NAME in, model id out. The name may come from a repository_dispatch
-      # payload — i.e. over the API — and the model is interpolated into the
-      # Claude CLI's arguments, so anything not on this list is refused rather
-      # than passed through. The model ids themselves come from repo variables,
-      # which only someone with write access can set.
-      - name: Choose the model tier
-        id: model
-        env:
-          RAW: ${{ github.event.client_payload.tier || inputs.tier }}
-          DEFAULT_TIER: ${{ vars.OVERSEER_IMPLEMENT_TIER || 'light' }}
-          LIGHT_MODEL: ${{ vars.OVERSEER_IMPLEMENT_MODEL || 'claude-sonnet-5' }}
-          HEAVY_MODEL: ${{ vars.OVERSEER_IMPLEMENT_HEAVY_MODEL || 'claude-opus-4-8' }}
-        run: |
-          tier="${RAW:-$DEFAULT_TIER}"
-          case "$tier" in
-            light|heavy) ;;
-            *) echo "::warning title=Unknown tier::'$tier' is not a tier; using light"; tier=light ;;
-          esac
-          case "$tier" in
-            heavy) model="$HEAVY_MODEL" ;;
-            *)     model="$LIGHT_MODEL" ;;
-          esac
-          echo "tier=$tier"   >> "$GITHUB_OUTPUT"
-          echo "model=$model" >> "$GITHUB_OUTPUT"
-          echo "Running issue #${{ steps.issue.outputs.number }} on the $tier tier ($model)" >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0   # the agent branches and pushes
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - run: pip install -r requirements.txt
-
-      - name: Implement it
-        uses: anthropics/claude-code-action@24dcd50c0568f0fc9e9211213a4fd2d9eb15c4e0 # v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          prompt: |
-            Implement GitHub issue #${{ steps.issue.outputs.number }} in this repository.
-
-            1. Read it first: `gh issue view ${{ steps.issue.outputs.number }} --comments`.
-               It was filed by this project's own review pipeline and its body
-               states the evidence the bug or idea rests on.
-            2. Check that evidence against the current code. If the issue is
-               already fixed, wrong, or no longer applies, do NOT invent work to
-               do — comment on the issue saying exactly that, and stop.
-            3. Otherwise make the smallest correct change that resolves it,
-               matching the surrounding code's style, naming and comment density.
-            4. Add or update tests that cover the change, then run the full suite:
-               `python -m pytest -q`. Never weaken, skip, or delete a test to get
-               it green.
-            5. With the suite passing, commit on a new branch named
-               `overseer/issue-${{ steps.issue.outputs.number }}`, push it, and open a pull
-               request with `gh pr create`. The body should say what changed and
-               why, note anything you deliberately left out, and end with
-               `Closes #${{ steps.issue.outputs.number }}`.
-            6. If you cannot get the suite passing, do not open a pull request.
-               Comment on the issue with what you tried and what blocked you.
-
-            Scope discipline: only what the issue asks for. No drive-by
-            refactors, no dependency bumps, no reformatting untouched code. Never
-            merge the pull request and never push to main.
-
-            Budget: you have a limited number of turns and this repo has several
-            very large files (tools.py, tracer.py, README.md). Grep for what you
-            need and read the ranges around the hits rather than reading whole
-            files, and get to the commit — a finished small change beats a
-            perfect one that runs out of turns with nothing pushed.
-          # 40 turns was not enough to read an issue, explore the repo, edit,
-          # test, commit and open a PR: the first real run died on
-          # error_max_turns at 41 turns having pushed nothing, and a run that
-          # produces no PR and no comment has spent money for no output.
-          claude_args: |
-            --max-turns 150
-            --model ${{ steps.model.outputs.model }}
-            --allowedTools Read,Edit,Write,Glob,Grep,Bash
-          # Puts Claude's own report in the run's Step Summary. The SDK output is
-          # hidden by default, so without this a failure is a one-line error with
-          # no account of what it had done first.
-          display_report: true
-
-      # A failed attempt must hand the issue BACK. Otherwise it keeps the
-      # overseer:implementing label the dispatcher applied, the gate treats it as
-      # in progress forever, and a filed issue is silently burned — no PR, no
-      # retry, nothing but a red run in an inbox.
-      #
-      # WHOSE FAULT IT WAS decides which label it gets back, and the difference
-      # is not cosmetic. An attempt that ran out of turns or couldn't get the
-      # suite green will usually do the same again next Monday at full price, so
-      # it is benched with overseer:implement-failed until a human takes the
-      # label off. But an attempt that died because the Anthropic key ran out of
-      # credit — which is exactly how the second real run ended, one step short
-      # of opening its PR with 254 tests passing — says nothing at all about the
-      # issue. Benching those would quietly retire every issue picked while the
-      # balance was dry, three a week, each needing a manual label removal to
-      # come back. Those are handed back CLEAN and retried on the next run.
-      - name: Hand the issue back on failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Without this, gh infers the repo from the git remote — and when a
-          # step BEFORE the checkout fails, there is no git remote. Every
-          # `gh issue edit`/`comment` here then died on "not a git repository",
-          # `|| true` swallowed it, and the step reported success having done
-          # nothing: the issue kept overseer:implementing, so the gate treated
-          # it as still in progress and it could never be picked up again. An
-          # explicit repo needs no checkout.
-          GH_REPO: ${{ github.repository }}
-          ISSUE: ${{ steps.issue.outputs.number }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          # The action writes the session result here; a billing failure is
-          # reported in it rather than as a distinct exit code.
-          report="$RUNNER_TEMP/claude-execution-output.json"
-          blameless=""
-          if [ -f "$report" ] && grep -qiE 'credit balance is too low|insufficient[ _](credit|quota)|billing' "$report"; then
-            blameless=1
-          fi
-
-          gh issue edit "$ISSUE" --remove-label "overseer:implementing" || true
-
-          if [ -n "$blameless" ]; then
-            echo "::warning title=Out of Anthropic credit::$ISSUE was handed back unbenched; top up and it is picked again next run."
-            printf '%s\n\n%s\n\n%s\n\n---\n%s\n' \
-              "The overseer's implementer could not run this issue: the Anthropic API key is out of credit. Nothing here reflects on the issue itself." \
-              "Run: $RUN_URL" \
-              'It stays in the queue and will be picked up again once the balance is topped up.' \
-              '_Generated by [Claude Code](https://claude.ai/code)_' > "$RUNNER_TEMP/failed.md"
-          else
-            gh label create "overseer:implement-failed" --force \
-              --color B60205 --description "An overseer implementation attempt failed" || true
-            gh issue edit "$ISSUE" --add-label "overseer:implement-failed" || true
-            printf '%s\n\n%s\n\n%s\n\n---\n%s\n' \
-              "The overseer's implementer attempted this issue and did not finish, so no pull request was opened." \
-              "Run: $RUN_URL" \
-              'Remove the `overseer:implement-failed` label to put it back in the queue.' \
-              '_Generated by [Claude Code](https://claude.ai/code)_' > "$RUNNER_TEMP/failed.md"
-          fi
-          gh issue comment "$ISSUE" --body-file "$RUNNER_TEMP/failed.md" || true
+    uses: ./.github/workflows/implementer.yml
+    with:
+      issue: ${{ github.event.client_payload.issue || inputs.issue }}
+      tier: ${{ github.event.client_payload.tier || inputs.tier }}
+      python_version: "3.12"
+      pip_cache: true
+      install: pip install -r requirements.txt
+      test_command: python -m pytest -q
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
