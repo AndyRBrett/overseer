@@ -1,6 +1,89 @@
 {
   "entries": [
     {
+      "closed_at": null,
+      "created_at": "2026-08-24T14:35:24+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 50,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR",
+      "url": "https://github.com/AndyRBrett/overseer/issues/50"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-24T14:35:21+00:00",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 90,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "open",
+      "status": "open",
+      "title": "Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/90"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-24T14:35:18+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 34,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/34"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-24T14:35:14+00:00",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 51,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-24T14:34:17+00:00",
+      "kind": "bug",
+      "number": 50,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
+    },
+    {
       "closed_at": "2026-08-17T22:11:04+00:00",
       "created_at": "2026-08-15T10:35:39+00:00",
       "effort": "low",
@@ -1399,7 +1482,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-24T14:35:53Z",
+  "generated": "2026-08-24T15:04:44Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1407,7 +1490,7 @@
     "efforts": [
       "low"
     ],
-    "eligible": 5,
+    "eligible": 7,
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "next": [
@@ -1426,25 +1509,23 @@
         "url": "https://github.com/AndyRBrett/overseer/issues/32"
       },
       {
-        "effort": "low",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 73,
-        "repo": "AndyRBrett/ufc-dashboard",
-        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
-        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
+        "kind": "bug",
+        "number": 50,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
       }
     ],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.714,
+    "delivery_rate": 0.662,
     "duplicate": 12,
-    "duplicate_rate": 0.16,
+    "duplicate_rate": 0.15,
     "in_flight": 0,
     "not_planned": 4,
-    "open": 14,
-    "proposed": 75,
+    "open": 19,
+    "proposed": 80,
     "shipped": 45
   }
 }
