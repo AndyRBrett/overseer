@@ -528,3 +528,74 @@ def test_the_spend_panel_says_what_it_leaves_out():
     assert "Excludes the implementer" in app
     assert "renderSpend(d.spend, runs, ledger && ledger.queue)" in app
     assert "Model spend (the review run)" in page, "the title must scope itself to the run"
+
+
+
+# ── ONE COPY OF THE IMPLEMENTER ──────────────────────────────────────────
+#
+# This file existed five times — here, in examples/, and in each of the three
+# project repos. A two-line fix to the author guard then meant five edits across
+# four repos, and a security sweep hardened three copies and missed two. These
+# tests exist so the duplication cannot come back quietly.
+
+def _wf(name):
+    import yaml
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    return yaml.safe_load((root / ".github" / "workflows" / name).read_text(encoding="utf-8"))
+
+
+def _example():
+    import yaml
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    return yaml.safe_load((root / "examples" / "implementer" / "implement.yml").read_text(encoding="utf-8"))
+
+
+def test_the_prompt_and_the_guard_live_in_exactly_one_file():
+    # The coding agent is invoked once, in the reusable workflow. A second
+    # `anthropics/claude-code-action` anywhere means a second prompt, a second
+    # author guard and a second failure taxonomy — i.e. the drift is back.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    files = list((root / ".github" / "workflows").glob("*.yml")) + \
+            [root / "examples" / "implementer" / "implement.yml"]
+    callers = [f.name for f in files
+               if "anthropics/claude-code-action" in f.read_text(encoding="utf-8")]
+    assert callers == ["implementer.yml"], f"the agent is invoked in {callers}"
+
+
+def test_every_caller_asks_for_inputs_the_reusable_workflow_declares():
+    # A renamed input breaks four repos at once and only at dispatch time, which
+    # is a week away for the scheduled path. Catch it here instead.
+    declared = set(_wf("implementer.yml")[True]["workflow_call"]["inputs"])
+    for name, caller in (("implement-worker.yml", _wf("implement-worker.yml")),
+                         ("examples/implementer", _example())):
+        passed = set(caller["jobs"]["implement"]["with"])
+        unknown = passed - declared
+        assert not unknown, f"{name} passes undeclared input(s): {sorted(unknown)}"
+
+
+def test_required_inputs_are_supplied_by_every_caller():
+    wc = _wf("implementer.yml")[True]["workflow_call"]["inputs"]
+    required = {k for k, v in wc.items() if v.get("required")}
+    for name, caller in (("implement-worker.yml", _wf("implement-worker.yml")),
+                         ("examples/implementer", _example())):
+        missing = required - set(caller["jobs"]["implement"]["with"])
+        assert not missing, f"{name} omits required input(s): {sorted(missing)}"
+
+
+def test_the_example_points_at_a_ref_a_project_repo_can_reach():
+    # A project repo cannot use a local path — it must name the overseer and a
+    # ref. `./` here would resolve inside the PROJECT repo and fail at dispatch.
+    uses = _example()["jobs"]["implement"]["uses"]
+    assert uses.startswith("AndyRBrett/overseer/.github/workflows/implementer.yml@"), uses
+
+
+def test_the_agent_is_told_to_close_issues_that_do_not_hold_up():
+    # An issue the agent judges obsolete stays eligible while it is open, so
+    # leaving it open means paying for the same investigation every week.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    assert "gh issue close" in body and '--reason "not planned"' in body

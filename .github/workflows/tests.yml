@@ -15,5 +15,10 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install -r requirements.txt pytest
+      # pyyaml is a TEST dependency, not a runtime one: the pipeline never parses
+      # YAML, but the tests read the implementer workflows to check that four repos
+      # still call one file with inputs it declares. Without it here those guards
+      # raise ModuleNotFoundError on CI while passing on any machine that happens
+      # to have it — which is exactly how they were first pushed.
+      - run: pip install -r requirements.txt pytest pyyaml
       - run: python -m pytest -q

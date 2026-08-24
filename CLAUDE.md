@@ -17,6 +17,9 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 
 ## ⛔ Run `python -m pytest -q` before you commit
 
+Test deps are `pytest` and `pyyaml` (CI installs both alongside
+`requirements.txt`; neither is a runtime dependency).
+
 263 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
@@ -43,21 +46,27 @@ Each of these exists because the opposite already happened here.
 2. **Dispatch fires BEFORE the issue is labelled**, never after. A failed
    hand-over must leave the issue unlabelled so the next run retries it;
    labelling first silently retires a filed bug.
-3. **The gate lives in exactly one place** — `tools.implementable` /
+3. **The implementer lives in exactly one place** —
+   `.github/workflows/implementer.yml`, a reusable workflow every repo calls.
+   It was copied into five files instead; a two-line fix then meant five edits
+   across four repos, and a security sweep hardened three copies and missed two.
+   Each project repo keeps only its toolchain and test command. Tests fail if a
+   second copy of the prompt or the author guard appears.
+4. **The gate lives in exactly one place** — `tools.implementable` /
    `implementation_queue`. The dashboard renders the `queue` block that
    `tools.queue_state` publishes; it must never re-derive the rules in
    `app.js`, or the panel will confidently describe a queue that never runs.
-4. **The model tier is a NAME (`light`/`heavy`), never a model id.** It rides in
+5. **The model tier is a NAME (`light`/`heavy`), never a model id.** It rides in
    a `repository_dispatch` payload — API input — and becomes the `--model`
    argument the coding agent runs on. `resolve_tier` refuses unknown values and
    the workflow refuses them again. A test pushes
    `"opus --dangerously-skip-permissions"` through the dispatch path.
-5. **A pull request is where the automation stops.** Nothing merges itself.
-6. **Deterministic digest sections stay deterministic.** The staleness banner,
+6. **A pull request is where the automation stops.** Nothing merges itself.
+7. **Deterministic digest sections stay deterministic.** The staleness banner,
    `IMPLEMENTED`, and `AGING BACKLOG` are computed in Python and stitched into
    the digest in `run_agent`, because a section that depends on an agent
    remembering to write it eventually goes quiet with nothing failing.
-7. **Failure taxonomy is load-bearing.** An attempt that died on an exhausted
+8. **Failure taxonomy is load-bearing.** An attempt that died on an exhausted
    API key is handed back *clean* and retried; one that ran out of turns or
    couldn't get tests green is benched with `overseer:implement-failed`. A dry
    balance otherwise retires every issue picked that week, three at a time.
