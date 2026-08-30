@@ -10,6 +10,8 @@ Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repositor
       ~10 min  implement-worker.yml the coding agent, IN EACH TARGET REPO
                                     → branch → tests → pull request
        hourly  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
+                                    → docs/ask-context.json → voice assistant
+     on demand  worker/             "Hey Siri, ask Overseer" → one model call
 ```
 
 The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
@@ -20,7 +22,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-263 tests, under a second. There is no JS test runner, so dashboard behaviour is
+306 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -35,6 +37,8 @@ pinned from Python instead (see *Testing what has no test runner* below).
 | `scripts/refresh_ledger.py` | hourly, pure GitHub reads, no model calls |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
+| `ask.py` / `ask_context.py` | the voice assistant: one call, no tool loop; `ask_context` owns its prompt AND its facts |
+| `worker/` | the Cloudflare Worker Siri talks to — deliberately knows nothing |
 | `examples/implementer/` | the drop-in workflow the three project repos run |
 
 ## Invariants — break these and the system lies to you
@@ -66,7 +70,18 @@ Each of these exists because the opposite already happened here.
    `IMPLEMENTED`, and `AGING BACKLOG` are computed in Python and stitched into
    the digest in `run_agent`, because a section that depends on an agent
    remembering to write it eventually goes quiet with nothing failing.
-8. **Failure taxonomy is load-bearing.** An attempt that died on an exhausted
+8. **The voice assistant's prompt and facts live in `ask_context.py`.** The
+   Worker fetches `docs/ask-context.json` and concatenates strings; it holds no
+   prompt text and no rules. This is invariant 4 one platform further away —
+   a second copy of the gate in JavaScript would be deployed separately, out of
+   sight when the Python changed, and answering out loud where nobody
+   cross-checks it. Tests grep the Worker for prompt sentences and rule strings.
+9. **Nothing in the pack depends on the current time.** The clock rides in the
+   user turn. Two reasons, both already nearly built wrong here: a timestamp
+   inside the cached prefix invalidates it and silently pays full price for 3.5k
+   tokens per question; and ages computed at build time read as fresh forever,
+   so a pack built Monday still says "two hours old" on Thursday.
+10. **Failure taxonomy is load-bearing.** An attempt that died on an exhausted
    API key is handed back *clean* and retried; one that ran out of turns or
    couldn't get tests green is benched with `overseer:implement-failed`. A dry
    balance otherwise retires every issue picked that week, three at a time.
@@ -89,6 +104,10 @@ Each of these exists because the opposite already happened here.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.
+- **Speech is not an API input.** Claude takes text, images and PDFs, not audio.
+  Voice works here only because the iPhone does speech-to-text and text-to-speech
+  on-device for free; any server-side transcription would add a provider, a key
+  and a per-minute bill to something that currently costs nothing.
 - **Beware time-of-day tests.** `_ts(hours_ago=2)` run after UTC midnight stamps
   *yesterday*; two tests failed for two hours every night because of it.
 
@@ -99,6 +118,7 @@ Each of these exists because the opposite already happened here.
 | Whole three-agent review | **$0.34** (Bug-Hunter $0.18 heavy, Idea $0.11, Reviewer $0.04) |
 | One successful implementation | **$1.49** — 54 turns, ~5 min, light tier |
 | A typical week (review + 3 attempts) | **~$4.80** |
+| One spoken question | **~$0.008** cold, **~$0.002** cached — 2% of a review |
 
 An implementation is ~4.4× the entire review, so `OVERSEER_IMPLEMENT_MAX` and
 the tier are the only spend levers that matter. The model tiering the README
@@ -106,6 +126,12 @@ documents saves $0.10/week — real, but noise beside the implementer.
 
 A failed attempt costs nearly as much as a successful one: you pay for the work,
 not the outcome.
+
+The assistant is cheap only because it makes **one call with no tools**. The
+first time it says "the snapshot doesn't cover that", the fix that suggests
+itself is to hand it the read tools — that is a tool loop, which is the 40×
+difference between a question and an agent run. Publish the missing facts into
+the pack instead.
 
 ## Testing what has no test runner
 
@@ -117,6 +143,11 @@ toolchain, the Python suite pins the seams:
 - `tests/test_implement_queue.py` asserts `app.js` renders into element ids
   `index.html` actually has, and that banner headings still match the ALL-CAPS
   regex `formatDigest` uses to make them section headings.
+- `tests/test_ask.py` greps `worker/overseer-ask.js` for prompt sentences and
+  gate-rule strings, so the Worker cannot quietly grow a second copy of either.
+  It also pins that the Worker never re-serializes the facts (that would miss
+  the prompt cache on every question while looking perfectly correct) and that
+  the shared secret is checked before the API key is read.
 
 To see the dashboard for real: serve `docs/` and drive it with Playwright
 (Chromium is preinstalled at `/opt/pw-browsers/chromium`). Rendering it is how

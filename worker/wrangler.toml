@@ -1,0 +1,18 @@
+# Deploy target for the voice front door. See worker/overseer-ask.js.
+#
+#   cd worker
+#   npx wrangler secret put ANTHROPIC_API_KEY   # the same key the pipeline uses
+#   npx wrangler secret put ASK_SHARED_SECRET   # any long random string
+#   npx wrangler deploy
+#
+# PACK_URL is a plain var, not a secret: it points at a file that is already
+# public on GitHub Pages alongside digest.json. Nothing in the pack is private,
+# and a test asserts it stays that way.
+
+name = "overseer-ask"
+main = "overseer-ask.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+PACK_URL = "https://andyrbrett.github.io/overseer/ask-context.json"
+ASK_MODEL = "claude-sonnet-5"
