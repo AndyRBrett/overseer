@@ -104,9 +104,11 @@ def test_brief_outage_skips_without_failing_the_workflow(run, capsys):
 
 
 def test_sustained_outage_eventually_fails(run):
-    # Six hourly misses in a row is no longer a wobble — the panel is stale and
-    # somebody should hear about it.
-    code, written = run(OUTAGE, published=_published(hours_ago=9))
+    # A full day with no successful read is no longer a wobble — the panel is
+    # stale and somebody should hear about it. 30h is past the limit and past
+    # the worst gap GitHub has actually delivered on this cron (13.3h), so it
+    # cannot be explained away as the schedule being slow again.
+    code, written = run(OUTAGE, published=_published(hours_ago=30))
     assert code == 1
     assert written is None
 
@@ -117,10 +119,19 @@ def test_outage_with_no_published_ledger_fails(run):
     assert code == 1
 
 
-def test_stale_limit_is_configurable(run, monkeypatch):
-    monkeypatch.setattr(rl, "MAX_STALE_HOURS", 24)
+def test_a_nine_hour_old_panel_rides_out_a_wobble(run):
+    # The reason the default moved from 6h to 24h. Nine hours is one ordinary
+    # gap on this cron, not an outage, so a 503 here must wait for the next run
+    # rather than going red.
     code, _ = run(OUTAGE, published=_published(hours_ago=9))
     assert code == 0
+
+
+def test_stale_limit_is_configurable(run, monkeypatch):
+    # Tightening it still works, for anyone whose cron is actually delivered.
+    monkeypatch.setattr(rl, "MAX_STALE_HOURS", 6)
+    code, _ = run(OUTAGE, published=_published(hours_ago=9))
+    assert code == 1
 
 
 def test_outage_annotates_the_actions_run(run, monkeypatch, capsys):

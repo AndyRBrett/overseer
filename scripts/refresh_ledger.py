@@ -23,8 +23,8 @@ run skipped because GitHub was briefly unreachable while the published ledger is
 still fresh; 1 when the ledger could not be built at all, so a broken credential
 fails the workflow instead of quietly publishing an empty scoreboard.
 
-A GitHub outage is NOT a broken credential. This runs hourly against an API that
-serves the odd 503, and a run that cannot read is not a run that read something
+A GitHub outage is NOT a broken credential. This runs on a short cron against an
+API that serves the odd 503, and a run that cannot read is not a run that read something
 wrong — the published file simply stands for another hour. Failing those runs
 means a red workflow and a failure email for a wobble that fixed itself before
 anyone opened the log. So a transient failure skips, and only a ledger that has
@@ -45,10 +45,22 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tools  # noqa: E402
 
 # How long the panel may coast on its last good read before a skipped refresh
-# becomes a real alarm. The cron is hourly, so this is six consecutive misses —
-# long enough to ride out any GitHub incident worth the name, short enough that
-# a genuinely stuck refresh still surfaces the same day.
-MAX_STALE_HOURS = float(os.getenv("LEDGER_MAX_STALE_HOURS", "6"))
+# becomes a real alarm.
+#
+# THIS WAS 6, AND 6 MEANT THE WRONG THING. It was chosen to mean "six
+# consecutive missed refreshes" back when the cron was believed to fire hourly.
+# It does not: measured over 29 consecutive scheduled runs (2026-08-25 → 08-30),
+# GitHub delivers this schedule about six times a day, median gap 2.6h and worst
+# 13.3h. So 6h had quietly become roughly ONE ordinary gap, and the skip path
+# below — the whole point of which is to ride out a transient 503 — almost never
+# applied: a wobble found the published ledger already past the limit and
+# hard-failed the run instead. That is the exact red workflow and failure email
+# the 2026-08-17 incident added this guard to prevent.
+#
+# 24h restores the original intent against the real cadence: comfortably past
+# the worst observed gap, still inside a day so a genuinely stuck refresh
+# surfaces before the next weekly review reads from it.
+MAX_STALE_HOURS = float(os.getenv("LEDGER_MAX_STALE_HOURS", "24"))
 
 
 def load_published(path):
