@@ -39,6 +39,19 @@ function secretMatches(given, expected) {
   return diff === 0;
 }
 
+/**
+ * Append the real reason when the caller asked for it.
+ *
+ * Safe to return: this is only reachable past the shared-secret check, so the
+ * only person who ever sees it is the one who owns the key that failed. The
+ * default stays a plain sentence because the usual caller is a phone reading
+ * the answer out loud, and "HTTP 401 authentication_error" spoken aloud helps
+ * nobody.
+ */
+function explain(message, err, debug) {
+  return debug ? `${message}\n\n${String(err)}` : message;
+}
+
 /** Plain text, because the caller is a phone that is about to read this aloud. */
 function say(text, status = 200) {
   return new Response(text + "\n", {
@@ -93,11 +106,14 @@ export default {
     const url = new URL(request.url);
     let question = url.searchParams.get("q") || "";
     let format = url.searchParams.get("format") || "voice";
+    let rawDebug = false;
     if (request.method === "POST") {
       const body = await request.json().catch(() => ({}));
       question = body.q || body.question || question;
       format = body.format || format;
+      rawDebug = body.debug === true;
     }
+    const debug = url.searchParams.get("debug") === "1" || rawDebug === true;
     question = String(question).trim();
     if (!question) return say("Ask me something.", 400);
     // A question is a sentence. Anything longer is a paste, an accident, or
@@ -111,7 +127,9 @@ export default {
       if (!res.ok) throw new Error(`pack fetch ${res.status}`);
       pack = await res.json();
     } catch (err) {
-      return say("I can't reach my notes right now, so I'd only be guessing.", 502);
+      console.error("[ask] pack fetch failed:", env.PACK_URL, String(err));
+      return say(explain("I can't reach my notes right now, so I'd only be guessing.",
+                         err, debug), 502);
     }
 
     const payload = {
@@ -140,9 +158,13 @@ export default {
       data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || `api ${res.status}`);
     } catch (err) {
-      // Spoken aloud, so it says what happened in a sentence rather than
-      // reading a stack trace at you.
-      return say("Something went wrong reaching the model. Try again in a moment.", 502);
+      // Spoken aloud, so the default is a sentence rather than a stack trace.
+      // But a failure you cannot see the reason for is a failure you cannot
+      // fix: the real error goes to the log (`wrangler tail`) every time, and
+      // comes back in the response when the caller explicitly asks for it.
+      console.error("[ask] model call failed:", String(err));
+      return say(explain("Something went wrong reaching the model. Try again in a moment.",
+                         err, debug), 502);
     }
 
     const answer = (data.content || [])
