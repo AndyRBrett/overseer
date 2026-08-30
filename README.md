@@ -171,7 +171,8 @@ workflows on free public repos, and measured over 29 consecutive scheduled runs
 Only 8 of 28 gaps were under 90 minutes. Nothing downstream breaks — the panel
 and the assistant both carry the timestamp they were built from and report their
 own age — but anything that assumes "at most an hour old" is wrong, and
-`LEDGER_MAX_STALE_HOURS` is tuned on that assumption (see below).
+`LEDGER_MAX_STALE_HOURS` was tuned on that assumption until it was measured
+(see below).
 
 **Why the other three repos poll instead of pushing:** GitHub fires
 `pull_request` events only in the repo where the PR lives, so instant cross-repo
@@ -215,17 +216,26 @@ apart from credential failures and handled by waiting:
 |---|---|
 | GitHub 5xx / unreachable | retried 3× with backoff (`OVERSEER_PREFLIGHT_ATTEMPTS`, `OVERSEER_PREFLIGHT_BACKOFF`) |
 | Still unreachable, panel fresh | **skip, exit 0** with a `::warning` on the run — the next scheduled run retries |
-| Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (6h) | **fail** — the panel is going stale |
+| Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (24h) | **fail** — the panel is going stale |
 | Token expired / revoked (401) | **fail immediately**, never retried — a 401 will 401 again |
 
-⚠️ **`LEDGER_MAX_STALE_HOURS` is mis-tuned against the real cron.** It was set to
-6h on the premise that this meant "six consecutive missed refreshes". At the
-measured cadence above, 6h is roughly *one* ordinary gap — the median over the
-last three days was 6.2h — so the skip path barely applies any more: a transient
-503 now usually finds a published ledger already past the limit and hard-fails
-the run instead of waiting for the next one. That is precisely the red workflow
-and failure email the 2026-08-17 incident added this guard to prevent. Raising
-it to ~24h restores the intended "several missed refreshes" meaning.
+**Re-running a refresh that already succeeded will go red, and that is not a
+bug.** A re-run replays the *original* checkout, so it rebuilds the ledger
+against a commit that its own first attempt has already superseded, then races
+to push over it. The publish step exhausts its three retries and exits 1 —
+about 31 seconds of sleeps, which is the tell. Read attempt 1 before believing
+attempt 2: if the first attempt was green, the work is published and there is
+nothing to fix.
+
+**`LEDGER_MAX_STALE_HOURS` is 24h, and it used to be 6h for the wrong reason.**
+6 was chosen to mean "six consecutive missed refreshes", back when the cron was
+believed to fire hourly. Against the measured cadence above it had quietly
+become roughly *one* ordinary gap — so the skip path almost never applied: a
+transient 503 found the published ledger already past the limit and hard-failed
+the run, which is precisely the red workflow and failure email the 2026-08-17
+incident added this guard to prevent. 24h restores the original intent: past the
+worst gap GitHub has actually delivered (13.3h), still inside a day, so a
+genuinely stuck refresh surfaces before the next weekly review reads from it.
 
 ## Implementing what it files
 
@@ -672,6 +682,31 @@ thing you will use a dozen times a week.
 `ASK_SHARED_SECRET` is checked before anything else happens, and specifically
 before the API key is touched. An endpoint that answers to anybody is somebody
 else spending your key.
+
+### Three things that will bite you deploying this
+
+All three cost real time the first time through, and none of them announce
+themselves.
+
+**`wrangler secret put` takes the NAME as its argument, not the value.** Type
+`npx wrangler secret put ANTHROPIC_API_KEY` and paste the key at the prompt it
+gives you. Pasting the key onto the command line instead creates a secret
+*named* after your key — wrangler cheerfully reports `✨ Success! Uploaded secret
+sk-ant-...`, echoing your credential to the terminal, and `ANTHROPIC_API_KEY` is
+still unset. The Worker then fails with "Something went wrong reaching the
+model", which points nowhere near the actual mistake. `npx wrangler secret list`
+prints the names and settles it in one line. This is also how a credential ends
+up pasted into a chat window; if that happens, revoke it rather than reasoning
+about whether it was exposed.
+
+**macOS is zsh, and `read -s -p` is bash.** In zsh `-p` means "read from a
+coprocess", so the whole command fails, the variable is empty, and a curl built
+around it sends an empty header — which the API reports as a missing header, not
+a bad key. Use `printf` for the prompt and a bare `read -s VAR`.
+
+**Nothing is deployed until `wrangler deploy` prints a URL.** Before that, any
+`*.workers.dev` address returns Cloudflare's "nothing is here" page, including
+the placeholder one in this README. That page is not a symptom of anything.
 
 ### The Siri Shortcut
 

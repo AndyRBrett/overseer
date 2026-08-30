@@ -22,7 +22,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-307 tests, under a second. There is no JS test runner, so dashboard behaviour is
+308 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -112,11 +112,27 @@ Each of these exists because the opposite already happened here.
   workflows on free public repos. Measured over 29 consecutive `ledger-refresh`
   runs (2026-08-25 → 08-30): **~6 firings a day, not 24** — median gap 2.6h
   (6.2h over the last three days), worst **13.3h**, only 8 of 28 gaps under 90
-  minutes. Two consequences. `LEDGER_MAX_STALE_HOURS = 6` was set to mean "six
-  consecutive missed refreshes" and now means roughly *one* ordinary gap, so the
-  transient-failure skip path mostly does not apply and a 503 hard-fails the run
-  instead — the exact red workflow the guard was added to prevent. And nothing
-  built on this cron may claim to be at most an hour old.
+  minutes. Two consequences. `LEDGER_MAX_STALE_HOURS` was 6, chosen to mean "six
+  consecutive missed refreshes"; against the real cadence that was roughly *one*
+  ordinary gap, so the transient-failure skip path stopped applying and a 503
+  hard-failed the run instead — the exact red workflow the guard was added to
+  prevent. **It is 24 now.** And nothing built on this cron may claim to be at
+  most an hour old.
+- **`wrangler secret put` takes the NAME, not the value.** Pasting the key onto
+  the command line creates a secret *named* after your credential, echoes it to
+  the terminal, and leaves the real slot unset — surfacing much later as an
+  unrelated "went wrong reaching the model". It is how an API key or a PAT ends
+  up in a chat window. `npx wrangler secret list` settles it in one line; a
+  credential that has been echoed anywhere gets revoked, not reasoned about.
+- **macOS is zsh; `read -s -p` is bash.** In zsh `-p` reads from a coprocess, so
+  the read fails, the variable is empty, and the request goes out with an empty
+  header — reported by the API as a *missing* header, which reads like a
+  different bug entirely. Use `printf` then a bare `read -s VAR`.
+- **Re-running a green `ledger-refresh` goes red, and means nothing.** The
+  re-run replays the original checkout, rebuilds against a commit its own first
+  attempt already superseded, and races to push over it; the publish step burns
+  its three retries (~31s) and exits 1. Read attempt 1 before believing
+  attempt 2.
 - **Beware time-of-day tests.** `_ts(hours_ago=2)` run after UTC midnight stamps
   *yesterday*; two tests failed for two hours every night because of it.
 
