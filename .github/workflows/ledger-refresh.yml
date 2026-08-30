@@ -70,15 +70,22 @@ jobs:
         run: |
           python scripts/refresh_ledger.py ${{ inputs.full && '--full' || '' }}
 
+      # The voice assistant answers from this pack, so it has to move with the
+      # ledger — an assistant describing last week's queue out loud is worse
+      # than one that says it doesn't know. Free to rebuild: pure file reads,
+      # no GitHub, no model calls, and it no-ops when nothing changed.
+      - name: Rebuild the voice assistant's context pack
+        run: python scripts/build_ask_context.py
+
       - name: Publish if anything moved
         run: |
-          if git diff --quiet -- docs/shipped.json; then
+          if git diff --quiet -- docs/shipped.json docs/ask-context.json; then
             echo "Ledger unchanged — nothing to publish."
             exit 0
           fi
           git config user.name  "overseer-bot"
           git config user.email "overseer-bot@users.noreply.github.com"
-          git add docs/shipped.json
+          git add docs/shipped.json docs/ask-context.json
           git commit -m "Refresh delivery ledger"
           # The weekly review commits to the same branch, and on a busy repo the
           # remote can move between checkout and push. Rebase and retry rather

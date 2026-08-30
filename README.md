@@ -582,6 +582,128 @@ After that, each weekly run pushes "Weekly review ready" to your phone. If you
 skip step 3, the app still updates every week — you just open it to read the
 digest instead of being pinged.
 
+## Asking it questions out loud
+
+The overseer reviews four projects, files issues and ships a few of them — and
+until now the only way to find out what it was thinking was to read the digest.
+This lets you ask instead, from a phone, hands-free:
+
+> *"Hey Siri, ask Overseer."*
+> *"Why hasn't the coachvision upload thing been built yet?"*
+> *"That's a medium-effort enhancement, and the gate only picks up low-effort
+> ones. Two bugs are queued ahead of it."*
+
+Speech-to-text and text-to-speech both happen **on the phone**, for free — the
+only thing that costs money is one model call, and the whole exchange runs at
+well under a cent.
+
+### How it fits together
+
+```
+scripts/build_ask_context.py     docs/ask-context.json     worker/overseer-ask.js
+  reads digest + history +   →     the facts, the       →    fetch, concatenate,
+  ledger, applies the gate         prompt, the format         one API call
+                                        ↑                          ↑
+                            published on GitHub Pages    Siri Shortcut asks it
+```
+
+**The Worker is deliberately stupid.** It fetches the pack, joins four strings,
+makes one call, and returns plain text. It does not know what the gate is, why
+an issue is queued, or what any field means. That is invariant 4 again: the
+dashboard once re-derived the gate's rules in `app.js` and confidently described
+a queue the dispatcher would never produce, and a Worker is the same hazard one
+platform further away — deployed separately, and out of sight when the Python
+changes. Everything that could drift lives in the pack, and `tests/test_ask.py`
+greps the Worker to keep it that way.
+
+That is also what makes the assistant testable, which a thing that answers from
+live model calls would not be. The tests pin that every "why wasn't this done?"
+answer is **quoted from `tools.implementable`**, never paraphrased — because
+nobody cross-checks a sentence they heard in the car against `docs/shipped.json`.
+
+### Try it from the terminal first
+
+```bash
+python ask.py "what is queued for the next implementation run?"
+python ask.py --format voice "what did we ship this month?"
+python ask.py --dry-run          # print the assembled prompt, call nothing
+```
+
+It prints what the question cost underneath the answer, the same way the
+pipeline reports its own spend.
+
+### Deploying the Worker
+
+```bash
+cd worker
+npx wrangler secret put ANTHROPIC_API_KEY   # the same key the pipeline uses
+npx wrangler secret put ASK_SHARED_SECRET   # any long random string
+npx wrangler deploy
+```
+
+Set `PACK_URL` in `wrangler.toml` to your Pages URL for `ask-context.json`.
+Cloudflare's free tier covers this comfortably — 100k requests a day against a
+thing you will use a dozen times a week.
+
+`ASK_SHARED_SECRET` is checked before anything else happens, and specifically
+before the API key is touched. An endpoint that answers to anybody is somebody
+else spending your key.
+
+### The Siri Shortcut
+
+In the Shortcuts app, new shortcut, four actions:
+
+1. **Dictate Text** — this is the free, on-device speech-to-text.
+2. **Get Contents of URL** — your Worker URL, method `POST`, headers
+   `Authorization: Bearer <your ASK_SHARED_SECRET>` and
+   `Content-Type: application/json`, request body JSON:
+   `{"q": <Dictated Text>, "format": "voice"}`
+3. **Speak Text** — the contents of the previous step.
+4. Name it **"Ask Overseer"**, and turn on *Show in Siri*.
+
+Then *"Hey Siri, Ask Overseer"* works from a locked screen, from AirPods, and
+from CarPlay.
+
+### What it costs, measured
+
+| | |
+|---|---|
+| The prompt (pack + rules) | ~3.5k tokens, cached |
+| One question, cold cache | **~$0.008** |
+| One question, warm cache | **~$0.002** |
+| Speech-to-text, text-to-speech | **$0.00** — both on the phone |
+| Cloudflare Worker | **$0.00** — free tier |
+
+For scale: one question is about **2% of a review** and **0.5% of a single
+implementation**. Asking is never the thing to hesitate over.
+
+Two decisions keep it there, and both are load-bearing:
+
+- **One call, no tool loop.** The three pipeline agents each run a loop of up to
+  25 iterations, which is why a review costs $0.34 and an implementation $1.49.
+  A question does none of that, because `build_ask_context.py` already did the
+  looking. The temptation, the first time it answers *"the snapshot doesn't
+  cover that"*, is to hand it the read tools — that is a 40× change, and the
+  cheaper fix is to publish the missing facts into the pack on a schedule.
+- **The clock lives in the question, not the prompt.** Anything volatile inside
+  the cached prefix invalidates it, so a timestamp one line higher would quietly
+  pay full price for 3.5k tokens on every question with nothing visibly wrong.
+  It is also why the pack carries absolute timestamps instead of pre-computed
+  ages: ages baked in at build time read as fresh forever, so a pack built on
+  Monday would still say "two hours old" on Thursday — out loud, confidently.
+
+### What it can and cannot do
+
+It answers from a snapshot rebuilt hourly behind the ledger refresh, so it knows
+the digest, the delivery record, the queue, the backlog with the gate's verdict
+on each item, and what the last few runs cost. It has no tools, so it cannot go
+and look at anything, and it will tell you so rather than guess.
+
+It also cannot *do* anything — no dispatching an implementation, no kicking off
+a review. That is invariant 6 holding for voice as well: a pull request is where
+the automation stops, and a spoken command is a poor place to start spending
+$1.49 a go.
+
 ## Running locally
 
 ```bash
@@ -607,6 +729,12 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
   the append-only `docs/history.json` trend log
 - `docs/` — the installable web app (GitHub Pages): `index.html`, `app.js`,
   `sw.js` (service worker / push handler), `manifest.webmanifest`, icons
+- `ask.py` — ask the overseer one question; one model call, no tool loop
+- `ask_context.py` — builds the context pack **and owns the assistant's prompt**,
+  so the Worker carries neither
+- `scripts/build_ask_context.py` — publishes `docs/ask-context.json`; skips the
+  write when only the build stamp moved, so the hourly rebuild stays quiet
+- `worker/overseer-ask.js` — the Cloudflare Worker the Siri Shortcut talks to
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
   happening, or completes while blind (stdlib only, no token)

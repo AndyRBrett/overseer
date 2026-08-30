@@ -112,6 +112,13 @@ jobs:
           echo "::error title=Review abandoned::GitHub was unreachable across 3 attempts."
           exit 75
 
+      # Rebuilt here as well as hourly: the digest is the highest-signal block
+      # in the pack, and waiting for the :20 refresh would leave the assistant
+      # answering from last week's review for up to an hour after this one.
+      - name: Rebuild the voice assistant's context pack
+        if: steps.guard.outputs.should_run == 'true'
+        run: python scripts/build_ask_context.py
+
       - name: Publish digest to the web app
         if: steps.guard.outputs.should_run == 'true'
         # The hourly ledger refresh commits to this same branch — at :20 and on
@@ -126,13 +133,13 @@ jobs:
         # because these three files are regenerated whole by a run that just
         # read GitHub, so the fresher complete file wins over a merge of two.
         run: |
-          if git diff --quiet -- docs/digest.json docs/history.json docs/shipped.json; then
+          if git diff --quiet -- docs/digest.json docs/history.json docs/shipped.json docs/ask-context.json; then
             echo "No digest change to publish."
             exit 0
           fi
           git config user.name  "overseer-bot"
           git config user.email "overseer-bot@users.noreply.github.com"
-          git add docs/digest.json docs/history.json docs/shipped.json
+          git add docs/digest.json docs/history.json docs/shipped.json docs/ask-context.json
           git commit -m "Weekly digest $(date -u +%Y-%m-%d)"
           for i in 1 2 3; do
             git pull --rebase -X theirs --autostash origin main && git push && exit 0
