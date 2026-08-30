@@ -310,6 +310,23 @@ def test_the_worker_checks_the_shared_secret_before_spending_anything():
     assert "secretMatches" in code
 
 
+def test_the_worker_logs_why_a_failure_happened():
+    """A voice endpoint that swallows its errors cannot be debugged.
+
+    The friendly sentence is right for something read aloud and wrong for
+    everything else: the first real failure here was "Something went wrong
+    reaching the model", with no way to tell a bad key from a bad request from
+    an outage. So the reason goes to the log on every failure, and comes back
+    in the response when the caller asks — which only an authenticated caller
+    can do, so it reveals nothing they do not already own.
+    """
+    code = _worker_code()
+    assert code.count("console.error") >= 2
+    assert "function explain(" in code
+    # And the friendly default survives: a phone must not read an error object.
+    assert "debug ?" in code
+
+
 def test_the_worker_asks_for_no_tools_and_no_thinking():
     # One call, no loop. This is the difference between a question costing a
     # fraction of a cent and costing what an agent run costs.
