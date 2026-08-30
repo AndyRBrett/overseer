@@ -9,9 +9,9 @@ Mon 14:00 UTC  weekly-review.yml    Bug-Hunter → Idea-Agent → Reviewer
 Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repository_dispatch
       ~10 min  implement-worker.yml the coding agent, IN EACH TARGET REPO
                                     → branch → tests → pull request
-       hourly  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
+      ~6×/day  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
                                     → docs/ask-context.json → voice assistant
-     on demand  worker/             "Hey Siri, ask Overseer" → one model call
+    on demand  worker/              "Hey Siri, ask Overseer" → one model call
 ```
 
 The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
@@ -34,7 +34,7 @@ pinned from Python instead (see *Testing what has no test runner* below).
 | `tools.py` | **everything shared** — tool implementations, the delivery ledger, the implementation gate, `run_agent` |
 | `tracer.py` | per-run recording, spend accounting, digest/history writers |
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
-| `scripts/refresh_ledger.py` | hourly, pure GitHub reads, no model calls |
+| `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
 | `ask.py` / `ask_context.py` | the voice assistant: one call, no tool loop; `ask_context` owns its prompt AND its facts |
@@ -108,6 +108,15 @@ Each of these exists because the opposite already happened here.
   Voice works here only because the iPhone does speech-to-text and text-to-speech
   on-device for free; any server-side transcription would add a provider, a key
   and a per-minute bill to something that currently costs nothing.
+- **The hourly cron is not delivered hourly.** GitHub deprioritises scheduled
+  workflows on free public repos. Measured over 29 consecutive `ledger-refresh`
+  runs (2026-08-25 → 08-30): **~6 firings a day, not 24** — median gap 2.6h
+  (6.2h over the last three days), worst **13.3h**, only 8 of 28 gaps under 90
+  minutes. Two consequences. `LEDGER_MAX_STALE_HOURS = 6` was set to mean "six
+  consecutive missed refreshes" and now means roughly *one* ordinary gap, so the
+  transient-failure skip path mostly does not apply and a 503 hard-fails the run
+  instead — the exact red workflow the guard was added to prevent. And nothing
+  built on this cron may claim to be at most an hour old.
 - **Beware time-of-day tests.** `_ts(hours_ago=2)` run after UTC midnight stamps
   *yesterday*; two tests failed for two hours every night because of it.
 
@@ -170,9 +179,13 @@ changing one:
 | `ufc-dashboard` | Python 3.12 + Node 20 (`npm ci`) — two gates | `python -m pytest -q`, and `npm run verify` if the web/edge side was touched |
 | `overseer` | Python 3.12 + `requirements.txt` | `python -m pytest -q` |
 
-**`crypto-trading` currently gets nothing**: all its open ideas are
-`effort:medium`, and the gate defaults to `effort:low`. Widen
-`OVERSEER_IMPLEMENT_EFFORT` to `low,medium` if that matters.
+**This table's `crypto-trading` note used to say it "gets nothing".** That is no
+longer true: as of 2026-08-30 it has bug #50 and `effort:low` enhancement #51
+open, both eligible, and #50 is second in the published queue. The claim was
+right when written and quietly went stale — which is the argument for asking the
+assistant (`python ask.py "what is queued?"`) rather than trusting a note here.
+Most of its *older* ideas are still `effort:medium`; widen
+`OVERSEER_IMPLEMENT_EFFORT` to `low,medium` if you want those too.
 
 ## House style
 

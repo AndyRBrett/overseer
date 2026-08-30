@@ -154,9 +154,24 @@ no model calls — so it can run constantly for effectively nothing.
 | Trigger | Covers | Latency |
 |---|---|---|
 | `pull_request: closed`, `issues: closed/reopened` | the overseer's own work | seconds |
-| `schedule` hourly at :20 | the other three repos | ≤ 1 hour |
+| `schedule` hourly at :20 | the other three repos | **~2–6h in practice, see below** |
 | `repository_dispatch: ledger-refresh` | opt-in, any repo | seconds |
 | `workflow_dispatch` (`full: true`) | manual, full re-walk | on demand |
+
+**The hourly cron is not delivered hourly.** GitHub deprioritises scheduled
+workflows on free public repos, and measured over 29 consecutive scheduled runs
+(2026-08-25 to 08-30) this one fires **about 6 times a day, not 24**:
+
+| | |
+|---|---|
+| Shortest gap | 0.9h |
+| Median gap | 2.6h (6.2h over the last three days) |
+| Longest gap | **13.3h** |
+
+Only 8 of 28 gaps were under 90 minutes. Nothing downstream breaks — the panel
+and the assistant both carry the timestamp they were built from and report their
+own age — but anything that assumes "at most an hour old" is wrong, and
+`LEDGER_MAX_STALE_HOURS` is tuned on that assumption (see below).
 
 **Why the other three repos poll instead of pushing:** GitHub fires
 `pull_request` events only in the repo where the PR lives, so instant cross-repo
@@ -189,8 +204,8 @@ applies to partial losses — if a repo errored mid-walk *and* the ledger came
 back shorter than the published one, the run declines to publish rather than
 dropping that project's history from the panel.
 
-**A GitHub outage is not a failure of this workflow.** Running hourly against an
-API that serves the occasional 503 means the odd run simply can't read; on
+**A GitHub outage is not a failure of this workflow.** Running on a short cron
+against an API that serves the occasional 503 means the odd run simply can't read; on
 2026-08-17 nine seconds of 503s on `/user` turned into a red workflow and a
 failure email for a panel that was 45 minutes old and refreshed normally an hour
 later. So transient failures (5xx, rate limiting, connection errors) are told
@@ -199,9 +214,18 @@ apart from credential failures and handled by waiting:
 | Situation | Result |
 |---|---|
 | GitHub 5xx / unreachable | retried 3× with backoff (`OVERSEER_PREFLIGHT_ATTEMPTS`, `OVERSEER_PREFLIGHT_BACKOFF`) |
-| Still unreachable, panel fresh | **skip, exit 0** with a `::warning` on the run — the next hourly run retries |
-| Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (6h) | **fail** — six missed refreshes is a real outage, not a wobble |
+| Still unreachable, panel fresh | **skip, exit 0** with a `::warning` on the run — the next scheduled run retries |
+| Still unreachable, panel older than `LEDGER_MAX_STALE_HOURS` (6h) | **fail** — the panel is going stale |
 | Token expired / revoked (401) | **fail immediately**, never retried — a 401 will 401 again |
+
+⚠️ **`LEDGER_MAX_STALE_HOURS` is mis-tuned against the real cron.** It was set to
+6h on the premise that this meant "six consecutive missed refreshes". At the
+measured cadence above, 6h is roughly *one* ordinary gap — the median over the
+last three days was 6.2h — so the skip path barely applies any more: a transient
+503 now usually finds a published ledger already past the limit and hard-fails
+the run instead of waiting for the next one. That is precisely the red workflow
+and failure email the 2026-08-17 incident added this guard to prevent. Raising
+it to ~24h restores the intended "several missed refreshes" meaning.
 
 ## Implementing what it files
 
@@ -334,8 +358,8 @@ stalled waiting on you. Its figures come from a `queue` block the ledger
 publishes (`tools.queue_state`) rather than from rules re-implemented in
 `app.js` — a second copy of the gate there would drift from the dispatcher's the
 first time the rules changed, and describe a queue that never runs. It rides
-along with the hourly ledger refresh, so the panel is live without a second
-workflow or a single model call.
+along with the ledger refresh, so the panel is live without a second workflow or
+a single model call.
 
 The dispatcher also prints what the run is about to cost before it fires:
 
@@ -403,7 +427,7 @@ credential only delays the diagnosis. A `weekly-review` concurrency group keeps
 a catch-up from joining a run that is still retrying.
 
 Both workflows also retry a *rejected push*. They commit to `main` from a
-checkout they may hold for minutes, and the hourly ledger refresh writes at :20
+checkout they may hold for minutes, and the ledger refresh writes on its cron
 and on every PR close, so either can find the remote has moved. For the review
 that costs more than the file: `Send push notification` is the step after the
 publish, so a lost race would drop the notification too. Collisions resolve in
@@ -694,7 +718,9 @@ Two decisions keep it there, and both are load-bearing:
 
 ### What it can and cannot do
 
-It answers from a snapshot rebuilt hourly behind the ledger refresh, so it knows
+It answers from a snapshot rebuilt behind the ledger refresh — scheduled hourly
+but in practice landing every few hours (see *Closing the loop* above) — so it
+knows
 the digest, the delivery record, the queue, the backlog with the gate's verdict
 on each item, and what the last few runs cost. It has no tools, so it cannot go
 and look at anything, and it will tell you so rather than guess.
@@ -733,7 +759,8 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `ask_context.py` — builds the context pack **and owns the assistant's prompt**,
   so the Worker carries neither
 - `scripts/build_ask_context.py` — publishes `docs/ask-context.json`; skips the
-  write when only the build stamp moved, so the hourly rebuild stays quiet
+  write when only the build stamp moved, so a rebuild that changed nothing is
+  silent
 - `worker/overseer-ask.js` — the Cloudflare Worker the Siri Shortcut talks to
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
