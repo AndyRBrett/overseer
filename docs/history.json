@@ -403,9 +403,9 @@
     },
     {
       "date": "2026-08-31",
-      "generated": "2026-08-31T19:08:51Z",
+      "generated": "2026-08-31T19:48:15Z",
       "status": "completed",
-      "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy, idle-as-expected, or within SLA \u2014 no new confirmed defects. Pre-existing open issues (#76 odds-budget-exhausted on ufc-dashboard; #32 overseer failed-run) remain tracked but unchanged, no regressions.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 External dead-man's-switch heartbeat (effort: low, impact: high): overseer can't detect its own silent failure (0 runs/7d, 168.7h stale this cycle); an out-of-band uptime ping would catch this independent of the pipeline itself, directly addressing the gap behind open issue #32.\n2. crypto-trading \u2014 Time-based position aging/rotation cap (effort: medium, impact: high): 8/10 signals rejected as in_position with flat equity for 7 days; a max-hold re-evaluation window stops recurring BUY signals from being perpetually blocked.\n3. coachvision \u2014 Escalating idle-footage notifications (effort: low, impact: medium): no footage ever ingested and the current \"nudge\" is a passive JSON field; staged SMS/push/Slack alerts as the 14-day idle mark approaches would actually get noticed.\n4. ufc-dashboard \u2014 Tiered movement_alert_threshold by weight-class/bout-position (effort: medium, impact: medium): one global threshold conflates noisy prelim swings (650-670) with meaningful main-event moves (202-295); backtested tiered thresholds would cut false signal noise.",
+      "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy or in expected idle/known states \u2014 no new bugs filed.\n\nTop Enhancement Ideas (ranked)\n1. coachvision \u2014 Drift-alerting on self-test canary (effort: low, impact: medium): Cheap statistical check on canary history catches silent pipeline/model regressions even while real footage stays idle.\n2. ufc-dashboard \u2014 Secondary odds-provider fallback (effort: medium, impact: high): Auto-failover when primary odds API budget is exhausted, fixing the recurring odds-unavailable events instead of just alerting.\n3. crypto-trading \u2014 ATR/volatility-scaled position sizing (effort: medium, impact: high): Normalizes per-trade risk to realized volatility, improving risk consistency independent of entry-threshold tuning.\n4. overseer \u2014 Track enhancement-proposal outcome rate per project (effort: medium, impact: medium): Feeds shipped/closed ratios back into idea generation so future proposals skew toward higher-yield categories.",
       "counts": {
         "tools": 9,
         "errors": 0,
@@ -426,14 +426,14 @@
           "score": 1.0
         },
         "Overseer": {
-          "status": "idle",
-          "score": 0.5
+          "status": "ok",
+          "score": 1.0
         }
       },
       "spend": {
-        "total_usd": 0.3267,
-        "baseline_usd": 0.4332,
-        "saved_usd": 0.1064
+        "total_usd": 0.2772,
+        "baseline_usd": 0.3722,
+        "saved_usd": 0.0951
       }
     }
   ]

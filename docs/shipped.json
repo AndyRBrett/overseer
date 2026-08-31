@@ -1,6 +1,78 @@
 {
   "entries": [
     {
+      "closed_at": null,
+      "created_at": "2026-08-31T19:08:24+00:00",
+      "effort": "low",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 59,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Add an external dead-man's-switch heartbeat (third-party uptime ping) independent of overseer's own run so silent pipeline failure is detectable",
+      "url": "https://github.com/AndyRBrett/overseer/issues/59"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-31T19:08:20+00:00",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 93,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "open",
+      "status": "open",
+      "title": "Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/93"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-31T19:08:17+00:00",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 38,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/38"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-31T19:08:13+00:00",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 52,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/52"
+    },
+    {
       "closed_at": "2026-08-24T16:49:41+00:00",
       "created_at": "2026-08-17T19:55:18+00:00",
       "effort": "low",
@@ -1485,7 +1557,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-31T19:08:51Z",
+  "generated": "2026-08-31T19:48:15Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1493,7 +1565,7 @@
     "efforts": [
       "low"
     ],
-    "eligible": 5,
+    "eligible": 7,
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "next": [
@@ -1524,13 +1596,13 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.676,
+    "delivery_rate": 0.639,
     "duplicate": 12,
-    "duplicate_rate": 0.15,
+    "duplicate_rate": 0.143,
     "in_flight": 0,
     "not_planned": 5,
-    "open": 17,
-    "proposed": 80,
+    "open": 21,
+    "proposed": 84,
     "shipped": 46
   }
 }
