@@ -157,6 +157,12 @@ Each of these exists because the opposite already happened here.
   the read fails, the variable is empty, and the request goes out with an empty
   header — reported by the API as a *missing* header, which reads like a
   different bug entirely. Use `printf` then a bare `read -s VAR`.
+- **Never put a trailing `# comment` on a command someone will paste.**
+  Interactive zsh does not set `interactive_comments`, so the `#` and every word
+  after it are passed as arguments. A documented `wrangler secret put NAME
+  # what the token needs` died on `Unknown arguments: #, PAT, with, ...` — the
+  annotation that was supposed to prevent a mistake caused one. Put the
+  explanation on its own line above.
 - **Re-running a green `ledger-refresh` goes red, and means nothing.** The
   re-run replays the original checkout, rebuilds against a commit its own first
   attempt already superseded, and races to push over it; the publish step burns

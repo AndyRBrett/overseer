@@ -177,7 +177,7 @@ own age — but anything that assumes "at most an hour old" is wrong, and
 **Why the other three repos poll instead of pushing:** GitHub fires
 `pull_request` events only in the repo where the PR lives, so instant cross-repo
 updates need a `repository_dispatch` call *from* each project repo — which means
-a PAT with `actions: write` stored in three more places. That is the credential
+a PAT with `contents: write` stored in three more places. That is the credential
 sprawl that caused the July outage, traded for 59 minutes of latency. The
 dispatch trigger is wired up regardless, so you can opt any repo in by adding a
 step to its own workflow:
@@ -452,8 +452,11 @@ The fix is a trigger on someone else's scheduler. The Cloudflare Worker that
 already serves the voice assistant now also runs a cron that fires
 `repository_dispatch` at 14:05 and 17:05 UTC on Mondays — five minutes behind
 GitHub's own cron, so an on-time Monday publishes first and the dispatch no-ops.
-It needs `DISPATCH_TOKEN` (a PAT with **actions: write** on this repo) as a
-wrangler secret; see `worker/wrangler.toml`.
+It needs `DISPATCH_TOKEN` as a wrangler secret — a PAT with **Contents: write**
+on this repo (fine-grained), or plain `repo` scope (classic). That is what
+`POST /repos/{owner}/{repo}/dispatches` actually checks; "Actions: write" reads
+like the right permission for something that starts a workflow, and is not it.
+Deploy from `worker/` so wrangler finds the config; see `worker/wrangler.toml`.
 
 Because two independent schedulers now aim at the same Monday,
 `scripts/weekly_guard.py` is asked by **every** automated trigger rather than
