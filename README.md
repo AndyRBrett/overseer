@@ -723,6 +723,20 @@ In the Shortcuts app, new shortcut, four actions:
 Then *"Hey Siri, Ask Overseer"* works from a locked screen, from AirPods, and
 from CarPlay.
 
+**It will answer in text rather than out loud until you change one iOS setting**
+— and the setting is not in the Shortcut. Run from the Shortcuts app it speaks
+correctly, so the Shortcut looks fine and the fault appears to be somewhere in
+this project. It is not: **Settings → Siri & Search → Siri Responses** defaults
+to *Automatic*, which lets Siri decide whether to talk based on context. Set it
+to **Prefer Spoken Responses**. Nothing here is a voice assistant until you do,
+which makes it the last thing to check and the first thing worth writing down.
+
+If it is already on *Prefer Spoken Responses* and you still get silence, the
+next two suspects are media volume (`Speak Text` plays through media, not the
+ringer, so the volume buttons adjust the wrong thing unless something is
+playing) and *Wait Until Finished* inside the `Speak Text` action — without it
+a Siri-invoked shortcut can end before the speech does, and cut itself off.
+
 ### What it costs, measured
 
 | | |
