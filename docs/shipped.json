@@ -1,6 +1,87 @@
 {
   "entries": [
     {
+      "closed_at": "2026-08-31T23:27:44+00:00",
+      "created_at": "2026-08-31T23:27:19+00:00",
+      "effort": "low",
+      "fix_ref": "PR #63",
+      "fix_sha": "892ad85",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/63",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 65,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Give implement.yml catch-up crons, guarded so they cannot double the weekly bill",
+      "url": "https://github.com/AndyRBrett/overseer/issues/65"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-08-31T23:27:35+00:00",
+      "effort": "low",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 66,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Distinguish work the implementer delivered from work done by hand",
+      "url": "https://github.com/AndyRBrett/overseer/issues/66"
+    },
+    {
+      "closed_at": "2026-08-31T23:21:12+00:00",
+      "created_at": "2026-08-24T14:35:14+00:00",
+      "effort": "low",
+      "fix_ref": "PR #55",
+      "fix_sha": "6b410d7",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/55",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 51,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
+    },
+    {
+      "closed_at": "2026-08-31T23:17:28+00:00",
+      "created_at": "2026-08-17T19:55:11+00:00",
+      "effort": "low",
+      "fix_ref": "PR #96",
+      "fix_sha": "72d3111",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/96",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 76,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
+    },
+    {
       "closed_at": "2026-08-31T23:10:33+00:00",
       "created_at": "2026-08-31T19:08:24+00:00",
       "effort": "low",
@@ -286,24 +367,6 @@
       "url": "https://github.com/AndyRBrett/coachvision/issues/34"
     },
     {
-      "closed_at": null,
-      "created_at": "2026-08-24T14:35:14+00:00",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 51,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
-    },
-    {
       "closed_at": "2026-08-17T22:11:04+00:00",
       "created_at": "2026-08-15T10:35:39+00:00",
       "effort": "low",
@@ -342,24 +405,6 @@
       "status": "open",
       "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-17T19:55:11+00:00",
-      "effort": "low",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 76,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
     },
     {
       "closed_at": null,
@@ -1644,7 +1689,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-31T23:11:56Z",
+  "generated": "2026-08-31T23:29:24Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1652,7 +1697,7 @@
     "efforts": [
       "low"
     ],
-    "eligible": 4,
+    "eligible": 3,
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "last_dispatch": {
@@ -1664,19 +1709,10 @@
         "effort": "low",
         "impact": "high",
         "kind": "enhancement",
-        "number": 76,
-        "repo": "AndyRBrett/ufc-dashboard",
-        "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
-        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
-      },
-      {
-        "effort": "low",
-        "impact": "medium",
-        "kind": "enhancement",
-        "number": 51,
-        "repo": "AndyRBrett/crypto-trading",
-        "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
+        "number": 66,
+        "repo": "AndyRBrett/overseer",
+        "title": "Distinguish work the implementer delivered from work done by hand",
+        "url": "https://github.com/AndyRBrett/overseer/issues/66"
       },
       {
         "effort": "low",
@@ -1686,18 +1722,27 @@
         "repo": "AndyRBrett/coachvision",
         "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
         "url": "https://github.com/AndyRBrett/coachvision/issues/38"
+      },
+      {
+        "effort": "low",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 39,
+        "repo": "AndyRBrett/coachvision",
+        "title": "Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/39"
       }
     ],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.645,
+    "delivery_rate": 0.667,
     "duplicate": 12,
-    "duplicate_rate": 0.136,
+    "duplicate_rate": 0.133,
     "in_flight": 0,
     "not_planned": 6,
-    "open": 21,
-    "proposed": 88,
-    "shipped": 49
+    "open": 20,
+    "proposed": 90,
+    "shipped": 52
   }
 }
