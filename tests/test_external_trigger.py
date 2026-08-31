@@ -179,9 +179,24 @@ def test_the_worker_does_not_decide_whether_to_run():
     # weekly_guard.py's judgement, on the GitHub side, for every automated
     # trigger. A copy of it here would be deployed separately and drift out of
     # sight of the Python — and would be deciding, unwatched, to skip a review.
-    src = worker_source().lower()
-    for leak in ("digest.json", "generated", "should_run", "status === \"completed\""):
-        assert leak not in src, f"the worker is re-deriving the guard: {leak!r}"
+    #
+    # Scoped to the DISPATCH path rather than the whole file since #59: the
+    # watchdog reads the published digest stamp to decide whether to wake a
+    # HUMAN, which is the opposite failure mode — it can only ever add an alert,
+    # never withhold a run. The assertion below is what actually protects the
+    # invariant, and it is stronger than a substring ban: the dispatch is
+    # unconditional.
+    src = worker_source()
+    dispatch = src.split("async function checkDigestFreshness(")[0]
+    for leak in ("digest.json", "generated", "should_run", 'status === "completed"'):
+        assert leak.lower() not in dispatch.lower(), (
+            f"the dispatch path is re-deriving the guard: {leak!r}")
+
+    scheduled = src.split("async scheduled(")[1].split("async fetch(")[0]
+    fire = scheduled.split("ctx.waitUntil(fireDispatch(")[0]
+    # Nothing between entering the handler and firing may consult freshness.
+    for leak in ("checkDigestFreshness", "generated", "stale"):
+        assert leak not in fire, f"the dispatch is gated on {leak!r}"
 
 
 def test_the_worker_does_not_hold_the_token_in_source():

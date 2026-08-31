@@ -4,6 +4,14 @@
 #   npx wrangler secret put ANTHROPIC_API_KEY   # the same key the pipeline uses
 #   npx wrangler secret put ASK_SHARED_SECRET   # any long random string
 #   npx wrangler secret put DISPATCH_TOKEN
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN  # optional — the watchdog alert
+#   npx wrangler secret put TELEGRAM_CHAT_ID    # optional — same pair the digest uses
+#
+# The TELEGRAM_* pair is what makes this a dead-man's switch rather than a
+# trigger (issue #59). Without them the Worker still pokes GitHub, but a review
+# that stops running goes unreported: every other failure path here ends in a
+# console.error nobody reads. They are the same two secrets the weekly digest
+# already uses, so there is no new credential to mint.
 #   npx wrangler deploy
 #
 # DISPATCH_TOKEN is a PAT that can POST /repos/{owner}/{repo}/dispatches on

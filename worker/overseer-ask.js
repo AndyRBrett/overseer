@@ -164,6 +164,70 @@ async function fireDispatch(env, eventType) {
   }
 }
 
+/**
+ * Tell a human the review has stopped happening (issue #59).
+ *
+ * Every failure path above ends at console.error, which is visible only to
+ * `wrangler tail` — nobody is tailing a Worker at 15:20 on a Tuesday. So each
+ * of these ends in silence: a DISPATCH_TOKEN that expired, GitHub refusing the
+ * dispatch, or the dispatch landing with 204 on a repo whose Actions are
+ * disabled. The heartbeat WORKFLOW cannot cover them either, because it only
+ * runs if GitHub runs it, and "GitHub isn't running things" is the outage.
+ *
+ * This is the one check that needs nothing from GitHub to work: the published
+ * pack is a static file on Pages, and if the review stops, its digest stamp
+ * stops advancing. Reading it here and messaging Telegram directly is a
+ * dead-man's switch that shares no machinery with what it watches.
+ *
+ * The threshold is NOT decided here — facts.heartbeat.max_age_hours is
+ * published by ask_context.py from the heartbeat script's own constant
+ * (invariant 8). This compares two timestamps against a number it was handed.
+ * With no published threshold it stays quiet rather than guessing: a watchdog
+ * that invents its own limit is how you get paged at the wrong time forever.
+ */
+async function checkDigestFreshness(env) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
+  let facts;
+  try {
+    const res = await fetch(env.PACK_URL, { cf: { cacheTtl: 0 } });
+    if (!res.ok) throw new Error(`pack ${res.status}`);
+    facts = (await res.json()).facts;
+  } catch (err) {
+    console.error("[watchdog] could not read the pack:", String(err));
+    return;
+  }
+
+  const staleAfterHours = facts?.heartbeat?.stale_after_hours;
+  const generated = facts?.digest?.generated;
+  if (!staleAfterHours || !generated) {
+    console.error("[watchdog] pack carries no threshold or no digest stamp");
+    return;
+  }
+  const ageHours = (Date.now() - new Date(generated)) / 3600000;
+  if (!(ageHours > staleAfterHours)) return;
+
+  const days = Math.floor(ageHours / 24);
+  const text =
+    `\u{1F6A8} Overseer watchdog: the weekly digest is ${days} days old ` +
+    `(${generated}), past the ${staleAfterHours}h threshold.\n\n` +
+    `This alert came from Cloudflare, not GitHub — so the review has stopped ` +
+    `running and GitHub is not saying so.`;
+  try {
+    const res = await fetch(
+      `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text }),
+      },
+    );
+    if (!res.ok) throw new Error(`telegram ${res.status}`);
+    console.log(`[watchdog] alerted: digest ${ageHours.toFixed(0)}h old`);
+  } catch (err) {
+    console.error("[watchdog] could not send the alert:", String(err));
+  }
+}
+
 export default {
   // Cloudflare's scheduler, not GitHub's — that separation is the whole point.
   // waitUntil so the POST is not cut off when the handler returns.
@@ -176,6 +240,10 @@ export default {
       return;
     }
     ctx.waitUntil(fireDispatch(env, eventType));
+    // Poking GitHub and checking whether the poking has been working are
+    // independent: the watchdog must still report when the dispatch above
+    // fails, so it is not chained to it.
+    if (eventType === "heartbeat") ctx.waitUntil(checkDigestFreshness(env));
   },
 
   async fetch(request, env) {
