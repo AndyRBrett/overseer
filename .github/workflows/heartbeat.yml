@@ -12,11 +12,27 @@ name: Overseer Heartbeat
 # not depend on the credential it is watching. Everything it checks comes from
 # docs/digest.json in the checkout.
 
+# THE ALARM SHARED THE SCHEDULER IT WATCHES (2026-08-31). All of the above is
+# true and none of it fired that Monday: GitHub delivered no scheduled events at
+# all, so the weekly review never ran AND this heartbeat never ran to say so. A
+# dead-man's switch on the same cron system as the thing it watches has a common
+# failure mode with it, which is the one thing a dead-man's switch may not have.
+# The stale digest was caught by a human, days late.
+#
+# So this now also answers a repository_dispatch fired by the Cloudflare cron in
+# worker/overseer-ask.js — the same off-GitHub path the review uses. That is
+# what makes this the detector for a dropped weekly event: the review going
+# missing stops docs/digest.json advancing, and this notices within ~24h.
 on:
   schedule:
     # 15:00 UTC daily — a day after the Monday 14:00 weekly run, so a missed
     # review is caught within ~24h rather than at the end of the next week.
     - cron: "0 15 * * *"
+  # The off-GitHub path, 15:20 UTC daily. Unguarded on purpose: this is a
+  # tokenless, model-free check, so running twice costs a checkout, and an alarm
+  # that fires twice while something is broken beats one that stays quiet.
+  repository_dispatch:
+    types: [heartbeat]
   workflow_dispatch: {}
 
 permissions:

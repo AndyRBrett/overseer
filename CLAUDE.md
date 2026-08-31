@@ -13,7 +13,9 @@ Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repositor
                                     → branch → tests → pull request
       ~6×/day  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
                                     → docs/ask-context.json → voice assistant
+  daily 15:20  heartbeat.yml        dead-man's switch, also Cloudflare-triggered
     on demand  worker/              "Hey Siri, ask Overseer" → one model call
+                                    (+ the crons above, off GitHub's scheduler)
 ```
 
 The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
@@ -24,7 +26,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-323 tests, under a second. There is no JS test runner, so dashboard behaviour is
+326 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -144,7 +146,12 @@ Each of these exists because the opposite already happened here.
   are `schedule:` entries queued through the very scheduler that dropped the
   primary. The heartbeat is on the same cron and was dropped too. Redundancy for
   a cron has to come from a different vendor: `worker/overseer-ask.js` now runs
-  a **Cloudflare** cron that fires `repository_dispatch` at 14:05/17:05 Monday.
+  **Cloudflare** crons firing `repository_dispatch` at 14:05/17:05 Monday for
+  the review and 15:20 daily for the heartbeat. The heartbeat especially — a
+  dead-man's switch on the scheduler it watches shares a failure mode with it,
+  which is the one thing a dead-man's switch may not do; off GitHub it is also
+  what makes a dropped event *detectable*, since a review that never runs leaves
+  `docs/digest.json` standing still and the heartbeat trips on that within a day.
   When diagnosing "the run didn't happen", check `total_count` on the workflow
   before reading logs — no new run number means there was never a job.
 - **`wrangler secret put` takes the NAME, not the value.** Pasting the key onto

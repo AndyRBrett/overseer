@@ -52,7 +52,14 @@ DISPATCH_REPO = "AndyRBrett/overseer"
 # sees today's digest and no-ops. 17:05 is the backup for a failed POST — not
 # for a failed review, which the workflow's own retries own.
 #
-# Cron is UTC here too. Keep DISPATCH_EVENT in overseer-ask.js in step with the
-# repository_dispatch `types:` in .github/workflows/weekly-review.yml.
+# 15:20 daily is the heartbeat, the dead-man's switch that goes red when the
+# review stops happening. It was on GitHub's 15:00 daily cron and was dropped on
+# 08-31 along with everything else — an alarm sharing the scheduler it watches is
+# not an alarm. It is tokenless and makes no model calls, so running it twice on
+# a day GitHub also delivers costs a checkout; and a duplicate alert on a day it
+# is genuinely failing is the right way to be wrong.
+#
+# Cron is UTC here too. Keep DISPATCH_EVENTS in overseer-ask.js in step with
+# these, and with the repository_dispatch `types:` in each workflow.
 [triggers]
-crons = ["5 14 * * 1", "5 17 * * 1"]
+crons = ["5 14 * * 1", "5 17 * * 1", "20 15 * * *"]
