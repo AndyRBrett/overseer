@@ -104,6 +104,12 @@ Each of these exists because the opposite already happened here.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.
+- **Siri decides whether to speak, and defaults to not.** The Shortcut speaks
+  correctly when run from the Shortcuts app and silently prints when Siri runs
+  it, so every hypothesis points at the Shortcut or the Worker. Neither is
+  involved: *Settings → Siri & Search → Siri Responses* is *Automatic* until
+  set to *Prefer Spoken Responses*. The last mile of a voice feature was a
+  toggle three apps away from the code.
 - **Speech is not an API input.** Claude takes text, images and PDFs, not audio.
   Voice works here only because the iPhone does speech-to-text and text-to-speech
   on-device for free; any server-side transcription would add a provider, a key
