@@ -421,6 +421,7 @@ def _ledger_entry(issue, merged_only=True):
     # re-fetching every issue to ask.
     if labels:
         entry["labels"] = sorted(labels)
+    entry["delivered_by"] = delivered_by(labels)
 
     if issue.state != "closed":
         # An open issue with work already on a branch is IN FLIGHT, not merely
@@ -569,6 +570,11 @@ def delivery_ledger(merged_only=True, limit_per_repo=100, known=None):
                 # its outcome is live again and has to be recomputed, or the
                 # ledger would keep reporting a settled state that no longer holds.
                 if prior and issue.state == "closed":
+                    # Backfill for entries settled before this field existed.
+                    # The labels are already on the row, so this needs no extra
+                    # call — without it every historical entry stays unattributed
+                    # until something forces a full rebuild.
+                    prior.setdefault("delivered_by", delivered_by(prior.get("labels")))
                     entries.append(prior)
                     continue
                 entry = _ledger_entry(issue, merged_only=merged_only)
@@ -584,6 +590,30 @@ def delivery_ledger(merged_only=True, limit_per_repo=100, known=None):
     # The number the dashboard leads with. Duplicates are excluded from the
     # denominator: re-proposing the same idea shouldn't dilute the delivery rate,
     # it's tracked separately as a dedupe failure.
+    # The split (#66). Counted only over SHIPPED work: attributing an open issue
+    # to a dispatcher that has not finished with it would be guessing.
+    #
+    # And counted only over work that shipped ONCE THE DISPATCHER EXISTED. 46 of
+    # these 49 landed before the implementer's first run, so a raw split reads
+    # "1 by the implementer, 48 by hand" — true, and a straight lie about the
+    # thing the number is for, which is whether the implementer earns its ~4.4x
+    # cost. The cutoff is derived rather than hardcoded: the earliest issue the
+    # dispatcher ever touched is the first moment it could have delivered
+    # anything.
+    touched = [e.get("closed_at") for e in entries
+               if {IMPLEMENTING_LABEL, FAILED_LABEL} & set(e.get("labels") or ())
+               and e.get("closed_at")]
+    since = min(touched) if touched else None
+    totals["implementer_since"] = since
+    for source in ("implementer", "hand"):
+        totals[f"shipped_by_{source}"] = sum(
+            1 for e in entries
+            if e["status"] == "shipped" and e.get("delivered_by") == source
+            and since is not None and (e.get("closed_at") or "") >= since)
+    totals["shipped_before_implementer"] = sum(
+        1 for e in entries
+        if e["status"] == "shipped"
+        and (since is None or (e.get("closed_at") or "") < since))
     considered = totals["proposed"] - totals["duplicate"]
     totals["delivery_rate"] = round(totals["shipped"] / considered, 3) if considered else 0.0
     totals["duplicate_rate"] = round(totals["duplicate"] / totals["proposed"], 3) if entries else 0.0
@@ -697,6 +727,34 @@ IMPLEMENT_COST_HINT = float(_env("OVERSEER_IMPLEMENT_COST_HINT", "1.50") or 1.50
 # it over again. The linked PR is the second line of defence: once one exists the
 # entry reads `in_flight` and the gate excludes it regardless of labels.
 IMPLEMENTING_LABEL = "overseer:implementing"
+
+def delivered_by(labels):
+    """Whether the DISPATCHER handed this issue over, for a shipped entry.
+
+    The ledger deliberately keys "shipped" on nothing but a merged PR closing the
+    issue, which is the right rule and says nothing about where the fix came
+    from. The cost of that showed on 2026-08-31: five issues shipped in one
+    evening, one of them delivered by the implementer end to end, and the
+    delivery rate read identically either way. The implementer is ~4.4x the whole
+    review, so deciding whether it earns its bill needs the number it actually
+    earned.
+
+    The signal is already on the issue. dispatch_implementation applies
+    IMPLEMENTING_LABEL before dispatching, and labels are never cleaned off a
+    closed issue — normally a gotcha, here a durable record that the handover
+    happened. FAILED_LABEL means the attempt was benched, so anything that
+    shipped afterwards did not come from it.
+
+    "dispatched", NOT "written by the agent": a dispatched issue whose PR a human
+    later corrected still had its first draft bought and paid for. This reports
+    what is actually known, and the field is named for the handover rather than
+    for authorship it cannot see.
+    """
+    labels = set(labels or ())
+    if IMPLEMENTING_LABEL in labels and FAILED_LABEL not in labels:
+        return "implementer"
+    return "hand"
+
 
 # Your opt-out. Put this on anything you want to decide yourself.
 NO_IMPLEMENT_LABEL = "overseer:no-implement"
