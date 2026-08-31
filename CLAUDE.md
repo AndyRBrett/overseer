@@ -6,6 +6,8 @@ implements a few of them**. Four stages, three of them agents:
 ```
 Mon 14:00 UTC  weekly-review.yml    Bug-Hunter → Idea-Agent → Reviewer
                                     → issues filed → digest → Telegram + PWA
+                                    (+14:05 Cloudflare cron → repository_dispatch,
+                                     because GitHub drops scheduled events)
 Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repository_dispatch
       ~10 min  implement-worker.yml the coding agent, IN EACH TARGET REPO
                                     → branch → tests → pull request
@@ -22,7 +24,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-308 tests, under a second. There is no JS test runner, so dashboard behaviour is
+323 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -66,6 +68,12 @@ Each of these exists because the opposite already happened here.
    the workflow refuses them again. A test pushes
    `"opus --dangerously-skip-permissions"` through the dispatch path.
 6. **A pull request is where the automation stops.** Nothing merges itself.
+6b. **Every automated trigger asks `weekly_guard`; only `workflow_dispatch`
+   doesn't.** Two schedulers now aim at the same Monday (GitHub's crons and the
+   Cloudflare `repository_dispatch`), so "am I the review?" is the wrong
+   question and "has today's review already landed?" is the right one. The
+   14:00 cron used to run unguarded; against a second trigger that is a
+   duplicate $0.34 pipeline whenever GitHub delivers late, which is routine.
 7. **Deterministic digest sections stay deterministic.** The staleness banner,
    `IMPLEMENTED`, and `AGING BACKLOG` are computed in Python and stitched into
    the digest in `run_agent`, because a section that depends on an agent
@@ -124,6 +132,21 @@ Each of these exists because the opposite already happened here.
   hard-failed the run instead — the exact red workflow the guard was added to
   prevent. **It is 24 now.** And nothing built on this cron may claim to be at
   most an hour old.
+- **A cron can be dropped entirely, and that looks like nothing at all.** On
+  2026-08-31 GitHub delivered *none* of the weekly review's three scheduled
+  events — 14:00, 16:00 and 18:00 with no run created, no failure, no queued
+  job, while push- and PR-triggered runs in the same repo fired normally. A
+  dropped event is not a red run you can find in the Actions tab; it is an
+  absent row, indistinguishable from a quiet week, and it was caught by a human
+  noticing a seven-day-old timestamp. Every alarm here is downstream of a job
+  starting, so **none of them fire** — the 08-17 retry loop and catch-up crons
+  included, since those live inside a job that has to start, and the catch-ups
+  are `schedule:` entries queued through the very scheduler that dropped the
+  primary. The heartbeat is on the same cron and was dropped too. Redundancy for
+  a cron has to come from a different vendor: `worker/overseer-ask.js` now runs
+  a **Cloudflare** cron that fires `repository_dispatch` at 14:05/17:05 Monday.
+  When diagnosing "the run didn't happen", check `total_count` on the workflow
+  before reading logs — no new run number means there was never a job.
 - **`wrangler secret put` takes the NAME, not the value.** Pasting the key onto
   the command line creates a secret *named* after your credential, echoes it to
   the terminal, and leaves the real slot unset — surfacing much later as an

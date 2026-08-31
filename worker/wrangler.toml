@@ -3,7 +3,15 @@
 #   cd worker
 #   npx wrangler secret put ANTHROPIC_API_KEY   # the same key the pipeline uses
 #   npx wrangler secret put ASK_SHARED_SECRET   # any long random string
+#   npx wrangler secret put DISPATCH_TOKEN      # PAT, actions:write on DISPATCH_REPO
 #   npx wrangler deploy
+#
+# `wrangler secret put` takes the NAME on the command line and prompts for the
+# value. Pasting the credential itself creates a secret named after your token,
+# echoes it to the terminal, and leaves the real slot empty — surfacing much
+# later as an unrelated-looking failure. `npx wrangler secret list` settles it in
+# one line; a credential that has been echoed anywhere gets revoked, not reasoned
+# about.
 #
 # PACK_URL is a plain var, not a secret: it points at a file that is already
 # public on GitHub Pages alongside digest.json. Nothing in the pack is private,
@@ -16,3 +24,22 @@ compatibility_date = "2026-08-01"
 [vars]
 PACK_URL = "https://andyrbrett.github.io/overseer/ask-context.json"
 ASK_MODEL = "claude-sonnet-5"
+DISPATCH_REPO = "AndyRBrett/overseer"
+
+# THE WEEKLY REVIEW'S OFF-GITHUB TRIGGER (2026-08-31).
+#
+# GitHub dropped all three of the review's scheduled events that Monday — no
+# runs created at all, so none of the workflow's own retries or catch-up crons
+# could engage. Those catch-ups are schedule: entries in the same workflow,
+# queued through the same deprioritised scheduler, so they were never redundancy
+# against this. Cloudflare's scheduler is, and this Worker was already deployed.
+#
+# 14:05 is five minutes after GitHub's own 14:00 cron, so a Monday GitHub
+# handles normally is untouched: the dispatch arrives second, weekly_guard.py
+# sees today's digest and no-ops. 17:05 is the backup for a failed POST — not
+# for a failed review, which the workflow's own retries own.
+#
+# Cron is UTC here too. Keep DISPATCH_EVENT in overseer-ask.js in step with the
+# repository_dispatch `types:` in .github/workflows/weekly-review.yml.
+[triggers]
+crons = ["5 14 * * 1", "5 17 * * 1"]
