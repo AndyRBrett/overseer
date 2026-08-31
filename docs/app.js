@@ -357,7 +357,7 @@ function renderShipped(ledger) {
   // rate rather than describe it.
   const aside = `<div class="sub">${t.proposed ?? 0} filed all time` +
     (t.duplicate ? ` · ${t.duplicate} duplicate (${pct(t.duplicate_rate)})` : "") +
-    `</div>`;
+    `</div>` + deliverySplit(t);
 
   const head = bar + aside;
 
@@ -440,6 +440,30 @@ function dispatchLine(d) {
     ? ` · ended <b>${escapeHtml(d.conclusion)}</b>` : "";
   return `<div class="sub"><span class="rc ${cls}">last dispatch</span> ` +
          `${escapeHtml(when)}${failed}</div>`;
+}
+
+// How much of "shipped" the implementer actually delivered (#66).
+//
+// The bar in the delivery panel counts merged work and says nothing about where
+// it came from, which credited the pipeline for an evening of hand-written
+// fixes. The implementer is ~4.4x the cost of the whole review, so this is the
+// number that decides whether it earns its bill.
+//
+// Both figures come from tools.delivery_ledger; nothing here re-reads a label
+// (invariant 4). A ledger published before the split existed carries neither
+// count, and renders nothing rather than a confident zero.
+function deliverySplit(t) {
+  const auto = t.shipped_by_implementer;
+  const hand = t.shipped_by_hand;
+  if (typeof auto !== "number" || typeof hand !== "number") return "";
+  if (!auto && !hand) return "";
+  // The pre-dispatcher count is carried in the same sentence on purpose. Without
+  // it "1 by the implementer" sits next to a shipped total of 49 and reads as a
+  // failure rate, when most of that total landed before the implementer existed.
+  const before = t.shipped_before_implementer;
+  const tail = before ? ` \u00b7 ${before} shipped before it existed` : "";
+  return `<div class="sub dim">since the implementer: ` +
+    `${auto} by the implementer \u00b7 ${hand} by hand${tail}</div>`;
 }
 
 // Implementer — the queue between "proposed" and "shipped".

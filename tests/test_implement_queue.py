@@ -637,3 +637,87 @@ def test_the_agent_is_told_to_close_issues_that_do_not_hold_up():
     root = Path(__file__).resolve().parent.parent
     body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
     assert "gh issue close" in body and '--reason "not planned"' in body
+
+
+# --- who actually delivered it (issue #66) ---------------------------------
+#
+# "Shipped" keys on a merged PR and nothing else, which is the right rule and
+# blind to where the fix came from. On 2026-08-31 five issues shipped in one
+# evening, one of them by the implementer, and the delivery rate read the same
+# either way — while the implementer is ~4.4x the cost of the whole review.
+
+def test_delivered_by_reads_the_dispatchers_own_label():
+    assert o.delivered_by([o.IMPLEMENTING_LABEL]) == "implementer"
+    assert o.delivered_by([]) == "hand"
+    assert o.delivered_by(None) == "hand"
+    assert o.delivered_by(["enhancement", "effort:low"]) == "hand"
+
+
+def test_a_benched_attempt_does_not_get_the_credit():
+    # The dispatcher labelled it, the attempt failed, and it shipped some other
+    # way. Counting that as the implementer's would flatter exactly the runs
+    # that cost money and produced nothing.
+    assert o.delivered_by([o.IMPLEMENTING_LABEL, o.FAILED_LABEL]) == "hand"
+
+
+def test_the_split_counts_only_shipped_work():
+    # Attributing an OPEN issue to a dispatcher that has not finished with it
+    # would be guessing, and the label is applied before the outcome is known.
+    entries = [
+        _entry(1, status="shipped", labels=[o.IMPLEMENTING_LABEL]),
+        _entry(2, status="shipped", labels=[]),
+        _entry(3, status="shipped", labels=[o.IMPLEMENTING_LABEL, o.FAILED_LABEL]),
+        _entry(4, status="open", labels=[o.IMPLEMENTING_LABEL]),
+    ]
+    for e in entries:
+        e["delivered_by"] = o.delivered_by(e.get("labels"))
+    totals = {}
+    for source in ("implementer", "hand"):
+        totals[f"shipped_by_{source}"] = sum(
+            1 for e in entries
+            if e["status"] == "shipped" and e.get("delivered_by") == source)
+    assert totals["shipped_by_implementer"] == 1
+    assert totals["shipped_by_hand"] == 2      # the plain one and the benched one
+
+
+def test_the_dashboard_renders_the_split_it_is_given():
+    # Same seam as the rest of the panel: computed in Python, rendered here, and
+    # a ledger published before the field existed must render nothing rather
+    # than a confident zero.
+    from pathlib import Path
+    app = (Path(__file__).resolve().parent.parent / "docs" / "app.js").read_text(
+        encoding="utf-8")
+    assert "function deliverySplit(" in app
+    assert "deliverySplit(t)" in app
+    assert "shipped_by_implementer" in app and "shipped_by_hand" in app
+    assert 'typeof auto !== "number"' in app
+    # The pre-dispatcher count must travel with the split. Alone, "1 by the
+    # implementer" next to a shipped total of 49 reads as a failure rate.
+    assert "shipped_before_implementer" in app
+
+
+def test_the_split_excludes_work_that_predates_the_dispatcher():
+    # 46 of 49 shipped before the implementer's first run. A raw split reads
+    # "1 by the implementer, 48 by hand" — true, and a straight lie about the
+    # question the number exists to answer.
+    ledger = {"entries": [
+        # The dispatcher's earliest touch sets the cutoff.
+        _entry(1, status="shipped", labels=[o.IMPLEMENTING_LABEL],
+               closed="2026-08-17T22:11:04+00:00"),
+        _entry(2, status="shipped", labels=[], closed="2026-08-31T20:00:00+00:00"),
+        _entry(3, status="shipped", labels=[], closed="2026-07-02T15:00:00+00:00"),
+    ]}
+    # Recompute the way delivery_ledger does, without touching GitHub.
+    entries = ledger["entries"]
+    for e in entries:
+        e["delivered_by"] = o.delivered_by(e.get("labels"))
+    touched = [e.get("closed_at") for e in entries
+               if {o.IMPLEMENTING_LABEL, o.FAILED_LABEL} & set(e.get("labels") or ())
+               and e.get("closed_at")]
+    since = min(touched)
+    auto = sum(1 for e in entries if e["status"] == "shipped"
+               and e["delivered_by"] == "implementer" and e["closed_at"] >= since)
+    hand = sum(1 for e in entries if e["status"] == "shipped"
+               and e["delivered_by"] == "hand" and e["closed_at"] >= since)
+    before = sum(1 for e in entries if e["status"] == "shipped" and e["closed_at"] < since)
+    assert (auto, hand, before) == (1, 1, 1)
