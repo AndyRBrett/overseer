@@ -1,6 +1,20 @@
 {
   "entries": [
     {
+      "closed_at": "2026-08-31T20:33:48+00:00",
+      "created_at": "2026-08-17T19:54:09+00:00",
+      "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
+      "number": 32,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
+      "url": "https://github.com/AndyRBrett/overseer/issues/32"
+    },
+    {
       "closed_at": null,
       "created_at": "2026-08-31T19:47:57+00:00",
       "effort": "medium",
@@ -251,11 +265,16 @@
     {
       "closed_at": null,
       "created_at": "2026-08-24T14:34:17+00:00",
+      "fix_ref": "PR #54",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/54",
       "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
       "number": 50,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
     },
@@ -334,17 +353,6 @@
       "status": "open",
       "title": "Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals",
       "url": "https://github.com/AndyRBrett/overseer/issues/33"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-17T19:54:09+00:00",
-      "kind": "bug",
-      "number": 32,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
-      "url": "https://github.com/AndyRBrett/overseer/issues/32"
     },
     {
       "closed_at": null,
@@ -481,7 +489,8 @@
       "labels": [
         "effort:low",
         "enhancement",
-        "impact:high"
+        "impact:high",
+        "overseer:implement-failed"
       ],
       "number": 73,
       "repo": "AndyRBrett/ufc-dashboard",
@@ -1629,32 +1638,9 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-31T20:11:32Z",
+  "generated": "2026-08-31T21:48:17Z",
   "queue": {
-    "benched": [],
-    "cap": 3,
-    "cost_hint": 1.5,
-    "efforts": [
-      "low"
-    ],
-    "eligible": 8,
-    "failed_label": "overseer:implement-failed",
-    "in_flight": [],
-    "next": [
-      {
-        "kind": "bug",
-        "number": 32,
-        "repo": "AndyRBrett/overseer",
-        "title": "Weekly Project Review workflow failed on its latest run (run 32038432010) \u2014 success_rate_7d dropped to 0.833",
-        "url": "https://github.com/AndyRBrett/overseer/issues/32"
-      },
-      {
-        "kind": "bug",
-        "number": 50,
-        "repo": "AndyRBrett/crypto-trading",
-        "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
-      },
+    "benched": [
       {
         "effort": "low",
         "impact": "high",
@@ -1665,15 +1651,62 @@
         "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
       }
     ],
+    "cap": 3,
+    "cost_hint": 1.5,
+    "efforts": [
+      "low"
+    ],
+    "eligible": 5,
+    "failed_label": "overseer:implement-failed",
+    "in_flight": [
+      {
+        "fix_ref": "PR #54",
+        "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/54",
+        "kind": "bug",
+        "number": 50,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
+      }
+    ],
+    "next": [
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 76,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
+      },
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 59,
+        "repo": "AndyRBrett/overseer",
+        "title": "Add an external dead-man's-switch heartbeat (third-party uptime ping) independent of overseer's own run so silent pipeline failure is detectable",
+        "url": "https://github.com/AndyRBrett/overseer/issues/59"
+      },
+      {
+        "effort": "low",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 51,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
+      }
+    ],
     "tier": "light"
   },
   "totals": {
     "delivery_rate": 0.605,
     "duplicate": 12,
     "duplicate_rate": 0.136,
-    "in_flight": 0,
-    "not_planned": 5,
-    "open": 25,
+    "in_flight": 1,
+    "not_planned": 6,
+    "open": 23,
     "proposed": 88,
     "shipped": 46
   }
