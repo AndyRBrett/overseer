@@ -484,18 +484,19 @@
       "closed_at": null,
       "created_at": "2026-08-15T10:17:32+00:00",
       "effort": "low",
+      "fix_ref": "PR #95",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/95",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
         "effort:low",
         "enhancement",
-        "impact:high",
-        "overseer:implement-failed"
+        "impact:high"
       ],
       "number": 73,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
     },
@@ -1638,19 +1639,9 @@
     }
   ],
   "errors": {},
-  "generated": "2026-08-31T21:56:46Z",
+  "generated": "2026-08-31T22:48:36Z",
   "queue": {
-    "benched": [
-      {
-        "effort": "low",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 73,
-        "repo": "AndyRBrett/ufc-dashboard",
-        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
-        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
-      }
-    ],
+    "benched": [],
     "cap": 3,
     "cost_hint": 1.5,
     "efforts": [
@@ -1667,8 +1658,23 @@
         "repo": "AndyRBrett/crypto-trading",
         "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
         "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
+      },
+      {
+        "effort": "low",
+        "fix_ref": "PR #95",
+        "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/95",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 73,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
       }
     ],
+    "last_dispatch": {
+      "at": "2026-08-31T21:57:52Z",
+      "conclusion": "success"
+    },
     "next": [
       {
         "effort": "low",
@@ -1704,9 +1710,9 @@
     "delivery_rate": 0.605,
     "duplicate": 12,
     "duplicate_rate": 0.136,
-    "in_flight": 1,
+    "in_flight": 2,
     "not_planned": 6,
-    "open": 23,
+    "open": 22,
     "proposed": 88,
     "shipped": 46
   }
