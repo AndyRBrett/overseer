@@ -16,6 +16,19 @@ on:
     # 15:00 UTC Monday — one hour after the 14:00 review, so this week's issues
     # are filed and the ledger has them.
     - cron: "0 15 * * 1"
+    # Catch-ups, each an hour behind one of weekly-review.yml's, so a late review
+    # is still followed by a dispatch. On 2026-08-31 the 15:00 cron did not fire
+    # at its hour at all — GitHub deprioritises scheduled workflows on free public
+    # repos — and landed at 20:30. It happened to still be Monday; a slip past
+    # midnight would have skipped the week's implementation stage silently.
+    #
+    # These are free when the 15:00 run already happened: scripts/implement_guard.py
+    # gates them on this workflow's own run history, because the dispatcher labels
+    # what it hands over, so an ungated catch-up would pick three DIFFERENT issues
+    # and turn a $4.50 Monday into $9.00. Keep CATCHUP_SCHEDULES there in step
+    # with these two lines.
+    - cron: "0 17 * * 1"
+    - cron: "0 19 * * 1"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -64,7 +77,17 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      # Only the catch-up crons ask this question. The 15:00 run and any manual
+      # dispatch are the dispatch — they always proceed.
+      - name: Did today's dispatch already run?
+        id: guard
+        env:
+          FIRED_BY_SCHEDULE: ${{ github.event.schedule }}
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+        run: python scripts/implement_guard.py
+
       - name: Pick and dispatch
+        if: steps.guard.outputs.should_run == 'true'
         env:
           # Needs Issues: write (to label) AND Actions: write (to dispatch) on
           # every repo listed below, including this one.
