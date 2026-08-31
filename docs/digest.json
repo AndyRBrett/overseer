@@ -1,17 +1,17 @@
 {
-  "generated": "2026-08-24T14:35:53Z",
+  "generated": "2026-08-31T19:08:51Z",
   "status": "completed",
-  "summary": "Issues Found\n- crypto-trading: Equity curve froze at exactly 49205.23 for ~25h (Aug 18\u201319) while ETH/SOL positions were open and market was live \u2014 silent stale mark-to-market read, no error logged (filed as #50).\n- coachvision, ufc-dashboard, overseer: all healthy this week \u2014 no new bugs. (coachvision's prior freeze #23 is resolved; ufc-dashboard staleness is expected due to odds_budget_exhausted, already tracked; overseer's earlier success-rate dip has not recurred.)\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Per-asset PnL/drawdown attribution (BTC/ETH/SOL) (effort: low, impact: medium): Cheapest way to find out if 90d drawdown is one asset dragging the book or a broad strategy issue.\n2. coachvision \u2014 Mobile quick-upload endpoint (PWA/iOS Shortcut) (effort: medium, impact: high): Pipeline works but has never ingested footage \u2014 this targets the actual bottleneck (capture friction), not the pipeline itself.\n3. overseer \u2014 CI end-to-end dry-run of the weekly pipeline (effort: medium, impact: high): Runs all four tools + digest gen against fixtures per PR, catching integration failures unit tests miss.\n4. ufc-dashboard \u2014 Correlated multi-bet (parlay) risk calculator (effort: medium, impact: medium): New analytical layer on existing odds/CLV data, not urgent but useful.\n\nIMPLEMENTED (LAST 7 DAYS)\n- overseer #26 \u2014 Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest (PR #37)",
+  "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy, idle-as-expected, or within SLA \u2014 no new confirmed defects. Pre-existing open issues (#76 odds-budget-exhausted on ufc-dashboard; #32 overseer failed-run) remain tracked but unchanged, no regressions.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 External dead-man's-switch heartbeat (effort: low, impact: high): overseer can't detect its own silent failure (0 runs/7d, 168.7h stale this cycle); an out-of-band uptime ping would catch this independent of the pipeline itself, directly addressing the gap behind open issue #32.\n2. crypto-trading \u2014 Time-based position aging/rotation cap (effort: medium, impact: high): 8/10 signals rejected as in_position with flat equity for 7 days; a max-hold re-evaluation window stops recurring BUY signals from being perpetually blocked.\n3. coachvision \u2014 Escalating idle-footage notifications (effort: low, impact: medium): no footage ever ingested and the current \"nudge\" is a passive JSON field; staged SMS/push/Slack alerts as the 14-day idle mark approaches would actually get noticed.\n4. ufc-dashboard \u2014 Tiered movement_alert_threshold by weight-class/bout-position (effort: medium, impact: medium): one global threshold conflates noisy prelim swings (650-670) with meaningful main-event moves (202-295); backtested tiered thresholds would cut false signal noise.",
   "counts": {
-    "tools": 12,
+    "tools": 9,
     "errors": 0,
-    "issues": 1,
+    "issues": 0,
     "enhancements": 4
   },
   "rollup": {
-    "ok": 3,
+    "ok": 2,
     "total": 4,
-    "issues": 1,
+    "issues": 0,
     "enhancements": 4,
     "errors": 0,
     "nudge_threshold": 2,
@@ -19,34 +19,43 @@
       {
         "name": "coachvision",
         "status": "idle",
-        "detail": "no recent activity \u00b7 idle 2 cycles",
-        "cycles": 2,
+        "detail": "no recent activity \u00b7 idle 3 cycles",
+        "cycles": 3,
         "nudge": true
+      },
+      {
+        "name": "Overseer",
+        "status": "idle",
+        "detail": "no recent activity \u00b7 idle 1 cycle",
+        "cycles": 1,
+        "nudge": false
       }
     ]
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-08-24T14:35:53Z",
+      "last_ok": "2026-08-31T19:08:51Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-08-24T14:35:53Z",
+      "last_ok": "2026-08-31T19:08:51Z",
       "blind_cycles": 0,
-      "idle_cycles": 2
+      "idle_cycles": 3
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-08-24T14:35:53Z",
+      "last_ok": "2026-08-31T19:08:51Z",
       "blind_cycles": 0
     },
     "Overseer": {
-      "status": "ok",
-      "last_ok": "2026-08-24T14:35:53Z",
-      "blind_cycles": 0
+      "status": "idle",
+      "reason": "read OK but no recent activity",
+      "last_ok": "2026-08-31T19:08:51Z",
+      "blind_cycles": 0,
+      "idle_cycles": 1
     }
   },
   "output_alerts": [],
@@ -56,12 +65,12 @@
         "agent": "Bug-Hunter",
         "model": "claude-opus-4-8",
         "tier": "heavy",
-        "calls": 3,
-        "input": 6,
-        "output": 6534,
-        "cache_write": 11770,
-        "cache_read": 32192,
-        "usd": 0.253
+        "calls": 1,
+        "input": 2,
+        "output": 3421,
+        "cache_write": 13040,
+        "cache_read": 0,
+        "usd": 0.167
       },
       {
         "agent": "Idea-Agent",
@@ -69,10 +78,10 @@
         "tier": "light",
         "calls": 2,
         "input": 4,
-        "output": 4005,
-        "cache_write": 15352,
-        "cache_read": 11457,
-        "usd": 0.1211
+        "output": 3281,
+        "cache_write": 15942,
+        "cache_read": 12727,
+        "usd": 0.1128
       },
       {
         "agent": "Reviewer",
@@ -80,116 +89,91 @@
         "tier": "light",
         "calls": 2,
         "input": 3,
-        "output": 1532,
-        "cache_write": 3954,
-        "cache_read": 2723,
-        "usd": 0.0386
+        "output": 1863,
+        "cache_write": 4782,
+        "cache_read": 3190,
+        "usd": 0.0468
       }
     ],
     "priced": true,
     "heavy_model": "claude-opus-4-8",
-    "total_usd": 0.4128,
-    "baseline_usd": 0.5193,
-    "saved_usd": 0.1065,
-    "saved_pct": 20.5
+    "total_usd": 0.3267,
+    "baseline_usd": 0.4332,
+    "saved_usd": 0.1064,
+    "saved_pct": 24.6
   },
   "timeline": [
     {
-      "ts": "14:32:54",
+      "ts": "19:06:51",
       "agent": "Telemetry",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:32:54",
+      "ts": "19:06:51",
       "agent": "Telemetry",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:32:54",
+      "ts": "19:06:51",
       "agent": "Telemetry",
       "label": "read_ufc_scraper_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:32:54",
+      "ts": "19:06:51",
       "agent": "Telemetry",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:33:39",
+      "ts": "19:07:38",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "I'm checking the trading bot telemetry: status is fine, last run within SLA, no errors logged, and PnL looks positive short-term but negative over 90 days, though that's just performance not a bug. I do notice a suspicious flat spot in the\u2026",
-      "text_full": "I'm checking the trading bot telemetry: status is fine, last run within SLA, no errors logged, and PnL looks positive short-term but negative over 90 days, though that's just performance not a bug. I do notice a suspicious flat spot in the equity curve over a weekend where the same value repeats several times, which could mean a frozen data feed, though it's not conclusive since trading resumes normally afterward. For coachvision, it's idle but the pipeline self-test passes and frames are processing fine, with the last run only 7.5 hours ago. I'm reconsidering issue #23 about the status being frozen since 2026-08-10 \u2014 but since the last run is now fresh, that issue looks resolved and this system is healthy, just idle waiting for footage. Turning to the UFC dashboard, success rate is perfect and the last run was under an hour ago, but there's one stale event \u2014 an upcoming fight whose data hasn't updated in two weeks, likely tied to the already-tracked odds budget exhaustion issue in #76. I'm weighing whether this single stale event constitutes a new bug worth filing or if it's just a downstream symptom of the existing budget problem. Looking at Overseer, the run success rate has recovered to 1.0 after the earlier failure reported in #32, and I'm checking whether the last run age of roughly 6.8 days is within the expected weekly cadence or indicates the system is falling behind schedule. With ETH and SOL positions open, equity should move with crypto prices, so being pinned to the exact cent for 29 hours looks like frozen data rather than normal behavior, though it could just be a quiet weekend stretch. The errors array is empty and it recovered afterward, so I'm weighing whether this counts as a confirmed bug or just a borderline case worth flagging cautiously. Since no error was logged and it self-recovered, it's ambiguous enough that I'm inclined to flag it mentally but hold off on formally filing it, since the instructions stress confirmed bugs over The instructi\u2026"
+      "text": "The trading bot looks healthy\u2014positive 30d PnL despite no trades in the last week, which just reflects a quiet market, and there's no sign of the frozen equity issue from before. Coachvision is also fine, just idle since no footage has com\u2026",
+      "text_full": "The trading bot looks healthy\u2014positive 30d PnL despite no trades in the last week, which just reflects a quiet market, and there's no sign of the frozen equity issue from before. Coachvision is also fine, just idle since no footage has come in, which matches its self-test passing cleanly. The UFC dashboard is running at 100% success rate with fresh data, and the odds budget exhaustion is already a known, tracked issue. Overseer is more concerning: 0 runs in the past 7 days and success_rate_7d is null, meaning the weekly schedule appears to have lapsed entirely rather than just having a failed run like the earlier issue #32 described. I need to think through whether 168.7 hours since the last run is consistent with a weekly cron or actually indicates the schedule stopped firing. Doing the math, 168 hours is exactly 7 days, so 168.7 hours puts it right at that boundary \u2014 this could just be normal cadence for a weekly job rather than an actual lapse, since runs_7d=0 would naturally happen if the last run occurred just outside the trailing 7-day window. There's no error logged either, which supports this being expected behavior rather than a failure, though I want to be careful not to dismiss it too quickly given the emphasis on reviewing overseer status rigorously. 168h just clears the 7-day boundary, so the zero-run count is a timing artifact of the window edge rather than an actual failure \u2014 nothing to file there. Going through the rest, nothing stands out as clearly broken: trading's negative pnl is just performance, and the null slippage is expected since there were no fills. The UFC line movement looks like normal data, not an error worth flagging. Since this run is happening right now, the schedule isn't actually lapsed, so there's nothing anomalous there either. I'll conclude there are no new bugs to file and move on to writing the summary without needing to call any more tools."
     },
     {
-      "ts": "14:33:39",
-      "agent": "Bug-Hunter",
-      "label": "search_existing_issues (search)",
-      "text": "searched AndyRBrett/crypto-trading: 0 match(es)"
-    },
-    {
-      "ts": "14:33:40",
-      "agent": "Bug-Hunter",
-      "label": "search_existing_issues (search)",
-      "text": "searched AndyRBrett/ufc-dashboard: 0 match(es)"
-    },
-    {
-      "ts": "14:34:17",
-      "agent": "Bug-Hunter",
-      "label": "reasoning",
-      "text": "I'm confirming there's no other match, then focusing on the frozen equity readings\u2014seven identical values of 49205.23 spanning roughly 25 hours despite the bot clearly still running and logging at regular intervals, which with open ETH/SOL\u2026",
-      "text_full": "I'm confirming there's no other match, then focusing on the frozen equity readings\u2014seven identical values of 49205.23 spanning roughly 25 hours despite the bot clearly still running and logging at regular intervals, which with open ETH/SOL/BTC positions strongly suggests a genuine stuck-value bug rather than a coincidence. But I'm second-guessing whether the bot might have simply been flat (all cash) during that window, which would make constant equity a benign explanation rather than a bug\u2014I need to check whether position state during Aug 18-19 supports this. But looking at the actual numbers, equity dropping to 49205.23 then holding exactly flat for 25 hours before resuming with different fluctuation patterns doesn't look like idle cash \u2014 it looks like a stuck cached value that got logged repeatedly without triggering any error. The surrounding small fluctuations before and after the freeze support that positions were being marked to market the whole time, making the freeze itself the anomaly worth flagging. I'm confident enough to file this as a confirmed data-integrity bug, so I'm drafting an issue titled around the frozen equity curve with the exact timestamps and duration as evidence."
-    },
-    {
-      "ts": "14:34:18",
-      "agent": "Bug-Hunter",
-      "label": "file_issue (bug)",
-      "text": "AndyRBrett/crypto-trading \u2014 Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error (#50)"
-    },
-    {
-      "ts": "14:35:14",
+      "ts": "19:08:12",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'm noticing the trading bot's performance diverges by timeframe\u2014negative over 90 days but recovering strongly in the last 30 and 7 days\u2014which makes me think about proposing a per-asset PnL breakdown (BTC/ETH/SOL) to pinpoint which asset i\u2026",
-      "text_full": "I'm noticing the trading bot's performance diverges by timeframe\u2014negative over 90 days but recovering strongly in the last 30 and 7 days\u2014which makes me think about proposing a per-asset PnL breakdown (BTC/ETH/SOL) to pinpoint which asset is driving the recent recovery versus the longer drawdown, distinct from the circuit-breaker idea already listed. For coachvision, since it's idle and staleness alerts already exist, I'm considering a mobile quick-capture shortcut (like an iOS Shortcuts integration) that lets users instantly push post-training clips into the watch folder, which feels more specific and additive than the existing cloud-storage connector proposal, though I want to make sure it's not just a duplicate framing of the same concept. Actually simplifying to a mobile-friendly quick-upload web endpoint for on-the-spot clip capture from the gym floor - low effort, distinct from the cloud-storage connector since it's first-party lightweight upload. For the UFC dashboard, I'm considering a fighter injury/replacement webhook scraper to auto-tag replacement bouts, which draws from a different upstream data source than the closed phantom-alert issue. I like the idea of a weekly parlay/correlated-bets risk calculator using implied probabilities across the card, building nicely on the implied win probability feature already shipped. For Overseer, I'm weighing automated retry/self-heal logic for weekly review workflow failures against an end-to-end test that runs the full weekly pipeline against fixture data in CI - the latter feels like a good extension since it tests the full pipeline rather than just units. I'm ruling out the stalled weekly runs issue since that's already tracked as a bug elsewhere. Settling on four final ideas spanning different projects: PnL attribution for the trading bot, the mobile quick-upload endpoint for coachvision, the correlated-parlay risk calculator for ufc-dashboard, and I still need to pick the fourth for Overseer. That fourth idea b\u2026"
+      "text": "I'm brainstorming new angles beyond what's already covered \u2014 considering stale-strategy detection when signals go unacted for too long, and adding a time-based position-aging exit rule rather than repeating the near-miss alert idea already\u2026",
+      "text_full": "I'm brainstorming new angles beyond what's already covered \u2014 considering stale-strategy detection when signals go unacted for too long, and adding a time-based position-aging exit rule rather than repeating the near-miss alert idea already addressed elsewhere. For coachvision, since existing ideas cover uploads and pose scoring, I'm looking at gamifying engagement with streak tracking or a calendar/SMS nudge integration that actually pushes notifications rather than just updating a status field \u2014 that feels distinct enough to be worth proposing. Now I'm turning to the UFC dashboard and checking whether the odds_budget_exhausted flag is already being tracked in an open item. For the awaiting-card issue, I want something distinct from the existing adaptive budget allocator proposal, so I'm leaning toward a historical odds-movement backtest to calibrate the movement alert threshold per weight class as a fresh idea. Checking the overseer's stale run status against ticket #32, I realize a dead-man's-switch alert idea overlaps too closely with that already-open issue about failed weekly reviews, so I need to find a genuinely new angle instead. I settle on proposing an external heartbeat monitor - a cron-based ping to a third-party uptime service that pages if the overseer's weekly run doesn't fire - since the overseer inherently can't detect its own failure, making this a distinct and valuable addition. With that I finalize four ideas: position-aging/rotation for the trading bot, proactive push-notification escalation for coachvision, adaptive threshold calibration via backtest for ufc-dashboard, and external heartbeat monitoring for overseer, and now I'll work out rationale plus effort/impact scoring for each."
     },
     {
-      "ts": "14:35:16",
+      "ts": "19:08:15",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows (effort low, impact medium)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals (effort medium, impact high)"
     },
     {
-      "ts": "14:35:20",
+      "ts": "19:08:19",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/coachvision \u2014 Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion (effort medium, impact high)"
+      "text": "AndyRBrett/coachvision \u2014 Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge (effort low, impact medium)"
     },
     {
-      "ts": "14:35:23",
+      "ts": "19:08:23",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data (effort medium, impact medium)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant (effort medium, impact medium)"
     },
     {
-      "ts": "14:35:26",
+      "ts": "19:08:27",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR (effort medium, impact high)"
+      "text": "AndyRBrett/overseer \u2014 Add an external dead-man's-switch heartbeat (third-party uptime ping) independent of overseer's own run so silent pipeline failure is detectable (effort low, impact high)"
     },
     {
-      "ts": "14:35:44",
+      "ts": "19:08:48",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "Now I'm compiling the digest: the only confirmed bug this week is the stale equity curve issue in crypto-trading #50, with everything else looking healthy. For enhancement ideas, I'm ranking them by leading with low-effort, high-impact opt\u2026",
-      "text_full": "Now I'm compiling the digest: the only confirmed bug this week is the stale equity curve issue in crypto-trading #50, with everything else looking healthy. For enhancement ideas, I'm ranking them by leading with low-effort, high-impact options first, putting the crypto-trading per-asset PnL attribution idea at the top since it's lowest effort, followed by the coachvision mobile upload, overseer CI dry-run, and ufc-dashboard parlay calculator ideas."
+      "text": "I'm merging the bug-hunter findings (no new bugs) with the idea agent's four ideas, and weighing whether the still-open overseer issue #32 should be surfaced under Issues Found even though no staleness alert triggered this run \u2014 the instru\u2026",
+      "text_full": "I'm merging the bug-hunter findings (no new bugs) with the idea agent's four ideas, and weighing whether the still-open overseer issue #32 should be surfaced under Issues Found even though no staleness alert triggered this run \u2014 the instructions seem to tie that surfacing rule specifically to halted-feed bugs, so I need to check if #32 qualifies. I'll keep it simple: \"None this week,\" possibly with a brief note on pre-existing open issues for context, but not required. Now for ranking the four ideas by effort versus impact, I'm leaning toward ordering them as low effort/high impact first, then medium effort/high impact, then low effort/medium impact, then medium/medium \u2014 putting the overseer heartbeat ping on top, followed by crypto-trading position aging cap, then coachvision notifications, then ufc-dashboard calibration."
     },
     {
-      "ts": "14:35:44",
+      "ts": "19:08:48",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"

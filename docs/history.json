@@ -400,6 +400,41 @@
         "baseline_usd": 0.5193,
         "saved_usd": 0.1065
       }
+    },
+    {
+      "date": "2026-08-31",
+      "generated": "2026-08-31T19:08:51Z",
+      "status": "completed",
+      "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy, idle-as-expected, or within SLA \u2014 no new confirmed defects. Pre-existing open issues (#76 odds-budget-exhausted on ufc-dashboard; #32 overseer failed-run) remain tracked but unchanged, no regressions.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 External dead-man's-switch heartbeat (effort: low, impact: high): overseer can't detect its own silent failure (0 runs/7d, 168.7h stale this cycle); an out-of-band uptime ping would catch this independent of the pipeline itself, directly addressing the gap behind open issue #32.\n2. crypto-trading \u2014 Time-based position aging/rotation cap (effort: medium, impact: high): 8/10 signals rejected as in_position with flat equity for 7 days; a max-hold re-evaluation window stops recurring BUY signals from being perpetually blocked.\n3. coachvision \u2014 Escalating idle-footage notifications (effort: low, impact: medium): no footage ever ingested and the current \"nudge\" is a passive JSON field; staged SMS/push/Slack alerts as the 14-day idle mark approaches would actually get noticed.\n4. ufc-dashboard \u2014 Tiered movement_alert_threshold by weight-class/bout-position (effort: medium, impact: medium): one global threshold conflates noisy prelim swings (650-670) with meaningful main-event moves (202-295); backtested tiered thresholds would cut false signal noise.",
+      "counts": {
+        "tools": 9,
+        "errors": 0,
+        "issues": 0,
+        "enhancements": 4
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "idle",
+          "score": 0.5
+        }
+      },
+      "spend": {
+        "total_usd": 0.3267,
+        "baseline_usd": 0.4332,
+        "saved_usd": 0.1064
+      }
     }
   ]
 }
