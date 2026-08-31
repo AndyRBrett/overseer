@@ -22,7 +22,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-321 tests, under a second. There is no JS test runner, so dashboard behaviour is
+324 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -185,7 +185,11 @@ toolchain, the Python suite pins the seams:
   caused visible layout bugs on a phone.
 - `tests/test_implement_queue.py` asserts `app.js` renders into element ids
   `index.html` actually has, and that banner headings still match the ALL-CAPS
-  regex `formatDigest` uses to make them section headings.
+  regex `formatDigest` uses to make them section headings. It also pins that the panel
+  says when the dispatcher last ran: an empty `in_flight` list means either "ran
+  and found nothing" or "never ran", and until `last_dispatch` existed those
+  rendered identically — on 2026-08-31 the second was true for hours while the
+  panel looked like a calm week.
 - `tests/test_ask.py` greps `worker/overseer-ask.js` for prompt sentences and
   gate-rule strings, so the Worker cannot quietly grow a second copy of either.
   It also pins that the Worker never re-serializes the facts (that would miss
