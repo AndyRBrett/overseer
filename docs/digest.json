@@ -1,7 +1,7 @@
 {
-  "generated": "2026-08-31T19:08:51Z",
+  "generated": "2026-08-31T19:48:15Z",
   "status": "completed",
-  "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy, idle-as-expected, or within SLA \u2014 no new confirmed defects. Pre-existing open issues (#76 odds-budget-exhausted on ufc-dashboard; #32 overseer failed-run) remain tracked but unchanged, no regressions.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 External dead-man's-switch heartbeat (effort: low, impact: high): overseer can't detect its own silent failure (0 runs/7d, 168.7h stale this cycle); an out-of-band uptime ping would catch this independent of the pipeline itself, directly addressing the gap behind open issue #32.\n2. crypto-trading \u2014 Time-based position aging/rotation cap (effort: medium, impact: high): 8/10 signals rejected as in_position with flat equity for 7 days; a max-hold re-evaluation window stops recurring BUY signals from being perpetually blocked.\n3. coachvision \u2014 Escalating idle-footage notifications (effort: low, impact: medium): no footage ever ingested and the current \"nudge\" is a passive JSON field; staged SMS/push/Slack alerts as the 14-day idle mark approaches would actually get noticed.\n4. ufc-dashboard \u2014 Tiered movement_alert_threshold by weight-class/bout-position (effort: medium, impact: medium): one global threshold conflates noisy prelim swings (650-670) with meaningful main-event moves (202-295); backtested tiered thresholds would cut false signal noise.",
+  "summary": "Issues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy or in expected idle/known states \u2014 no new bugs filed.\n\nTop Enhancement Ideas (ranked)\n1. coachvision \u2014 Drift-alerting on self-test canary (effort: low, impact: medium): Cheap statistical check on canary history catches silent pipeline/model regressions even while real footage stays idle.\n2. ufc-dashboard \u2014 Secondary odds-provider fallback (effort: medium, impact: high): Auto-failover when primary odds API budget is exhausted, fixing the recurring odds-unavailable events instead of just alerting.\n3. crypto-trading \u2014 ATR/volatility-scaled position sizing (effort: medium, impact: high): Normalizes per-trade risk to realized volatility, improving risk consistency independent of entry-threshold tuning.\n4. overseer \u2014 Track enhancement-proposal outcome rate per project (effort: medium, impact: medium): Feeds shipped/closed ratios back into idea generation so future proposals skew toward higher-yield categories.",
   "counts": {
     "tools": 9,
     "errors": 0,
@@ -9,7 +9,7 @@
     "enhancements": 4
   },
   "rollup": {
-    "ok": 2,
+    "ok": 3,
     "total": 4,
     "issues": 0,
     "enhancements": 4,
@@ -19,43 +19,34 @@
       {
         "name": "coachvision",
         "status": "idle",
-        "detail": "no recent activity \u00b7 idle 3 cycles",
-        "cycles": 3,
+        "detail": "no recent activity \u00b7 idle 4 cycles",
+        "cycles": 4,
         "nudge": true
-      },
-      {
-        "name": "Overseer",
-        "status": "idle",
-        "detail": "no recent activity \u00b7 idle 1 cycle",
-        "cycles": 1,
-        "nudge": false
       }
     ]
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-08-31T19:08:51Z",
+      "last_ok": "2026-08-31T19:48:15Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-08-31T19:08:51Z",
+      "last_ok": "2026-08-31T19:48:15Z",
       "blind_cycles": 0,
-      "idle_cycles": 3
+      "idle_cycles": 4
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-08-31T19:08:51Z",
+      "last_ok": "2026-08-31T19:48:15Z",
       "blind_cycles": 0
     },
     "Overseer": {
-      "status": "idle",
-      "reason": "read OK but no recent activity",
-      "last_ok": "2026-08-31T19:08:51Z",
-      "blind_cycles": 0,
-      "idle_cycles": 1
+      "status": "ok",
+      "last_ok": "2026-08-31T19:48:15Z",
+      "blind_cycles": 0
     }
   },
   "output_alerts": [],
@@ -67,10 +58,10 @@
         "tier": "heavy",
         "calls": 1,
         "input": 2,
-        "output": 3421,
-        "cache_write": 13040,
+        "output": 2112,
+        "cache_write": 13075,
         "cache_read": 0,
-        "usd": 0.167
+        "usd": 0.1345
       },
       {
         "agent": "Idea-Agent",
@@ -78,10 +69,10 @@
         "tier": "light",
         "calls": 2,
         "input": 4,
-        "output": 3281,
-        "cache_write": 15942,
-        "cache_read": 12727,
-        "usd": 0.1128
+        "output": 3300,
+        "cache_write": 15939,
+        "cache_read": 12762,
+        "usd": 0.1131
       },
       {
         "agent": "Reviewer",
@@ -89,91 +80,91 @@
         "tier": "light",
         "calls": 2,
         "input": 3,
-        "output": 1863,
-        "cache_write": 4782,
-        "cache_read": 3190,
-        "usd": 0.0468
+        "output": 959,
+        "cache_write": 3791,
+        "cache_read": 3026,
+        "usd": 0.0295
       }
     ],
     "priced": true,
     "heavy_model": "claude-opus-4-8",
-    "total_usd": 0.3267,
-    "baseline_usd": 0.4332,
-    "saved_usd": 0.1064,
-    "saved_pct": 24.6
+    "total_usd": 0.2772,
+    "baseline_usd": 0.3722,
+    "saved_usd": 0.0951,
+    "saved_pct": 25.5
   },
   "timeline": [
     {
-      "ts": "19:06:51",
+      "ts": "19:46:41",
       "agent": "Telemetry",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "19:06:51",
+      "ts": "19:46:41",
       "agent": "Telemetry",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "19:06:51",
+      "ts": "19:46:41",
       "agent": "Telemetry",
       "label": "read_ufc_scraper_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "19:06:51",
+      "ts": "19:46:41",
       "agent": "Telemetry",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "19:07:38",
+      "ts": "19:47:12",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "The trading bot looks healthy\u2014positive 30d PnL despite no trades in the last week, which just reflects a quiet market, and there's no sign of the frozen equity issue from before. Coachvision is also fine, just idle since no footage has com\u2026",
-      "text_full": "The trading bot looks healthy\u2014positive 30d PnL despite no trades in the last week, which just reflects a quiet market, and there's no sign of the frozen equity issue from before. Coachvision is also fine, just idle since no footage has come in, which matches its self-test passing cleanly. The UFC dashboard is running at 100% success rate with fresh data, and the odds budget exhaustion is already a known, tracked issue. Overseer is more concerning: 0 runs in the past 7 days and success_rate_7d is null, meaning the weekly schedule appears to have lapsed entirely rather than just having a failed run like the earlier issue #32 described. I need to think through whether 168.7 hours since the last run is consistent with a weekly cron or actually indicates the schedule stopped firing. Doing the math, 168 hours is exactly 7 days, so 168.7 hours puts it right at that boundary \u2014 this could just be normal cadence for a weekly job rather than an actual lapse, since runs_7d=0 would naturally happen if the last run occurred just outside the trailing 7-day window. There's no error logged either, which supports this being expected behavior rather than a failure, though I want to be careful not to dismiss it too quickly given the emphasis on reviewing overseer status rigorously. 168h just clears the 7-day boundary, so the zero-run count is a timing artifact of the window edge rather than an actual failure \u2014 nothing to file there. Going through the rest, nothing stands out as clearly broken: trading's negative pnl is just performance, and the null slippage is expected since there were no fills. The UFC line movement looks like normal data, not an error worth flagging. Since this run is happening right now, the schedule isn't actually lapsed, so there's nothing anomalous there either. I'll conclude there are no new bugs to file and move on to writing the summary without needing to call any more tools."
+      "text": "The trading bot looks healthy\u2014stable status, no errors, and its lack of trades in the past week is just a quiet-market condition rather than a bug. Now I'm checking coachvision, which appears idle since no footage has ever been ingested, s\u2026",
+      "text_full": "The trading bot looks healthy\u2014stable status, no errors, and its lack of trades in the past week is just a quiet-market condition rather than a bug. Now I'm checking coachvision, which appears idle since no footage has ever been ingested, so I'm looking at its pipeline self-test results. The self-test passed with 77 frames, showing no errors\u2014this is just idle behavior already tracked under issue #38, not a new bug. I do notice a naming inconsistency where the read tool is still called \"read_volleyball_results\" despite coachvision now being martial-arts focused, but that's cosmetic, not a data bug worth filing. For the UFC dashboard, success rate is perfect with no errors; the odds_budget_exhausted flag is already tracked in #76, and while some line movements look large, that's just volatile data rather than a bug, so unavailable odds for two events are explained by the exhausted budget. The overseer system is fully healthy too\u2014one run, 100% success, no errors, recovered from the earlier issue in #32. So across all four systems this week, I'm not finding any new confirmed bugs, and I want to do one more pass to make sure nothing broken is slipping through. Everything checks out as healthy or simply idle\u2014no crashes, no failed runs, no stale data, no incorrect values. The trading system shows zero trades over seven days, but that's due to quiet market conditions and in-position rejections, not malfunction. Since I'm not planning to file anything, there's no need to search existing issues, so I'll move on to writing up the summary."
     },
     {
-      "ts": "19:08:12",
+      "ts": "19:47:45",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'm brainstorming new angles beyond what's already covered \u2014 considering stale-strategy detection when signals go unacted for too long, and adding a time-based position-aging exit rule rather than repeating the near-miss alert idea already\u2026",
-      "text_full": "I'm brainstorming new angles beyond what's already covered \u2014 considering stale-strategy detection when signals go unacted for too long, and adding a time-based position-aging exit rule rather than repeating the near-miss alert idea already addressed elsewhere. For coachvision, since existing ideas cover uploads and pose scoring, I'm looking at gamifying engagement with streak tracking or a calendar/SMS nudge integration that actually pushes notifications rather than just updating a status field \u2014 that feels distinct enough to be worth proposing. Now I'm turning to the UFC dashboard and checking whether the odds_budget_exhausted flag is already being tracked in an open item. For the awaiting-card issue, I want something distinct from the existing adaptive budget allocator proposal, so I'm leaning toward a historical odds-movement backtest to calibrate the movement alert threshold per weight class as a fresh idea. Checking the overseer's stale run status against ticket #32, I realize a dead-man's-switch alert idea overlaps too closely with that already-open issue about failed weekly reviews, so I need to find a genuinely new angle instead. I settle on proposing an external heartbeat monitor - a cron-based ping to a third-party uptime service that pages if the overseer's weekly run doesn't fire - since the overseer inherently can't detect its own failure, making this a distinct and valuable addition. With that I finalize four ideas: position-aging/rotation for the trading bot, proactive push-notification escalation for coachvision, adaptive threshold calibration via backtest for ufc-dashboard, and external heartbeat monitoring for overseer, and now I'll work out rationale plus effort/impact scoring for each."
+      "text": "I'm looking for fresh ideas not already covered, noticing the signal_proximity data tracks near_threshold_pct metrics that aren't used for alerting yet. This suggests a proactive \"near-trigger\" notification that fires before the actual sig\u2026",
+      "text_full": "I'm looking for fresh ideas not already covered, noticing the signal_proximity data tracks near_threshold_pct metrics that aren't used for alerting yet. This suggests a proactive \"near-trigger\" notification that fires before the actual signal threshold is crossed, which seems distinct from the existing near-miss report and adaptive threshold issues already logged. For the trading bot specifically, I settle on proposing automated position-sizing based on volatility targeting using ATR\u2014this is distinct from the existing threshold-scaling and circuit-breaker ideas since it addresses position size rather than trigger conditions. For coachvision, since it's idle with no footage and existing ideas already cover the pipeline end-to-end, I'm thinking about proposing synthetic footage generation as something genuinely new. For UFC dashboard, adding a fallback secondary odds-data provider seems like solid distinct value given the budget exhaustion state, separate from the existing banner alert and adaptive allocator ideas. For Overseer, I'm noting the existing open ideas around attention score, CI dry-run, and dead man's switch before considering what gap remains. I land on tracking idea acceptance rate (shipped vs closed vs still-open) per project as a feedback metric to improve future brainstorming quality - a distinct meta-loop idea with medium effort and impact. That gives me four final ideas spread across trading bot, coachvision, ufc-dashboard, and overseer, which is good coverage across all four repos, so I'll stick with four rather than stretching to five."
     },
     {
-      "ts": "19:08:15",
+      "ts": "19:47:48",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals (effort medium, impact high)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add ATR/volatility-scaled position sizing (vol-targeting) independent of entry thresholds (effort medium, impact high)"
     },
     {
-      "ts": "19:08:19",
+      "ts": "19:47:52",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/coachvision \u2014 Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge (effort low, impact medium)"
+      "text": "AndyRBrett/coachvision \u2014 Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline (effort low, impact medium)"
     },
     {
-      "ts": "19:08:23",
+      "ts": "19:47:56",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant (effort medium, impact medium)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted (effort medium, impact high)"
     },
     {
-      "ts": "19:08:27",
+      "ts": "19:47:59",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add an external dead-man's-switch heartbeat (third-party uptime ping) independent of overseer's own run so silent pipeline failure is detectable (effort low, impact high)"
+      "text": "AndyRBrett/overseer \u2014 Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation (effort medium, impact medium)"
     },
     {
-      "ts": "19:08:48",
+      "ts": "19:48:12",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "I'm merging the bug-hunter findings (no new bugs) with the idea agent's four ideas, and weighing whether the still-open overseer issue #32 should be surfaced under Issues Found even though no staleness alert triggered this run \u2014 the instru\u2026",
-      "text_full": "I'm merging the bug-hunter findings (no new bugs) with the idea agent's four ideas, and weighing whether the still-open overseer issue #32 should be surfaced under Issues Found even though no staleness alert triggered this run \u2014 the instructions seem to tie that surfacing rule specifically to halted-feed bugs, so I need to check if #32 qualifies. I'll keep it simple: \"None this week,\" possibly with a brief note on pre-existing open issues for context, but not required. Now for ranking the four ideas by effort versus impact, I'm leaning toward ordering them as low effort/high impact first, then medium effort/high impact, then low effort/medium impact, then medium/medium \u2014 putting the overseer heartbeat ping on top, followed by crypto-trading position aging cap, then coachvision notifications, then ufc-dashboard calibration."
+      "text": "No bugs found this week, so the digest will note \"Issues Found: None.\" Now I'm ranking ideas by effort/impact: idea 2 is low-effort/medium-impact so it goes first, followed by ideas 1 and 3 which are medium-effort/high-impact, then idea 4 \u2026",
+      "text_full": "No bugs found this week, so the digest will note \"Issues Found: None.\" Now I'm ranking ideas by effort/impact: idea 2 is low-effort/medium-impact so it goes first, followed by ideas 1 and 3 which are medium-effort/high-impact, then idea 4 as medium-effort/medium-impact."
     },
     {
-      "ts": "19:08:48",
+      "ts": "19:48:12",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"

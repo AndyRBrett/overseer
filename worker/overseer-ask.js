@@ -13,13 +13,32 @@
  * the Python changes. So everything that could drift lives in the pack, and
  * `tests/test_ask.py` greps this file to make sure it stays that way.
  *
+ * It has one other job, added 2026-08-31 and deliberately kept at arm's length
+ * from the above: crons that poke GitHub into running the weekly review and the
+ * heartbeat that watches it. See fireDispatch() for why those live here rather
+ * than in a workflow.
+ *
  * Deploy:
  *   npx wrangler secret put ANTHROPIC_API_KEY
  *   npx wrangler secret put ASK_SHARED_SECRET
+ *   npx wrangler secret put DISPATCH_TOKEN
  *   npx wrangler deploy
  */
 
 const API_URL = "https://api.anthropic.com/v1/messages";
+
+// Which cron asks for what. Cloudflare hands the scheduled handler the cron
+// expression that fired, which is the only way one Worker tells its schedules
+// apart. Keep this in step with [triggers] in wrangler.toml and with the
+// repository_dispatch `types:` in each workflow — a typo in any of the three is
+// a dispatch GitHub accepts with 204 that no workflow reacts to, which reads as
+// healthy right up until someone notices a stale digest. A test pins all three
+// together for exactly that reason.
+const DISPATCH_EVENTS = {
+  "5 14 * * 1": "weekly-review",
+  "5 17 * * 1": "weekly-review",
+  "20 15 * * *": "heartbeat",
+};
 const DEFAULT_MODEL = "claude-sonnet-5";
 
 // Voice answers are two or three sentences. Nothing here needs room to ramble,
@@ -84,7 +103,81 @@ function userTurn(question) {
   return `[current time: ${now}]\n${question}`;
 }
 
+/**
+ * Poke GitHub into running a workflow.
+ *
+ * WHY THIS IS IN A CLOUDFLARE WORKER. On 2026-08-31 GitHub delivered none of
+ * the weekly review's three scheduled events — 14:00, 16:00 and 18:00 UTC all
+ * passed with no workflow run created at all. Not a failure: no job, no log,
+ * nothing red, so none of the workflow's own hardening (in-job retries, the
+ * catch-up crons) could engage, and nothing alerted. Scheduled workflows on
+ * free public repos are deprioritised hard enough that ledger-refresh's HOURLY
+ * cron managed two firings in eighteen hours that day.
+ *
+ * The catch-up crons could not fix this because they share the scheduler that
+ * dropped the primary. Redundancy has to come from a different vendor, so it
+ * comes from here: this Worker already exists, already deploys, and its cron
+ * runs on Cloudflare's scheduler rather than GitHub's. repository_dispatch was
+ * the natural target because ledger-refresh already exposes one and the
+ * event-driven paths were the ones that kept working on 08-31.
+ *
+ * This does NOT decide whether the review should run — scripts/weekly_guard.py
+ * does, on the GitHub side, for every automated trigger. Keeping that judgement
+ * out of here is invariant 8: a rule that lives in the Worker is deployed
+ * separately and drifts out of sight of the Python. All this knows is "it is
+ * Monday, ask".
+ */
+async function fireDispatch(env, eventType) {
+  const repo = env.DISPATCH_REPO;
+  if (!env.DISPATCH_TOKEN || !repo) {
+    // Loud, because the symptom otherwise is a review that silently stops
+    // happening — which is the exact failure this was built to end.
+    console.error("[dispatch] not configured: need DISPATCH_TOKEN and DISPATCH_REPO");
+    return;
+  }
+
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.DISPATCH_TOKEN}`,
+        accept: "application/vnd.github+json",
+        "x-github-api-version": "2022-11-28",
+        // GitHub rejects an API request with no User-Agent outright, and the
+        // 403 it returns reads like a permissions problem rather than a
+        // missing header.
+        "user-agent": "overseer-weekly-trigger",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ event_type: eventType }),
+    });
+    // 204 No Content is success here; anything else has a body worth reading.
+    if (res.status !== 204) {
+      throw new Error(`dispatch ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    }
+    console.log(`[dispatch] asked ${repo} for ${eventType}`);
+  } catch (err) {
+    // Nothing to retry into — the next Cloudflare cron is the retry, and the
+    // guard makes a duplicate harmless. Log it so `wrangler tail` can say why a
+    // Monday was quiet.
+    console.error("[dispatch] failed:", String(err));
+  }
+}
+
 export default {
+  // Cloudflare's scheduler, not GitHub's — that separation is the whole point.
+  // waitUntil so the POST is not cut off when the handler returns.
+  async scheduled(event, env, ctx) {
+    const eventType = DISPATCH_EVENTS[event.cron];
+    if (!eventType) {
+      // A cron added to wrangler.toml and not here fires into nothing. Loud,
+      // because silence is this system's characteristic failure.
+      console.error(`[dispatch] no event mapped for cron ${event.cron}`);
+      return;
+    }
+    ctx.waitUntil(fireDispatch(env, eventType));
+  },
+
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
       return new Response(null, {

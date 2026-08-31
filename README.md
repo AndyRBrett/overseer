@@ -177,7 +177,7 @@ own age — but anything that assumes "at most an hour old" is wrong, and
 **Why the other three repos poll instead of pushing:** GitHub fires
 `pull_request` events only in the repo where the PR lives, so instant cross-repo
 updates need a `repository_dispatch` call *from* each project repo — which means
-a PAT with `actions: write` stored in three more places. That is the credential
+a PAT with `contents: write` stored in three more places. That is the credential
 sprawl that caused the July outage, traded for 59 minutes of latency. The
 dispatch trigger is wired up regardless, so you can opt any repo in by adding a
 step to its own workflow:
@@ -431,10 +431,50 @@ keys on in two layers:
 |---|---|---|
 | In-job retry — 3 attempts, 2 then 4 minutes apart | an outage lasting minutes | nothing; the preflight runs before the first agent, so a deferred attempt spends no budget |
 | Catch-up crons at 16:00 and 18:00 UTC Monday | an outage lasting hours | a checkout and a file read — `scripts/weekly_guard.py` skips them once today's digest is published |
+| Cloudflare cron → `repository_dispatch`, 14:05 and 17:05 UTC Monday | GitHub not delivering the scheduled event at all | the same checkout and file read; the dispatch arrives after GitHub's own 14:00 cron, so on a healthy Monday it no-ops |
+| Cloudflare cron → `repository_dispatch`, 15:20 UTC daily | the *heartbeat* being dropped by the same scheduler, leaving a missed review unreported | a checkout and a file read; no token, no model calls |
 
 Any other exit code fails on the first attempt, because retrying a dead
 credential only delays the diagnosis. A `weekly-review` concurrency group keeps
 a catch-up from joining a run that is still retrying.
+
+**1c. When the job never starts.** Both layers above assume a run gets created.
+On **2026-08-31** none did: GitHub delivered no scheduled event that Monday at
+all — 14:00, 16:00 and 18:00 passed with no run, nothing red, nothing queued,
+while push- and PR-triggered runs in the same repo fired normally. Nothing
+alerted, because every alarm here is downstream of a job starting; it was found
+by noticing a seven-day-old timestamp on the dashboard. The catch-up crons were
+never redundancy against this — they are `schedule:` entries in the *same*
+workflow, queued through the same deprioritised scheduler that dropped the
+primary. The heartbeat — the dead-man's switch that exists precisely to notice a
+review that stopped happening — was no help either, and for the sharpest reason
+of all: it is a daily GitHub cron, so it was dropped in the same outage. An
+alarm sharing a failure mode with the thing it watches is not an alarm.
+
+The fix is a trigger on someone else's scheduler. The Cloudflare Worker that
+already serves the voice assistant now also runs a cron that fires
+`repository_dispatch` at 14:05 and 17:05 UTC on Mondays — five minutes behind
+GitHub's own cron, so an on-time Monday publishes first and the dispatch no-ops.
+**The heartbeat rides the same path**, dispatched daily at 15:20 UTC, twenty
+minutes behind its own GitHub cron. That is also what makes a dropped event
+*detectable* rather than merely survivable: a review that never runs stops
+`docs/digest.json` advancing, and the heartbeat trips on a stale digest within
+about a day. It is deliberately unguarded — tokenless and model-free, so a
+double run costs a checkout, and an alarm that fires twice while something is
+broken beats one that stays quiet.
+It needs `DISPATCH_TOKEN` as a wrangler secret — a PAT with **Contents: write**
+on this repo (fine-grained), or plain `repo` scope (classic). That is what
+`POST /repos/{owner}/{repo}/dispatches` actually checks; "Actions: write" reads
+like the right permission for something that starts a workflow, and is not it.
+Deploy from `worker/` so wrangler finds the config; see `worker/wrangler.toml`.
+
+Because two independent schedulers now aim at the same Monday,
+`scripts/weekly_guard.py` is asked by **every** automated trigger rather than
+only the catch-ups — including the 14:00 cron, which used to run unguarded on
+the grounds that it *is* the review. A cron delivered 30 minutes late (routine)
+would otherwise run a second full pipeline over a digest published minutes
+earlier, at $0.34 a time. Only `workflow_dispatch` still bypasses the guard,
+which is also how you force a re-review on a day that already has a digest.
 
 Both workflows also retry a *rejected push*. They commit to `main` from a
 checkout they may hold for minutes, and the ledger refresh writes on its cron
@@ -453,6 +493,15 @@ GitHub's own failure email, and optionally sends a Telegram alert.
 
 The heartbeat is **standard-library only** and uses no GitHub token by design —
 the outage it exists to catch is a broken credential, so it must not need one.
+
+It is also triggered **twice, from two different vendors**: its own GitHub cron
+at 15:00 UTC, and a Cloudflare `repository_dispatch` at 15:20. On 2026-08-31 the
+GitHub scheduler dropped every event in this repo, including this one, so the
+review went missing and the alarm went missing with it — separate *workflow* was
+never enough, because it was not a separate *scheduler*. Being independently
+triggered is what makes it a real dead-man's switch, and what makes a dropped
+cron detectable at all: it reads a digest timestamp, and a review that never ran
+leaves that timestamp standing still.
 
 Tune with `HEARTBEAT_MAX_AGE_HOURS` (default 192h — one missed weekly run plus a
 day of slack) and `HEARTBEAT_ERROR_RATIO` (default 0.5 of tool calls).
@@ -810,13 +859,17 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `scripts/build_ask_context.py` — publishes `docs/ask-context.json`; skips the
   write when only the build stamp moved, so a rebuild that changed nothing is
   silent
-- `worker/overseer-ask.js` — the Cloudflare Worker the Siri Shortcut talks to
+- `worker/overseer-ask.js` — the Cloudflare Worker the Siri Shortcut talks to;
+  also runs the crons that fire `repository_dispatch` for the weekly review and
+  the daily heartbeat, so neither depends on GitHub's scheduler alone
 - `scripts/notify_push.py` — sends the weekly push (run by the Action)
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
-  happening, or completes while blind (stdlib only, no token)
+  happening, or completes while blind (stdlib only, no token). Triggered from
+  both GitHub and Cloudflare, so it survives the scheduler it watches
 - `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
-- `scripts/weekly_guard.py` — lets the Monday catch-up runs no-op once the
-  review has published, so retrying a missed week costs nothing in a healthy one
+- `scripts/weekly_guard.py` — lets any automated Monday trigger no-op once the
+  review has published, so covering a missed week (or a second scheduler) costs
+  nothing in a healthy one
 - `scripts/delete-merged-branches.sh` — cleanup of branches already merged into
   `main` across all four repos; dry-run by default, `--go` to apply. Runnable
   from a phone via the **Clean up merged branches** Action (Actions tab → Run
@@ -824,6 +877,7 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
   **Contents: write** on all four repos; a dry run needs no token at all.
 - `.github/workflows/weekly-review.yml` — cron, digest commit, push, report artifact
 - `.github/workflows/heartbeat.yml` — daily heartbeat, independent of the above
+  in workflow *and* in scheduler (GitHub cron + Cloudflare `repository_dispatch`)
 - `.github/workflows/cleanup-branches.yml` — manual branch cleanup (never
   scheduled); writes the result to the run's job summary so it's readable on a
   phone without opening the log

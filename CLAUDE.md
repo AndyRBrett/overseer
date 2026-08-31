@@ -6,12 +6,16 @@ implements a few of them**. Four stages, three of them agents:
 ```
 Mon 14:00 UTC  weekly-review.yml    Bug-Hunter → Idea-Agent → Reviewer
                                     → issues filed → digest → Telegram + PWA
+                                    (+14:05 Cloudflare cron → repository_dispatch,
+                                     because GitHub drops scheduled events)
 Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repository_dispatch
       ~10 min  implement-worker.yml the coding agent, IN EACH TARGET REPO
                                     → branch → tests → pull request
       ~6×/day  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
                                     → docs/ask-context.json → voice assistant
+  daily 15:20  heartbeat.yml        dead-man's switch, also Cloudflare-triggered
     on demand  worker/              "Hey Siri, ask Overseer" → one model call
+                                    (+ the crons above, off GitHub's scheduler)
 ```
 
 The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
@@ -22,7 +26,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-324 tests, under a second. There is no JS test runner, so dashboard behaviour is
+342 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -67,6 +71,12 @@ Each of these exists because the opposite already happened here.
    the workflow refuses them again. A test pushes
    `"opus --dangerously-skip-permissions"` through the dispatch path.
 6. **A pull request is where the automation stops.** Nothing merges itself.
+6b. **Every automated trigger asks `weekly_guard`; only `workflow_dispatch`
+   doesn't.** Two schedulers now aim at the same Monday (GitHub's crons and the
+   Cloudflare `repository_dispatch`), so "am I the review?" is the wrong
+   question and "has today's review already landed?" is the right one. The
+   14:00 cron used to run unguarded; against a second trigger that is a
+   duplicate $0.34 pipeline whenever GitHub delivers late, which is routine.
 7. **Deterministic digest sections stay deterministic.** The staleness banner,
    `IMPLEMENTED`, and `AGING BACKLOG` are computed in Python and stitched into
    the digest in `run_agent`, because a section that depends on an agent
@@ -135,7 +145,30 @@ Each of these exists because the opposite already happened here.
   labels what it hands over, so an ungated catch-up does not re-pick the same
   three issues — it picks three *different* ones, turning a $4.50 Monday into
   $9.00. `scripts/implement_guard.py` gates them on the workflow's own run
-  history; a test asserts the crons and `CATCHUP_SCHEDULES` stay in step.
+  history; a test asserts the crons and `CATCHUP_SCHEDULES` stay in step. Note
+  what these catch-ups do NOT cover: a *dropped* event (the bullet below). They
+  are `schedule:` entries queued through the same scheduler, so they help when a
+  cron is late and not at all when it never fires.
+- **A cron can be dropped entirely, and that looks like nothing at all.** On
+  2026-08-31 GitHub delivered *none* of the weekly review's three scheduled
+  events — 14:00, 16:00 and 18:00 with no run created, no failure, no queued
+  job, while push- and PR-triggered runs in the same repo fired normally. A
+  dropped event is not a red run you can find in the Actions tab; it is an
+  absent row, indistinguishable from a quiet week, and it was caught by a human
+  noticing a seven-day-old timestamp. Every alarm here is downstream of a job
+  starting, so **none of them fire** — the 08-17 retry loop and catch-up crons
+  included, since those live inside a job that has to start, and the catch-ups
+  are `schedule:` entries queued through the very scheduler that dropped the
+  primary. The heartbeat is on the same cron and was dropped too. Redundancy for
+  a cron has to come from a different vendor: `worker/overseer-ask.js` now runs
+  **Cloudflare** crons firing `repository_dispatch` at 14:05/17:05 Monday for
+  the review and 15:20 daily for the heartbeat. The heartbeat especially — a
+  dead-man's switch on the scheduler it watches shares a failure mode with it,
+  which is the one thing a dead-man's switch may not do; off GitHub it is also
+  what makes a dropped event *detectable*, since a review that never runs leaves
+  `docs/digest.json` standing still and the heartbeat trips on that within a day.
+  When diagnosing "the run didn't happen", check `total_count` on the workflow
+  before reading logs — no new run number means there was never a job.
 - **`wrangler secret put` takes the NAME, not the value.** Pasting the key onto
   the command line creates a secret *named* after your credential, echoes it to
   the terminal, and leaves the real slot unset — surfacing much later as an
@@ -146,6 +179,12 @@ Each of these exists because the opposite already happened here.
   the read fails, the variable is empty, and the request goes out with an empty
   header — reported by the API as a *missing* header, which reads like a
   different bug entirely. Use `printf` then a bare `read -s VAR`.
+- **Never put a trailing `# comment` on a command someone will paste.**
+  Interactive zsh does not set `interactive_comments`, so the `#` and every word
+  after it are passed as arguments. A documented `wrangler secret put NAME
+  # what the token needs` died on `Unknown arguments: #, PAT, with, ...` — the
+  annotation that was supposed to prevent a mistake caused one. Put the
+  explanation on its own line above.
 - **Re-running a green `ledger-refresh` goes red, and means nothing.** The
   re-run replays the original checkout, rebuilds against a commit its own first
   attempt already superseded, and races to push over it; the publish step burns

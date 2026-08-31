@@ -4,7 +4,7 @@ name: Weekly Project Review
 # from api.github.com, aborted at the credential preflight, and the next attempt
 # was seven days away — no digest, no push notification, and nothing that said
 # so. A workflow that runs hourly can shrug off an outage; one that runs weekly
-# cannot. Two layers now cover that, both keyed on the orchestrator exiting 75
+# cannot. Two layers cover that, both keyed on the orchestrator exiting 75
 # (EX_TEMPFAIL) for "GitHub was unreachable" and any other code for real
 # failures, so a dead credential still stops on the first attempt:
 #
@@ -14,6 +14,23 @@ name: Weekly Project Review
 #   2. catch-up crons at 16:00 and 18:00 UTC, for an outage measured in hours.
 #      They no-op unless today's digest is missing (scripts/weekly_guard.py), so
 #      a healthy Monday costs a checkout and a file read.
+#
+# BOTH OF THOSE ASSUME THE JOB STARTS. On 2026-08-31 none of them ran: GitHub
+# delivered no scheduled event at all that Monday — 14:00, 16:00 and 18:00 came
+# and went with no run created, nothing red, nothing queued, while push- and
+# PR-triggered runs in this same repo fired normally. Measured that day,
+# ledger-refresh's HOURLY cron was delivered twice in eighteen hours. Scheduled
+# workflows on free public repos are deprioritised (see CLAUDE.md), and a weekly
+# cron has no next attempt to absorb that. The catch-ups were never redundancy
+# against it — they are schedule: entries in this same workflow, queued through
+# the same scheduler that dropped the primary.
+#
+#   3. an off-GitHub trigger, for a scheduler that drops the event entirely.
+#      A Cloudflare cron in worker/overseer-ask.js fires repository_dispatch at
+#      14:05 and 17:05 UTC Monday. Different vendor, different scheduler: the
+#      one path that demonstrably still worked on 08-31 was the event-driven
+#      one. The guard makes whichever trigger arrives second a no-op, so this
+#      costs nothing on a Monday that GitHub handles by itself.
 
 on:
   schedule:
@@ -22,6 +39,10 @@ on:
     # Catch-ups. These do nothing unless the 14:00 run failed to publish.
     - cron: "0 16 * * 1"
     - cron: "0 18 * * 1"
+  # The off-GitHub path. Fired by the Cloudflare cron in worker/overseer-ask.js;
+  # see worker/wrangler.toml for the schedule and the token it needs.
+  repository_dispatch:
+    types: [weekly-review]
   workflow_dispatch: {}   # allow manual runs from the Actions tab
 
 # Needed so the run can commit the updated digest back into docs/ (GitHub Pages).
@@ -50,12 +71,16 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      # Only the catch-up crons ask this question. The 14:00 run and any manual
-      # dispatch are the review — they always proceed.
+      # Every automated trigger asks this — the crons and the Cloudflare
+      # repository_dispatch alike. Two schedulers aiming at the same Monday
+      # means the second one to arrive must not run a duplicate pipeline over a
+      # digest published minutes earlier. Only workflow_dispatch skips the
+      # question, which is also how you force a re-review on a day that already
+      # has a digest.
       - name: Is today's digest still missing?
         id: guard
         env:
-          FIRED_BY_SCHEDULE: ${{ github.event.schedule }}
+          FIRED_BY_EVENT: ${{ github.event_name }}
         run: python scripts/weekly_guard.py
 
       - if: steps.guard.outputs.should_run == 'true'
