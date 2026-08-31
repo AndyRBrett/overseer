@@ -11,9 +11,15 @@ was unreachable" and "something is actually wrong":
   * orchestrator exits 75 (EX_TEMPFAIL) on a transient preflight, which is the
     signal the workflow's retry loop keys on. Any other failure keeps its own
     exit code and is not retried.
-  * scripts/weekly_guard.py keeps the catch-up crons from re-running a review
+  * scripts/weekly_guard.py keeps an automated trigger from re-running a review
     that already published, so covering a missed Monday doesn't cost a duplicate
     pipeline every healthy one.
+
+Since 2026-08-31 the guard is asked by every automated trigger rather than only
+the catch-up crons: the review now also has an off-GitHub trigger (a Cloudflare
+cron firing repository_dispatch, see worker/overseer-ask.js), and two schedulers
+aiming at the same Monday means whichever arrives second must no-op. See
+test_external_trigger.py for that trigger's own seams.
 """
 
 import json
@@ -29,8 +35,10 @@ import orchestrator  # noqa: E402
 import tools  # noqa: E402
 import weekly_guard as wg  # noqa: E402
 
-CATCHUP = "0 16 * * 1"
-PRIMARY = "0 14 * * 1"
+# What the guard actually keys on now: the event name, not the cron string.
+CRON = "schedule"
+DISPATCH = "repository_dispatch"
+MANUAL = "workflow_dispatch"
 
 
 def _ts(hours_ago=1):
@@ -105,57 +113,70 @@ def test_dead_credential_does_not_get_retried(monkeypatch):
 
 # ── the catch-up guard ───────────────────────────────────────────────────
 
-def test_primary_run_never_asks_the_guard():
-    # The 14:00 review is the review. It runs even though last week's digest is
-    # sitting there, and even though this week's is not.
-    run, _ = wg.should_run(PRIMARY, _digest(hours_ago=168))
-    assert run is True
-
-
 def test_manual_dispatch_always_runs():
-    # github.event.schedule is empty for workflow_dispatch — a human clicking
-    # "Run workflow" means it, even an hour after a successful review.
-    run, reason = wg.should_run("", _digest(hours_ago=1))
+    # A human clicking "Run workflow" means it, even an hour after a successful
+    # review. This is the documented way to force a re-review on a day that
+    # already has a digest, so it is the one trigger that skips the question.
+    run, reason = wg.should_run(MANUAL, _digest_today(hours_ago=1))
     assert run is True
-    assert "not a catch-up" in reason
+    assert "a human asked" in reason
 
 
-def test_catchup_skips_when_today_already_published():
-    # The common case by far: the 14:00 run worked, so 16:00 and 18:00 cost a
-    # checkout and a file read instead of a second full pipeline.
-    run, reason = wg.should_run(CATCHUP, _digest_today(hours_ago=2))
+@pytest.mark.parametrize("event", [CRON, DISPATCH])
+def test_an_automated_trigger_skips_when_today_already_published(event):
+    # The common case by far: the review already landed, so the later triggers
+    # cost a checkout and a file read instead of a second full pipeline.
+    run, reason = wg.should_run(event, _digest_today(hours_ago=2))
     assert run is False
     assert "already published" in reason
 
 
-def test_catchup_runs_when_the_review_failed():
-    # THE REGRESSION TEST: 14:00 aborted on an outage, so nothing published
-    # today and the catch-up is exactly what should happen.
-    run, _ = wg.should_run(CATCHUP, _digest(hours_ago=168))
+def test_the_primary_cron_is_guarded_too():
+    # CHANGED 2026-08-31, and the reason matters. The 14:00 cron used to run
+    # unconditionally on the grounds that it *is* the review. With a Cloudflare
+    # cron firing repository_dispatch at 14:05, that became a way to pay twice:
+    # a GitHub cron delivered late (30 minutes is routine, 45 has happened)
+    # would run a second full pipeline over a digest published minutes earlier.
+    run, _ = wg.should_run(CRON, _digest_today(hours_ago=1))
+    assert run is False, "a late primary cron must not duplicate a landed review"
+
+
+@pytest.mark.parametrize("event", [CRON, DISPATCH])
+def test_an_automated_trigger_runs_when_the_review_failed(event):
+    # THE REGRESSION TEST: nothing published today, so covering it is exactly
+    # what should happen — whichever scheduler got through.
+    run, _ = wg.should_run(event, _digest(hours_ago=168))
     assert run is True
 
 
-def test_catchup_runs_when_the_digest_is_from_an_incomplete_run():
+def test_a_trigger_runs_when_the_digest_is_from_an_incomplete_run():
     # A digest written by a run that crashed partway is not this week's update.
-    run, _ = wg.should_run(CATCHUP, _digest(hours_ago=1, status="failed"))
+    run, _ = wg.should_run(CRON, _digest(hours_ago=1, status="failed"))
     assert run is True
 
 
 @pytest.mark.parametrize("digest", [None, {}, {"generated": "sometime"},
                                     {"generated": None, "status": "completed"}])
-def test_catchup_runs_when_the_digest_is_missing_or_unreadable(digest):
+def test_a_trigger_runs_when_the_digest_is_missing_or_unreadable(digest):
     # When in doubt, run: a redundant review costs money, a skipped one costs
     # the week.
-    run, _ = wg.should_run(CATCHUP, digest)
+    run, _ = wg.should_run(CRON, digest)
     assert run is True
+
+
+def test_an_unknown_event_is_guarded_rather_than_waved_through():
+    # A trigger nobody thought about must land on the safe side of the fence:
+    # asked, not exempt. Exemption is an allowlist of exactly one.
+    run, _ = wg.should_run("pull_request", _digest_today(hours_ago=1))
+    assert run is False
 
 
 def test_yesterdays_digest_does_not_count_as_today(monkeypatch):
     # Same-day is the test, not "recent" — a Sunday digest must not satisfy
-    # Monday's catch-up.
+    # Monday's run.
     now = datetime(2026, 8, 17, 16, 0, tzinfo=timezone.utc)
     digest = {"generated": "2026-08-16T23:59:00Z", "status": "completed"}
-    run, _ = wg.should_run(CATCHUP, digest, now=now)
+    run, _ = wg.should_run(CRON, digest, now=now)
     assert run is True
 
 
@@ -167,7 +188,7 @@ def test_guard_writes_the_workflow_output(monkeypatch, tmp_path, capsys):
     output = tmp_path / "github_output"
     monkeypatch.setattr(wg, "DIGEST_PATH", str(digest_path))
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    monkeypatch.setenv("FIRED_BY_SCHEDULE", CATCHUP)
+    monkeypatch.setenv("FIRED_BY_EVENT", CRON)
 
     assert wg.main() == 0, "the guard must never be what fails the workflow"
     assert output.read_text(encoding="utf-8").strip() == "should_run=false"
@@ -178,7 +199,7 @@ def test_guard_survives_a_missing_digest_file(monkeypatch, tmp_path):
     output = tmp_path / "github_output"
     monkeypatch.setattr(wg, "DIGEST_PATH", str(tmp_path / "nope.json"))
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    monkeypatch.setenv("FIRED_BY_SCHEDULE", CATCHUP)
+    monkeypatch.setenv("FIRED_BY_EVENT", CRON)
 
     assert wg.main() == 0
     assert output.read_text(encoding="utf-8").strip() == "should_run=true"
@@ -187,13 +208,21 @@ def test_guard_survives_a_missing_digest_file(monkeypatch, tmp_path):
 WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 
 
-def test_catchup_schedules_match_the_workflow():
-    # A cron in the workflow but not in CATCHUP_SCHEDULES runs unguarded, which
-    # is a duplicate review every Monday. Cheap to assert, easy to forget.
+def test_the_workflow_passes_the_event_name_to_the_guard():
+    # The guard keys on github.event_name. Pass it the wrong thing — the old
+    # github.event.schedule, say, which is empty for repository_dispatch — and
+    # every dispatch reads as "a human asked", running unguarded. That is a
+    # duplicate pipeline on any Monday where both schedulers get through.
     workflow = (WORKFLOWS / "weekly-review.yml").read_text(encoding="utf-8")
-    crons = {line.split("cron:")[1].strip().strip('"')
-             for line in workflow.splitlines() if "- cron:" in line}
-    assert crons == {PRIMARY} | wg.CATCHUP_SCHEDULES
+    assert "FIRED_BY_EVENT: ${{ github.event_name }}" in workflow
+    assert "FIRED_BY_SCHEDULE" not in workflow, "the guard no longer reads a cron string"
+
+
+def test_only_a_human_is_exempt_from_the_guard():
+    # The exemption is an allowlist of one. Widening it is how the 14:00 cron
+    # got to run unguarded, which cost a duplicate review once two schedulers
+    # pointed at the same Monday.
+    assert wg.UNGUARDED_EVENTS == {"workflow_dispatch"}
 
 
 def test_both_publishers_retry_a_rejected_push():
