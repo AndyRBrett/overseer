@@ -514,6 +514,44 @@ def test_the_dashboard_renders_the_queue_it_is_given():
         assert f'id="{element}"' in page, f"app.js writes to #{element}; index.html lacks it"
 
 
+def test_the_queue_says_when_the_dispatcher_last_ran():
+    # An empty in_flight list means either "ran, nothing to hand over" or "never
+    # ran", and the panel rendered both identically. On 2026-08-31 the second was
+    # true for hours and the dashboard looked like a calm week.
+    state = o.queue_state({"entries": [_entry(1)]},
+                          last_dispatch={"at": "2026-08-31T20:30:33Z",
+                                         "conclusion": "success"})
+    assert state["last_dispatch"]["at"] == "2026-08-31T20:30:33Z"
+
+    # None is "could not read it", which is NOT the same claim as never-ran and
+    # must reach the panel intact rather than being smoothed into a default.
+    assert o.queue_state({"entries": [_entry(1)]})["last_dispatch"] is None
+
+
+def test_last_dispatch_publishes_a_timestamp_not_an_age():
+    # The ledger is rebuilt a few times a day and read for far longer. An age
+    # baked in at build time reads as fresh forever — the same trap invariant 9
+    # names for the assistant's context pack.
+    from pathlib import Path
+    src = (Path(__file__).resolve().parent.parent / "tools.py").read_text(encoding="utf-8")
+    body = src.split("def last_dispatch_run(")[1].split("\ndef ")[0]
+    for banned in ("age_hours", "days_ago", "hours_ago"):
+        assert banned not in body, f"last_dispatch_run computes {banned} at build time"
+
+
+def test_the_dashboard_renders_the_last_dispatch():
+    # Same seam as the queue itself: the fact is computed in Python and rendered
+    # here, and the renderer must actually be wired into the panel — a helper
+    # nothing calls is the quietest way for this to regress.
+    from pathlib import Path
+    app = (Path(__file__).resolve().parent.parent / "docs" / "app.js").read_text(
+        encoding="utf-8")
+    assert "function dispatchLine(" in app
+    assert "dispatchLine(q.last_dispatch)" in app
+    # A ledger written before this field existed must not render as "unknown".
+    assert "d === undefined" in app
+
+
 def test_the_spend_panel_says_what_it_leaves_out():
     # The implementer runs in another repo, so none of its spend reaches this
     # panel's token counts — and it is ~4x the review. Unsaid, "$0.34 this run"

@@ -411,6 +411,37 @@ function renderShipped(ledger) {
   $("shipped").innerHTML = head + groups;
 }
 
+// When the dispatcher last ran — the fact that makes the rest of the panel
+// readable.
+//
+// An empty "Under way" list has two opposite meanings: the implementer ran and
+// there was nothing to hand over, or the implementer never ran at all. Those
+// rendered identically until this line existed, and on 2026-08-31 the second one
+// was true for hours while the panel looked like a calm week. The dispatch cron
+// is skipped often enough (GitHub deprioritises schedules on free public repos)
+// that "when did this last fire" is load-bearing, not trivia.
+//
+// The age is computed HERE, at render time, from the timestamp the ledger
+// publishes. An age baked in at build time would still say "2 hours ago" on
+// Thursday.
+function dispatchLine(d) {
+  if (d === undefined) return "";              // ledger predates this field
+  if (d === null) {
+    return `<div class="sub dim">Last dispatch: unknown — could not read the ` +
+           `workflow's run history.</div>`;
+  }
+  const at = new Date(d.at);
+  if (isNaN(at)) return "";
+  const days = Math.floor((Date.now() - at) / 86400000);
+  const when = days <= 0 ? "today" : days === 1 ? "yesterday" : `${days} days ago`;
+  // A week is the cadence, so anything past it means a Monday was missed.
+  const cls = days > 7 ? "bad" : days > 1 ? "warn" : "";
+  const failed = d.conclusion && d.conclusion !== "success"
+    ? ` · ended <b>${escapeHtml(d.conclusion)}</b>` : "";
+  return `<div class="sub"><span class="rc ${cls}">last dispatch</span> ` +
+         `${escapeHtml(when)}${failed}</div>`;
+}
+
 // Implementer — the queue between "proposed" and "shipped".
 //
 // The Shipped panel is a record of what happened; this is the only view of what
@@ -466,7 +497,7 @@ function renderImplementer(q) {
     : "Nothing eligible: everything filed is either bigger than the effort gate, " +
       "already under way, or done.";
 
-  $("implementer").innerHTML = head +
+  $("implementer").innerHTML = head + dispatchLine(q.last_dispatch) +
     section("Next run", q.next, "queued", "", nothing) +
     section("Under way", q.in_flight, "building", "warn") +
     section("Needs you", q.benched, "stalled", "bad",  "") +

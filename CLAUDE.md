@@ -26,7 +26,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-326 tests, under a second. There is no JS test runner, so dashboard behaviour is
+342 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 ## Where things live
@@ -39,6 +39,7 @@ pinned from Python instead (see *Testing what has no test runner* below).
 | `tracer.py` | per-run recording, spend accounting, digest/history writers |
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
 | `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
+| `scripts/implement_guard.py` | keeps implement.yml's catch-up crons from dispatching a second batch |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
 | `ask.py` / `ask_context.py` | the voice assistant: one call, no tool loop; `ask_context` owns its prompt AND its facts |
@@ -134,6 +135,20 @@ Each of these exists because the opposite already happened here.
   hard-failed the run instead — the exact red workflow the guard was added to
   prevent. **It is 24 now.** And nothing built on this cron may claim to be at
   most an hour old.
+- **It skips the weekly crons too, and `implement.yml` had no catch-up.** On
+  2026-08-31 the 15:00 dispatch did not fire at its hour at all; it landed at
+  20:30, five and a half hours late, and was inside Monday only by luck. A slip
+  past midnight would have skipped the week's implementation stage with nothing
+  red and nothing to say so — `weekly-review.yml` has had catch-ups at 16:00 and
+  18:00 for exactly this reason. `implement.yml` now has them at 17:00 and 19:00,
+  each an hour behind a review cron. **They must stay guarded.** The dispatcher
+  labels what it hands over, so an ungated catch-up does not re-pick the same
+  three issues — it picks three *different* ones, turning a $4.50 Monday into
+  $9.00. `scripts/implement_guard.py` gates them on the workflow's own run
+  history; a test asserts the crons and `CATCHUP_SCHEDULES` stay in step. Note
+  what these catch-ups do NOT cover: a *dropped* event (the bullet below). They
+  are `schedule:` entries queued through the same scheduler, so they help when a
+  cron is late and not at all when it never fires.
 - **A cron can be dropped entirely, and that looks like nothing at all.** On
   2026-08-31 GitHub delivered *none* of the weekly review's three scheduled
   events — 14:00, 16:00 and 18:00 with no run created, no failure, no queued
@@ -209,7 +224,11 @@ toolchain, the Python suite pins the seams:
   caused visible layout bugs on a phone.
 - `tests/test_implement_queue.py` asserts `app.js` renders into element ids
   `index.html` actually has, and that banner headings still match the ALL-CAPS
-  regex `formatDigest` uses to make them section headings.
+  regex `formatDigest` uses to make them section headings. It also pins that the panel
+  says when the dispatcher last ran: an empty `in_flight` list means either "ran
+  and found nothing" or "never ran", and until `last_dispatch` existed those
+  rendered identically — on 2026-08-31 the second was true for hours while the
+  panel looked like a calm week.
 - `tests/test_ask.py` greps `worker/overseer-ask.js` for prompt sentences and
   gate-rule strings, so the Worker cannot quietly grow a second copy of either.
   It also pins that the Worker never re-serializes the facts (that would miss

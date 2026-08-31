@@ -605,7 +605,7 @@ def write_ledger(ledger, path=None):
     # Ride along with the ledger so the dashboard's implementer panel refreshes
     # on the hourly ledger job — no extra workflow, no model calls, and it
     # cannot disagree with the gate because it IS the gate.
-    queue = queue_state(ledger)
+    queue = queue_state(ledger, last_dispatch=last_dispatch_run())
     if queue:
         payload["queue"] = queue
     with open(path, "w", encoding="utf-8") as f:
@@ -814,7 +814,36 @@ def resolve_tier(tier):
     return name
 
 
-def queue_state(ledger, limit=None, efforts=None):
+def last_dispatch_run(workflow_file="implement.yml", limit=20):
+    """When the dispatcher last ran and how it ended, or None if unreadable.
+
+    The dashboard cannot otherwise tell "the implementer ran and found nothing"
+    from "the implementer never ran" — both render as an empty in_flight list.
+    That is not hypothetical: on 2026-08-31 the 15:00 dispatch was skipped for
+    hours and the panel showed exactly what a quiet, healthy week shows.
+
+    Returns the timestamp only, never an age: the ledger is rebuilt a few times a
+    day and read for much longer than that, so an age computed here would read as
+    fresh forever. app.js does the arithmetic at render time.
+    """
+    slug = _env("OVERSEER_REPO") or _env("GITHUB_REPOSITORY")
+    if not slug:
+        return None
+    try:
+        workflow = _github().get_repo(slug).get_workflow(workflow_file)
+        for run in list(workflow.get_runs()[:limit]):
+            if run.status != "completed":
+                continue
+            return {
+                "at": run.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "conclusion": run.conclusion,
+            }
+    except Exception:  # noqa: BLE001 — a panel fact, never worth failing a run
+        return None
+    return None
+
+
+def queue_state(ledger, limit=None, efforts=None, last_dispatch=None):
     """What the implementer will do next, shaped for the dashboard.
 
     Computed HERE and published with the ledger rather than worked out in the
@@ -868,6 +897,9 @@ def queue_state(ledger, limit=None, efforts=None):
         "in_flight": in_flight,
         "benched": benched,
         "failed_label": FAILED_LABEL,
+        # None means "could not read it", which the panel must say out loud
+        # rather than render as never-ran — see last_dispatch_run.
+        "last_dispatch": last_dispatch,
     }
 
 
