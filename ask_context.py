@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from datetime import datetime, timezone
 
 import tools
@@ -90,6 +91,12 @@ def _repo_name(slug):
 
 # ── THE FACTS ────────────────────────────────────────────────────────────
 
+# The heartbeat script owns this number; importing it keeps the published copy
+# from drifting out of step with the alarm that GitHub-side runs use.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"))
+from heartbeat import MAX_AGE_HOURS as HEARTBEAT_MAX_AGE_HOURS  # noqa: E402
+
+
 def build_facts(digest, history, ledger):
     """Assemble the deterministic fact block. Pure — no I/O, no model calls.
 
@@ -152,6 +159,17 @@ def build_facts(digest, history, ledger):
     } for run in runs[-MAX_RUNS:]]
 
     return {
+        # The staleness THRESHOLD the off-GitHub watchdog applies (issue #59) — a
+        # limit, not a computed age: the pack may never carry an age (invariant 9). It is
+        # PUBLISHED rather than written into worker/overseer-ask.js for the same
+        # reason the gate is (invariant 8): a second copy of the threshold in
+        # JavaScript would be deployed separately, drift the first time this one
+        # moved, and page — or fail to page — on a rule nobody could see from
+        # here. The Worker compares two timestamps against this number; the
+        # number itself is Python's.
+        "heartbeat": {
+            "stale_after_hours": HEARTBEAT_MAX_AGE_HOURS,
+        },
         "digest": {
             "generated": _stamp(digest.get("generated")),
             "status": digest.get("status"),

@@ -294,6 +294,54 @@ def test_the_worker_does_not_re_derive_the_gate():
         assert rule not in code
 
 
+def test_the_watchdog_threshold_is_published_not_hardcoded():
+    # Invariant 8, one platform further out. A staleness limit written into the
+    # Worker would be deployed separately from the Python that owns it, drift
+    # the first time one moved, and then page — or stay silent — on a rule
+    # nobody could see from this repo.
+    import ask_context
+    from heartbeat import MAX_AGE_HOURS
+
+    facts = ask_context.build_facts(
+        {"generated": "2026-08-31T19:48:15Z"}, {"runs": []}, {"entries": [], "totals": {}})
+    assert facts["heartbeat"]["stale_after_hours"] == MAX_AGE_HOURS
+
+    worker = open(WORKER, encoding="utf-8").read()
+    assert "facts?.heartbeat?.stale_after_hours" in worker
+    assert str(int(MAX_AGE_HOURS)) not in worker, "the Worker hardcodes the threshold"
+
+
+def test_the_watchdog_alerts_a_human_not_the_console():
+    # The bug it exists for: every other failure path in the Worker ends at
+    # console.error, which is only visible to `wrangler tail`. An alarm nobody
+    # is watching is the same as no alarm.
+    worker = open(WORKER, encoding="utf-8").read()
+    assert "api.telegram.org" in worker
+    assert "checkDigestFreshness" in worker
+
+
+def test_the_watchdog_runs_even_when_the_dispatch_fails():
+    # Poking GitHub and noticing that the poking stopped working are
+    # independent. Chaining the check to a successful dispatch would make it
+    # silent in exactly the case it is for — an expired DISPATCH_TOKEN.
+    worker = open(WORKER, encoding="utf-8").read()
+    scheduled = worker.split("async scheduled(")[1].split("async fetch(")[0]
+    assert "ctx.waitUntil(fireDispatch(env, eventType));" in scheduled
+    assert "ctx.waitUntil(checkDigestFreshness(env));" in scheduled
+    # Two separate waitUntil calls, not one chained off the other.
+    assert ".then(" not in scheduled
+
+
+def test_the_watchdog_stays_quiet_without_a_threshold_or_credentials():
+    # A watchdog that guesses its own limit pages at the wrong time forever,
+    # and one that assumes credentials throws inside a scheduled handler where
+    # nothing surfaces it.
+    worker = open(WORKER, encoding="utf-8").read()
+    fn = worker.split("async function checkDigestFreshness(")[1].split("\nexport default")[0]
+    assert "if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;" in fn
+    assert "if (!staleAfterHours || !generated)" in fn
+
+
 def test_the_worker_never_re_serializes_the_facts():
     # JSON.stringify(pack.facts) would render different bytes from Python's
     # dump — different key order, different spacing, \u-escaped em dashes — and
