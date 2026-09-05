@@ -28,7 +28,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-455 tests, under a second. There is no JS test runner, so dashboard behaviour is
+490 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 `python scripts/pipeline_dryrun.py` runs the WHOLE pipeline end to end against
@@ -229,6 +229,16 @@ Each of these exists because the opposite already happened here.
   the read fails, the variable is empty, and the request goes out with an empty
   header — reported by the API as a *missing* header, which reads like a
   different bug entirely. Use `printf` then a bare `read -s VAR`.
+- **Dependabot preserves the format it finds, including a bad one.** #53 and #54
+  were correct bumps (setup-python v5→v7, setup-node v4→v7) and both would have
+  re-landed *floating tags* in `implementer.yml` — the last two in the repo, in
+  the one file that runs a coding agent with Bash, a `contents: write` token and
+  an Anthropic key in four repos. The bump was right; the form was not. Taken by
+  hand as SHA pins instead, and `tests/test_workflow_pins.py` now enforces the
+  convention so the next bot PR cannot quietly undo it. The one deliberate
+  exception is `anthropics/claude-code-action@v1`, recorded in that file:
+  pinning the agent itself would freeze it at whatever it was the day someone
+  last looked.
 - **Never put a trailing `# comment` on a command someone will paste.**
   Interactive zsh does not set `interactive_comments`, so the `#` and every word
   after it are passed as arguments. A documented `wrangler secret put NAME

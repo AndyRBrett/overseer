@@ -155,14 +155,24 @@ jobs:
 
       # The caller's toolchain, declared as inputs. A repo that needs neither
       # (or installs nothing) simply leaves them empty.
+      #
+      # PINNED BY SHA, like every other action in this repo. These two were the
+      # last floating tags left, and this is the worst file to leave one in: it
+      # is the reusable workflow all four project repos call, and the job it
+      # sets up runs a coding agent with Bash, a contents:write token and an
+      # Anthropic key. A mutable tag means whoever controls that tag chooses
+      # what runs there. Dependabot opened #53 and #54 to bump these and, since
+      # it preserves whatever format it finds, both would have re-landed
+      # floating tags — so the bump is taken here in the repo's own form.
+      # The comment is the version; `git ls-remote` the tag to check a SHA.
       - if: inputs.python_version != ''
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ inputs.python_version }}
           cache: ${{ inputs.pip_cache && 'pip' || '' }}
 
       - if: inputs.node_version != ''
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: ${{ inputs.node_version }}
           cache: npm
