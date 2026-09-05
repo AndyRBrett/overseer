@@ -28,24 +28,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-05T17:55:09Z",
+      "last_ok": "2026-09-05T18:08:16Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-05T17:55:09Z",
+      "last_ok": "2026-09-05T18:08:16Z",
       "blind_cycles": 0,
       "idle_cycles": 4
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-05T17:55:09Z",
+      "last_ok": "2026-09-05T18:08:16Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-05T17:55:09Z",
+      "last_ok": "2026-09-05T18:08:16Z",
       "blind_cycles": 0
     }
   },
@@ -183,7 +183,9 @@
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
+      "short": "is running, but nothing has happened there lately",
       "action": "Check whether it has anything to do.",
+      "notable": true,
       "repo": "AndyRBrett/coachvision"
     },
     {
@@ -198,22 +200,26 @@
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
+      "notable": true,
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.11,
+      "score": 0.115,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.252,
+        "kpi": 0.274,
         "backlog": 0.4
       },
-      "why": "4 open ideas; success_rate_7d is 67%",
+      "why": "4 open ideas; success_rate_7d is 65%",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
+      "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
     },
     {
@@ -228,10 +234,12 @@
       "name": "Overseer",
       "status": "ok",
       "plain": "Overseer looks fine",
+      "short": "looks fine",
       "action": "Nothing to do.",
+      "notable": false,
       "repo": "AndyRBrett/overseer"
     }
   ],
   "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
-  "refreshed": "2026-09-05T17:55:09Z"
+  "refreshed": "2026-09-05T18:08:16Z"
 }
