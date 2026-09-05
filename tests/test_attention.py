@@ -240,3 +240,36 @@ def test_the_dashboard_renders_the_published_headline_and_does_not_compose_one()
     for phrase in ("has not sent anything new", "Everything looks fine",
                    "cannot see", "could use a look"):
         assert phrase not in app, f"app.js is composing its own verdict: {phrase!r}"
+
+
+def test_the_headline_count_matches_the_projects_the_list_will_flag():
+    # The page shows both: a headline saying "1 other could use a look too" and
+    # a list marking which projects those are. They read the same `notable`
+    # flag, and this pins that they cannot disagree — a headline counting two
+    # while the list highlights three is the kind of thing nobody reports and
+    # everybody stops trusting.
+    ranked = attention.rank(
+        {"a": {"status": "stale", "age_hours": 400, "sla_hours": 192},
+         "b": {"status": "ok"}, "c": {"status": "ok"}, "d": {"status": "blind"}},
+        readings={"b": {"odds_budget_used_pct": 94}})
+    flagged = [r for r in ranked if r["notable"]]
+    line = attention.headline(ranked)
+    others = len(flagged) - 1
+    assert (f"{others} other" in line) if others else ("other" not in line)
+
+
+def test_the_short_form_drops_the_name_and_nothing_else():
+    # The list prints the name in its own column, so the phrase beside it must
+    # not repeat it. Derived from one wording, not by trimming the sentence in
+    # JavaScript — that breaks the first time a name appears mid-sentence.
+    row = attention.rank({"coachvision": {"status": "stale", "age_hours": 400,
+                                          "sla_hours": 192}})[0]
+    assert row["short"] == "has not sent anything new in 17 days"
+    assert row["plain"] == f"coachvision {row['short']}"
+    assert "coachvision" not in row["short"]
+
+
+def test_an_unreadable_project_still_reads_as_a_phrase_in_the_list():
+    row = attention.rank({"coachvision": {"status": "blind"}})[0]
+    assert row["short"] == "cannot be seen at all right now"
+    assert row["plain"].startswith("We cannot see")

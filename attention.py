@@ -237,35 +237,48 @@ def _days(hours):
         return None
 
 
-def plain_reason(name, health, signals, open_ideas=0) -> str:
-    """One sentence a stranger could act on, for this project's top signal.
+def plain_predicate(health, signals, open_ideas=0) -> str:
+    """What is going on with this project, as a phrase with no subject.
 
-    Ordered by the same weights the score uses, so the sentence always describes
+    Split from the full sentence so one wording serves both places the page
+    needs it: the headline says "coachvision has not sent anything new in 17
+    days", and the per-project list says "has not sent anything new in 17 days"
+    beside the name it already printed. Deriving the second by trimming the
+    first in JavaScript would break the first time a name appeared mid-sentence.
+
+    Ordered by the same weights the score uses, so the phrase always describes
     the thing that put the project where it is in the ranking.
     """
     health = health or {}
     status = health.get("status")
     if status in ("error", "blind"):
+        return "cannot be seen at all right now"
+    if status == "stale":
+        days = _days(health.get("age_hours"))
+        return (f"has not sent anything new in {days} days"
+                if days else "has stopped sending new information")
+    if status == "idle":
+        return "is running, but nothing has happened there lately"
+    # Reads fine, so the concern (if any) is in what it reports.
+    if signals.get("errors", 0) > 0:
+        return "is working, but some of its jobs keep failing"
+    if signals.get("kpi", 0) > 0:
+        return "is working, but the numbers it reports look bad"
+    if open_ideas:
+        return (f"has {open_ideas} idea{'s' if open_ideas != 1 else ''} "
+                f"waiting for someone to look at")
+    return "looks fine"
+
+
+def plain_reason(name, health, signals, open_ideas=0) -> str:
+    """The predicate above as a whole sentence about one project."""
+    if (health or {}).get("status") in ("error", "blind"):
         # Capitalised at source, unlike every other branch: those begin with the
         # project's own name, and "coachvision" is spelled that way. Upper-casing
         # a sentence's first letter would silently rename a project on the one
         # line of the page most people read.
         return f"We cannot see {name} at all right now"
-    if status == "stale":
-        days = _days(health.get("age_hours"))
-        return (f"{name} has not sent anything new in {days} days"
-                if days else f"{name} has stopped sending new information")
-    if status == "idle":
-        return f"{name} is running, but nothing has happened there lately"
-    # Reads fine, so the concern (if any) is in what it reports.
-    if signals.get("errors", 0) > 0:
-        return f"{name} is working, but some of its jobs keep failing"
-    if signals.get("kpi", 0) > 0:
-        return f"{name} is working, but the numbers it reports look bad"
-    if open_ideas:
-        return (f"{name} has {open_ideas} "
-                f"idea{'s' if open_ideas != 1 else ''} waiting for someone to look at")
-    return f"{name} looks fine"
+    return f"{name} {plain_predicate(health, signals, open_ideas)}"
 
 
 # What to actually do about it, keyed on the same dominant signal. Short enough
@@ -373,7 +386,12 @@ def rank(projects, readings=None, repos=None, ledger=None) -> list[dict]:
         row["status"] = (health or {}).get("status")
         row["plain"] = plain_reason(name, health, row["signals"],
                                     open_ideas.get(repo, 0))
+        row["short"] = plain_predicate(health, row["signals"], open_ideas.get(repo, 0))
         row["action"] = plain_action(health, row["signals"], open_ideas.get(repo, 0))
+        # Whether this one is worth the reader's attention at all, decided by
+        # the same floor `headline` uses — so the list and the headline can
+        # never disagree about which projects are a concern.
+        row["notable"] = row["score"] >= NOTABLE
         if repo:
             row["repo"] = repo
         ranked.append(row)
