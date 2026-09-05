@@ -472,3 +472,37 @@ def test_the_question_goes_after_the_cached_prefix_not_inside_it():
     assert turn["content"].endswith("what shipped?")
     assert "current time:" in turn["content"]
     assert "current time:" not in system[0]["text"]
+
+
+# ── THE NEW FACTS ────────────────────────────────────────────────────────
+# Invariant 8: the assistant answers from facts computed in Python. Two blocks
+# were added for #25 and #60, and both are rankings/arithmetic the Worker must
+# quote rather than recompute — the same rule the gate lives under.
+
+
+def test_the_attention_ranking_is_passed_through_as_published():
+    ranked = [{"name": "coachvision", "score": 0.46, "why": "data 400h old"},
+              {"name": "Overseer", "score": 0.01, "why": "1 open idea"}]
+    facts = ask_context.build_facts(_digest(attention=ranked), None, _ledger([]))
+    # Byte-identical, in order. "What should I work on?" must get the same answer
+    # out loud as the dashboard gives on screen.
+    assert facts["attention"] == ranked
+
+
+def test_the_prompt_tells_the_model_not_to_re_rank():
+    assert "Do not re-rank" in ask_context.SYSTEM
+
+
+def test_the_per_project_yield_travels_as_counts_not_prose():
+    ledger = _ledger([])
+    ledger["outcomes"] = {"by_repo": {"A/coachvision": {"shipped": 3, "settled": 4,
+                                                        "ship_rate": 0.75}}}
+    facts = ask_context.build_facts(_digest(), None, ledger)
+    assert facts["delivery"]["outcomes"]["A/coachvision"]["ship_rate"] == 0.75
+
+
+def test_a_withheld_ship_rate_is_explained_rather_than_guessed_at():
+    # A null rate means too few settled proposals to say. The assistant must
+    # report that, not invent a number — it is the one thing it is told never
+    # to do.
+    assert "ship_rate` of null" in ask_context.SYSTEM or "null" in ask_context.SYSTEM

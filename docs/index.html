@@ -212,6 +212,19 @@
     .prow.alert .pmeta { color: #f59e0b; }
     .prow .pright { display: flex; align-items: center; gap: 10px; }
 
+    /* Attention score (#25): the one-line reason this project is ranked where it
+       is. Deliberately quieter than the status line above it — the badge says
+       what is wrong, this says why it is worth an hour before the others.
+       `white-space: normal` because the reason is a sentence and the row above
+       it is nowrap; without it a long reason clipped instead of wrapping. */
+    .prow .pmeta.attn { margin-top: 4px; color: var(--muted); white-space: normal; }
+    .prow.alert .pmeta.attn { color: var(--muted); }
+    .ascore { display: inline-block; font-variant-numeric: tabular-nums;
+              font-weight: 700; color: var(--text); margin-right: 6px;
+              /* Never let a score like 0.62 break across two lines — the same
+                 bug that rendered "$0.31" as "$0.3 / 1" on a phone. */
+              white-space: nowrap; }
+
     /* Trend sparklines (week over week) */
     .spark { display: block; opacity: .9; }
     .trow { display: flex; align-items: center; gap: 10px; padding: 9px 0;

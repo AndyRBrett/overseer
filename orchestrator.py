@@ -84,6 +84,9 @@ def run_pipeline(dry_run=False):
     plan = ", ".join(f"{name} → {tools.model_for(name)}" for name in tools.AGENT_NAMES)
     print(f"[model] {plan}")
     tracer.prev_projects = tools.load_prev_projects()
+    # Which repo each read tool reports on, so the attention score can join a
+    # project's telemetry to its open-idea count in the ledger (#25).
+    tracer.read_repos = tools.read_tool_repos()
     tracer.start()
     status = "completed"
 
@@ -99,6 +102,15 @@ def run_pipeline(dry_run=False):
     try:
         ledger = tools.delivery_ledger()
         known_work = tools.known_work_block(ledger)
+        # Per-project ship rate of past proposals, fed back into the Idea
+        # Agent's prompt so it can aim at the kind of idea that lands in each
+        # repo rather than treating all four as one audience (#60).
+        outcomes = tools.outcomes_block(ledger.get("outcomes"))
+        # The dedupe index the Idea Agent's check_duplicate queries, and the one
+        # propose_enhancement refuses near-exact re-filings against (#33). Built
+        # from the ledger just fetched, so it costs nothing and is never stale.
+        index = tools.set_duplicate_index(ledger)
+        print(f"[dedupe] {len(index or ())} filed issue(s) indexed for duplicate checks")
         # Also the source of the digest's IMPLEMENTED block — what the
         # implementer landed since last week, appended to the Reviewer's summary
         # by run_agent. Handed over on the tracer so run_agent can reach it.
@@ -109,7 +121,8 @@ def run_pipeline(dry_run=False):
               f"{t['duplicate']} duplicate")
     except Exception as exc:  # noqa: BLE001 — a missing ledger must not stop a review
         print(f"[ledger] unavailable ({exc}) — agents run without dedupe context")
-        ledger, known_work = None, None
+        ledger, known_work, outcomes = None, None, None
+        tools.set_duplicate_index(None)
 
     # Telemetry: every project's status read ONCE, before any agent starts.
     #
@@ -136,7 +149,7 @@ def run_pipeline(dry_run=False):
         bug_output = agent_bug_hunter.run(client, tracer, known_work=known_work,
                                           telemetry=telemetry)
         idea_output = agent_idea.run(client, tracer, known_work=known_work,
-                                     telemetry=telemetry)
+                                     telemetry=telemetry, outcomes=outcomes)
         agent_reviewer.run(client, tracer, bug_output, idea_output)
     except Exception as exc:  # noqa: BLE001 — record, render, then re-raise
         status = f"crashed: {exc}"

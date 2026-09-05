@@ -16,7 +16,13 @@ import tools
 # injected into the prompt below, so this agent starts with its grounding already
 # in hand instead of spending an entire API turn fetching what the Bug-Hunter
 # just fetched. Leaving the tools available would have made the saving optional.
+#
+# check_duplicate is the exception, and it is cheap: it scores a candidate title
+# against an index built from the ledger this run already fetched — no API call,
+# no network, just the turn the agent spends asking. It is listed first because
+# that is the order the prompt requires it in (#33).
 TOOL_NAMES = [
+    "check_duplicate",
     "propose_enhancement",
 ]
 
@@ -52,6 +58,13 @@ Process:
 - If a project's telemetry says "not_configured" or "error", you can still
   propose ideas for it from its description above — just don't invent fake data.
 
+WHAT YOUR PROPOSALS HAVE BEEN WORTH SO FAR — the outcome of every idea this
+pipeline has filed, per project. Use it to calibrate WHAT you propose, never
+whether: a project with a low ship rate needs different ideas from you, not
+fewer. Look at what actually shipped there versus what got closed as not
+planned, and aim this run's ideas at the kind that lands.
+{outcomes}
+
 ALREADY ON RECORD — do not re-propose these:
 {known_work}
 
@@ -62,6 +75,15 @@ but the answer to "my best idea is already on the list" is to propose your NEXT
 best one, not to propose nothing. Genuinely extending a shipped feature is fine;
 say explicitly what is new about it. The list is long because the pipeline has
 been productive, not because the projects are finished.
+
+BEFORE EACH propose_enhancement, CALL check_duplicate with the same title and
+rationale. The list above is capped and does not show every issue ever filed;
+the check scores your idea against all of them. A `duplicate` verdict means
+propose_enhancement will refuse the filing outright — move to your next idea, or
+pass `extends` with that issue number if you are genuinely building on it and
+say in the rationale what is new. A `similar` verdict is advice, not a refusal:
+read the match, and either differentiate your idea in the rationale or pick
+another.
 
 FILING IS THE DELIVERABLE. An idea that appears only in your final message has
 NOT been proposed — it reaches nobody, and the run counts it as zero. Every idea
@@ -78,7 +100,7 @@ USER_MESSAGE = ("Brainstorm at least three ranked enhancement ideas across the "
                 "three projects and the overseer itself.")
 
 
-def build_system_prompt(known_work=None, telemetry=None):
+def build_system_prompt(known_work=None, telemetry=None, outcomes=None):
     """System prompt with the already-filed ledger injected.
 
     Falls back to a clear 'no record' note rather than an empty string, so the
@@ -88,19 +110,22 @@ def build_system_prompt(known_work=None, telemetry=None):
         project_block=tools.project_block(),
         known_work=known_work or "(no previously filed issues on record)",
         telemetry=telemetry or "(telemetry unavailable — use the read tools)",
+        outcomes=outcomes or "(no proposal outcomes on record yet)",
     )
 
 
-def run(client, tracer, known_work=None, telemetry=None):
+def run(client, tracer, known_work=None, telemetry=None, outcomes=None):
     """Run the Idea Agent to completion; return its structured idea list text.
 
     `known_work` is the delivery ledger's compact summary of what has already
     been proposed and shipped — the dedupe input (see tools.known_work_block).
+    `outcomes` is the per-project ship rate of past proposals, the calibration
+    input (see tools.outcomes_block).
     """
     return tools.run_agent(
         client,
         agent="Idea-Agent",
-        system=build_system_prompt(known_work, telemetry),
+        system=build_system_prompt(known_work, telemetry, outcomes),
         tool_names=TOOL_NAMES,
         user_message=USER_MESSAGE,
         tracer=tracer,

@@ -19,6 +19,8 @@ import os
 import time
 from datetime import datetime, timezone
 
+import attention
+
 # How many consecutive idle/blind cycles a project may sit at before the rollup
 # "nudges" it — promotes it from a quiet badge to an explicit call-out at the top
 # of the dashboard (overseer self-review: idle-detection + rollup). Configurable
@@ -93,14 +95,20 @@ class RunTracer:
         self.jsonl_path = jsonl_path
         self.html_path = html_path
         self._t0 = time.monotonic()
-        self.counts = {"tools": 0, "errors": 0, "issues": 0, "enhancements": 0}
+        self.counts = {"tools": 0, "errors": 0, "issues": 0, "enhancements": 0,
+                       # Proposals the dedupe gate refused as re-filings (#33).
+                       # Counted because a gate nobody can see the effect of is a
+                       # gate that gets removed as pointless.
+                       "duplicates_blocked": 0}
         self.digest_text = None
         self.status = "running"
         self.read_tools = {}          # {tool_name: project_label} — set by caller
+        self.read_repos = {}          # {tool_name: repo_slug} — set by caller (attention scoring)
         self.prev_projects = {}       # last run's per-project health, for continuity
         self.agent = None             # current pipeline agent, for labelling output
         self.usage: dict[str, dict] = {}  # per-agent model + token spend, in pipeline order
         self.heavy_model = None       # the heavy tier, for the what-if baseline
+        self.ledger = None            # the run's delivery ledger — set by the orchestrator
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -137,10 +145,19 @@ class RunTracer:
         self.counts["tools"] += 1
         if is_error:
             self.counts["errors"] += 1
-        if name == "file_issue" and not is_error:
+        # A call that RETURNED is not a call that FILED. propose_enhancement
+        # answers `duplicate` when the dedupe gate refuses a re-filing (#33) —
+        # not an error, and not an idea either. Counting it would inflate the
+        # "ideas proposed" tile with work that never reached GitHub, which is the
+        # same class of lie the output_alerts check exists to catch.
+        outcome = _result_status(result)
+        if name == "file_issue" and not is_error and outcome in (None, "filed", "dry_run"):
             self.counts["issues"] += 1
         if name == "propose_enhancement" and not is_error:
-            self.counts["enhancements"] += 1
+            if outcome == "duplicate":
+                self.counts["duplicates_blocked"] += 1
+            elif outcome in (None, "logged", "dry_run"):
+                self.counts["enhancements"] += 1
         self._record(
             "tool_call", iteration=iteration, name=name, category=category,
             input=tool_input, result=result, is_error=is_error,
@@ -282,16 +299,16 @@ class RunTracer:
             f.write(self._render_html())
         print(f"[{_now()}] wrote {self.html_path} and {self.jsonl_path}")
 
-    def project_health(self) -> dict:
-        """Per-project read health with blind-spot continuity (self-review #1).
+    def _read_rows(self) -> list[dict]:
+        """One row per project read this run: name, graded status, and payload.
 
-        A project read returning "ok" resets it; "not_configured"/"error"/a raised
-        tool marks it BLIND and increments a cross-run blind_cycles counter so the
-        dashboard and notification can flag a project that's been dark >1 cycle —
-        instead of a green run hiding the fact that we couldn't see it.
+        Split out of project_health because the attention score (#25) needs the
+        SAME grading and the SAME name resolution, plus the status payload
+        project_health throws away once it has graded it. Two loops over the
+        same events would have been two places to keep the `app`-name fallback
+        in step, and they would not have stayed in step.
         """
-        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        projects = {}
+        rows = []
         for ev in self.events:
             if ev["kind"] != "tool_call" or ev["name"] not in self.read_tools:
                 continue
@@ -316,7 +333,22 @@ class RunTracer:
             # Prefer the project's self-reported `app` name from its status file;
             # fall back to the static READ_TOOLS label when a read fails or the
             # file omits `app`, so the name stays stable across healthy/blind runs.
-            name = _app_name(obj) or label
+            rows.append({"tool": ev["name"], "name": _app_name(obj) or label,
+                         "status": status, "reason": reason, "data": obj})
+        return rows
+
+    def project_health(self) -> dict:
+        """Per-project read health with blind-spot continuity (self-review #1).
+
+        A project read returning "ok" resets it; "not_configured"/"error"/a raised
+        tool marks it BLIND and increments a cross-run blind_cycles counter so the
+        dashboard and notification can flag a project that's been dark >1 cycle —
+        instead of a green run hiding the fact that we couldn't see it.
+        """
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        projects = {}
+        for row in self._read_rows():
+            status, reason, obj, name = row["status"], row["reason"], row["data"], row["name"]
             prev = self.prev_projects.get(name, {})
             if status == "ok":
                 projects[name] = {"status": "ok", "last_ok": now_iso, "blind_cycles": 0}
@@ -344,6 +376,26 @@ class RunTracer:
                                   "last_ok": prev.get("last_ok"),
                                   "blind_cycles": prev.get("blind_cycles", 0) + 1}
         return projects
+
+    def attention(self) -> list[dict]:
+        """Projects ranked by where an hour is worth most (overseer #25).
+
+        Composed in `attention.py` from signals this run already has: the health
+        grades below, the status payloads behind them, and the open-idea counts
+        on the delivery ledger. Published into the digest so the dashboard sorts
+        by it instead of re-deriving a second opinion in JavaScript — the same
+        rule the implementation gate lives under (invariant 4).
+        """
+        rows = self._read_rows()
+        readings = {row["name"]: row["data"] for row in rows}
+        repos = {row["name"]: self.read_repos.get(row["tool"]) for row in rows
+                 if self.read_repos.get(row["tool"])}
+        return attention.rank(self.project_health(), readings=readings,
+                              repos=repos, ledger=self.ledger)
+
+    def attention_banner(self) -> str:
+        """The digest's ATTENTION RANKING block (see attention.banner)."""
+        return attention.banner(self.attention())
 
     def rollup(self) -> dict:
         """A scannable, top-of-dashboard summary of this run (idle-detection +
@@ -482,6 +534,9 @@ class RunTracer:
             "counts": dict(self.counts),
             "rollup": self.rollup(),
             "projects": self.project_health(),
+            # Ranked here, never in app.js: the dashboard sorts by this list and
+            # renders its `why` verbatim rather than forming a second opinion.
+            "attention": self.attention(),
             "output_alerts": self.output_alerts(),
             "spend": self.spend(),
             "timeline": timeline,
@@ -671,6 +726,20 @@ def _tool_summary(ev: dict) -> str:
         status = result.get("status", "sent")
         return f"digest {status}"
     return _oneline(ev["result"], 160)
+
+
+def _result_status(result) -> str | None:
+    """The `status` field of a tool result, or None if it has no readable one.
+
+    None means "cannot tell", and every caller treats that as the old behaviour
+    — a tool that returns something unparseable must not silently stop being
+    counted.
+    """
+    try:
+        parsed = json.loads(result)
+    except (ValueError, TypeError):
+        return None
+    return parsed.get("status") if isinstance(parsed, dict) else None
 
 
 def _oneline(text: str, limit: int = 160) -> str:

@@ -89,7 +89,13 @@ def test_guard_writes_the_workflow_output(monkeypatch, tmp_path):
     output = tmp_path / "github_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
     monkeypatch.setenv("FIRED_BY_SCHEDULE", CATCHUP)
-    monkeypatch.setattr(ig, "recent_runs", lambda *a, **k: [_run(1)])
+    # main() reads the REAL clock, so this run has to be dated against the real
+    # clock too. It was pinned to NOW (a fixed Monday in August), which meant the
+    # test passed on the day it was written and has read "no dispatch today"
+    # ever since — the same class of bug as the _ts(hours_ago=2) tests that
+    # failed for two hours every night after UTC midnight.
+    today = datetime.now(timezone.utc).replace(hour=15, minute=0, second=0, microsecond=0)
+    monkeypatch.setattr(ig, "recent_runs", lambda *a, **k: [_run(1, at=today)])
 
     assert ig.main() == 0
     assert output.read_text(encoding="utf-8").strip() == "should_run=false"

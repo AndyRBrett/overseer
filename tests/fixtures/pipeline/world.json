@@ -1,0 +1,103 @@
+{
+  "_comment": [
+    "The synthetic world the end-to-end dry run reviews (overseer #50).",
+    "",
+    "Every timestamp is RELATIVE — '-3h' means three hours before the run.",
+    "Absolute dates would have made this a time bomb: the freshness SLAs are",
+    "measured against the clock, so a fixture pinned to a date in August would",
+    "have read as fresh in August and 'stale by 4000 hours' ever after. Same",
+    "trap as the _ts(hours_ago=2) tests in CLAUDE.md, one file bigger.",
+    "",
+    "The four projects are deliberately in four different states, because the",
+    "point of an integration fixture is to exercise the joins: a healthy feed, a",
+    "stale one, one that is fresh but reporting bad numbers, and the overseer's",
+    "own workflow history."
+  ],
+  "login": "overseer-bot",
+  "repos": {
+    "fixture/crypto-trading": {
+      "status_file": {
+        "app": "Crypto trading bot",
+        "generated_at": "-6h",
+        "trades": 14,
+        "signals_evaluated": 220,
+        "win_rate": 0.51,
+        "sharpe_90d": -0.62,
+        "last_error": null
+      },
+      "workflow_runs": [
+        {"name": "run-bot", "conclusion": "success", "created_at": "-6h"},
+        {"name": "run-bot", "conclusion": "success", "created_at": "-30h"}
+      ],
+      "issues": [
+        {"number": 44, "title": "[enhancement] Add a transaction-cost-aware signal gate",
+         "labels": ["enhancement", "effort:medium", "impact:high"],
+         "state": "closed", "created_at": "-900h", "closed_at": "-200h"},
+        {"number": 45, "title": "[enhancement] Publish a per-strategy drawdown breakdown",
+         "labels": ["enhancement", "effort:low", "impact:medium"],
+         "state": "open", "created_at": "-1500h"},
+        {"number": 46, "title": "[enhancement] Rewrite the executor in Rust",
+         "labels": ["enhancement", "effort:high", "impact:low"],
+         "state": "closed", "state_reason": "not_planned",
+         "created_at": "-800h", "closed_at": "-700h"}
+      ]
+    },
+    "fixture/coachvision": {
+      "status_file": {
+        "app": "coachvision",
+        "generated_at": "-400h",
+        "footage_processed": 0,
+        "frames_processed": 0,
+        "detection_accuracy": 0.71
+      },
+      "workflow_runs": [
+        {"name": "overseer-status", "conclusion": "success", "created_at": "-400h"}
+      ],
+      "issues": [
+        {"number": 12, "title": "Ingest job silently drops clips over 2GB",
+         "labels": [], "body_marker": true,
+         "state": "open", "created_at": "-300h"},
+        {"number": 13, "title": "[enhancement] Score technique consistency across a session",
+         "labels": ["enhancement", "effort:low", "impact:high"],
+         "state": "open", "created_at": "-2000h"}
+      ]
+    },
+    "fixture/ufc-dashboard": {
+      "status_file": {
+        "app": "UFC dashboard",
+        "generated_at": "-5h",
+        "events_tracked": 11,
+        "odds_budget_used_pct": 94,
+        "failures": 2
+      },
+      "workflow_runs": [
+        {"name": "update", "conclusion": "success", "created_at": "-5h"},
+        {"name": "update", "conclusion": "failure", "created_at": "-20h"},
+        {"name": "update", "conclusion": "success", "created_at": "-44h"}
+      ],
+      "issues": [
+        {"number": 66, "title": "[enhancement] Cache odds responses between fight windows",
+         "labels": ["enhancement", "effort:low", "impact:high"],
+         "state": "open", "created_at": "-100h"}
+      ]
+    },
+    "fixture/overseer": {
+      "workflow_runs": [
+        {"name": "weekly-review", "conclusion": "success", "created_at": "-2h"},
+        {"name": "weekly-review", "conclusion": "success", "created_at": "-170h"}
+      ],
+      "issues": [
+        {"number": 25, "title": "[enhancement] Compute a per-project attention score and rank projects",
+         "labels": ["enhancement", "effort:medium", "impact:high"],
+         "state": "open", "created_at": "-500h"},
+        {"number": 26, "title": "[enhancement] Publish an aging-backlog block in the digest",
+         "labels": ["enhancement", "effort:low", "impact:medium"],
+         "state": "closed", "created_at": "-600h", "closed_at": "-100h"},
+        {"number": 27, "title": "[enhancement] Publish an aging backlog section in the weekly digest",
+         "labels": ["enhancement", "effort:low", "impact:medium"],
+         "state": "closed", "state_reason": "duplicate",
+         "created_at": "-590h", "closed_at": "-120h"}
+      ]
+    }
+  }
+}

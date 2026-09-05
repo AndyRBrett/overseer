@@ -26,8 +26,14 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-351 tests, under a second. There is no JS test runner, so dashboard behaviour is
+407 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
+
+`python scripts/pipeline_dryrun.py` runs the WHOLE pipeline end to end against
+fixtures — real orchestrator, real tools, real tracer, with GitHub and Anthropic
+replaced. No key, no network, no spend, ~1s. CI runs it as its own job on every
+PR because the seams between tested components are where the weekly review has
+actually failed.
 
 ## Where things live
 
@@ -35,7 +41,10 @@ pinned from Python instead (see *Testing what has no test runner* below).
 |---|---|
 | `orchestrator.py` | runs the three agents in sequence; preflight, ledger, telemetry |
 | `agent_bug_hunter.py` / `agent_idea.py` / `agent_reviewer.py` | one prompt + tool list each |
-| `tools.py` | **everything shared** — tool implementations, the delivery ledger, the implementation gate, `run_agent` |
+| `tools.py` | **everything shared** — tool implementations, the delivery ledger, the implementation gate, proposal outcomes, `run_agent` |
+| `attention.py` | the per-project attention score — pure, imports nothing of ours |
+| `dedupe.py` | TF-IDF duplicate detection over the filed backlog — pure, stdlib |
+| `scripts/pipeline_dryrun.py` | the whole pipeline against fixtures; CI's `e2e` job |
 | `tracer.py` | per-run recording, spend accounting, digest/history writers |
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
 | `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
@@ -78,8 +87,8 @@ Each of these exists because the opposite already happened here.
    14:00 cron used to run unguarded; against a second trigger that is a
    duplicate $0.34 pipeline whenever GitHub delivers late, which is routine.
 7. **Deterministic digest sections stay deterministic.** The staleness banner,
-   `IMPLEMENTED`, and `AGING BACKLOG` are computed in Python and stitched into
-   the digest in `run_agent`, because a section that depends on an agent
+   `ATTENTION RANKING`, `IMPLEMENTED`, and `AGING BACKLOG` are computed in
+   Python and stitched into the digest in `run_agent`, because a section that depends on an agent
    remembering to write it eventually goes quiet with nothing failing.
 8. **The voice assistant's prompt and facts live in `ask_context.py`.** The
    Worker fetches `docs/ask-context.json` and concatenates strings; it holds no
@@ -96,6 +105,23 @@ Each of these exists because the opposite already happened here.
    API key is handed back *clean* and retried; one that ran out of turns or
    couldn't get tests green is benched with `overseer:implement-failed`. A dry
    balance otherwise retires every issue picked that week, three at a time.
+11. **A gate the model can decline to run is not a gate.** `check_duplicate` is
+   in the Idea Agent's tool list AND `propose_enhancement` refuses a near-exact
+   re-filing on its own, because the ALREADY ON RECORD list was already in the
+   prompt for most of the twelve issues that got closed as duplicates. Both
+   halves, or neither is worth having. `extends=<issue>` is the only override,
+   and it is recorded on the issue rather than argued in a rationale.
+12. **The attention score is computed once, in Python.** `attention.rank` orders
+   the dashboard's project panel, the digest's ATTENTION RANKING block and the
+   voice pack. This is invariant 4's rule applied to a second set of rules: a
+   scoring formula re-derived in `app.js` would drift, and the three surfaces
+   would then give three answers to "what should I work on".
+13. **A count of tool calls is not a count of work.** `propose_enhancement`
+   returns `duplicate` when the dedupe gate refuses a filing; the tracer reads the
+   result's `status` and counts it under `duplicates_blocked`, not under
+   `enhancements`. Counting the call would inflate the dashboard's "ideas
+   proposed" tile with work that never reached GitHub — the same shape of lie
+   `output_alerts` exists to catch.
 
 ## Gotchas that have already cost money or a week
 
@@ -191,7 +217,18 @@ Each of these exists because the opposite already happened here.
   its three retries (~31s) and exits 1. Read attempt 1 before believing
   attempt 2.
 - **Beware time-of-day tests.** `_ts(hours_ago=2)` run after UTC midnight stamps
-  *yesterday*; two tests failed for two hours every night because of it.
+  *yesterday*; two tests failed for two hours every night because of it. The
+  same bug with a longer fuse: `test_guard_writes_the_workflow_output` dated its
+  fake run against a fixed Monday in August while `main()` read the real clock,
+  so it passed on the day it was written and asserted nothing ever after. Fixture
+  timestamps go in RELATIVE (`-6h`, resolved at load) — which is why
+  `tests/fixtures/pipeline/world.json` carries no absolute dates.
+- **A similarity threshold means nothing without the scorer it was measured on.**
+  Issue #33 asked for >0.8. On this TF-IDF that would have missed overseer #12,
+  the re-filing the feature exists to catch. It is 0.75, measured against every
+  pair in the filed corpus (see the table in `dedupe.py`) — and a rationale can
+  only ever RAISE a score, never lower it, because the documents are titles and
+  blending a long rationale in dropped a real duplicate from 0.77 to 0.66.
 
 ## What a run costs (measured, not estimated)
 
@@ -229,6 +266,11 @@ toolchain, the Python suite pins the seams:
   and found nothing" or "never ran", and until `last_dispatch` existed those
   rendered identically — on 2026-08-31 the second was true for hours while the
   panel looked like a calm week.
+- `tests/test_pipeline_e2e.py` runs `scripts/pipeline_dryrun.py` in a SUBPROCESS
+  and asserts on what it wrote. A subprocess because the harness sets the repo
+  environment before importing `tools`, and `PROJECTS` is built at import time:
+  in-process it would either read a `tools` some earlier test imported, or leave
+  one configured for a fixture world behind for every test after it.
 - `tests/test_ask.py` greps `worker/overseer-ask.js` for prompt sentences and
   gate-rule strings, so the Worker cannot quietly grow a second copy of either.
   It also pins that the Worker never re-serializes the facts (that would miss
