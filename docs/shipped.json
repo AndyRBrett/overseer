@@ -1,6 +1,160 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-05T17:18:11+00:00",
+      "created_at": "2026-08-31T19:47:57+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #68",
+      "fix_sha": "0cb795c",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/68",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 60,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation",
+      "url": "https://github.com/AndyRBrett/overseer/issues/60"
+    },
+    {
+      "closed_at": "2026-09-05T17:18:11+00:00",
+      "created_at": "2026-08-24T14:35:24+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #56",
+      "fix_sha": "5974ae2",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/56",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 50,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR",
+      "url": "https://github.com/AndyRBrett/overseer/issues/50"
+    },
+    {
+      "closed_at": "2026-09-05T17:18:11+00:00",
+      "created_at": "2026-08-17T19:55:08+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #68",
+      "fix_sha": "0cb795c",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/68",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 33,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals",
+      "url": "https://github.com/AndyRBrett/overseer/issues/33"
+    },
+    {
+      "closed_at": "2026-09-05T17:18:10+00:00",
+      "created_at": "2026-08-15T10:17:41+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #68",
+      "fix_sha": "0cb795c",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/68",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 25,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable",
+      "url": "https://github.com/AndyRBrett/overseer/issues/25"
+    },
+    {
+      "closed_at": "2026-09-05T16:27:04+00:00",
+      "created_at": "2026-08-31T19:47:46+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #59",
+      "fix_sha": "a2eda8d",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/59",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 53,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add ATR/volatility-scaled position sizing (vol-targeting) independent of entry thresholds",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/53"
+    },
+    {
+      "closed_at": "2026-09-05T16:21:05+00:00",
+      "created_at": "2026-08-31T19:08:13+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #58",
+      "fix_sha": "1f1458d",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/58",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 52,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/52"
+    },
+    {
+      "closed_at": "2026-09-05T16:15:07+00:00",
+      "created_at": "2026-08-17T19:55:15+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #57",
+      "fix_sha": "22f8a97",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/57",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 45,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
+    },
+    {
       "closed_at": "2026-09-05T15:41:04+00:00",
       "created_at": "2026-08-15T10:35:29+00:00",
       "delivered_by": "hand",
@@ -189,25 +343,6 @@
     },
     {
       "closed_at": null,
-      "created_at": "2026-08-31T19:47:57+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 60,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation",
-      "url": "https://github.com/AndyRBrett/overseer/issues/60"
-    },
-    {
-      "closed_at": null,
       "created_at": "2026-08-31T19:47:53+00:00",
       "delivered_by": "hand",
       "effort": "medium",
@@ -243,25 +378,6 @@
       "status": "open",
       "title": "Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline",
       "url": "https://github.com/AndyRBrett/coachvision/issues/39"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-31T19:47:46+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 53,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Add ATR/volatility-scaled position sizing (vol-targeting) independent of entry thresholds",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/53"
     },
     {
       "closed_at": null,
@@ -302,25 +418,6 @@
       "url": "https://github.com/AndyRBrett/coachvision/issues/38"
     },
     {
-      "closed_at": null,
-      "created_at": "2026-08-31T19:08:13+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 52,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/52"
-    },
-    {
       "closed_at": "2026-08-24T16:49:41+00:00",
       "created_at": "2026-08-17T19:55:18+00:00",
       "delivered_by": "hand",
@@ -353,25 +450,6 @@
       "status": "not_planned",
       "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
       "url": "https://github.com/AndyRBrett/coachvision/issues/23"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-24T14:35:24+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 50,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR",
-      "url": "https://github.com/AndyRBrett/overseer/issues/50"
     },
     {
       "closed_at": null,
@@ -436,46 +514,6 @@
     },
     {
       "closed_at": null,
-      "created_at": "2026-08-17T19:55:15+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "fix_ref": "PR #57",
-      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/57",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 45,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "in_flight",
-      "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-17T19:55:08+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 33,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals",
-      "url": "https://github.com/AndyRBrett/overseer/issues/33"
-    },
-    {
-      "closed_at": null,
       "created_at": "2026-08-15T10:35:36+00:00",
       "delivered_by": "hand",
       "effort": "high",
@@ -530,25 +568,6 @@
       "status": "open",
       "title": "Pose-estimation technique form-scoring that compares ingested clips against a reference-technique library",
       "url": "https://github.com/AndyRBrett/coachvision/issues/24"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:17:41+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 25,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "open",
-      "title": "Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable",
-      "url": "https://github.com/AndyRBrett/overseer/issues/25"
     },
     {
       "closed_at": null,
@@ -1787,7 +1806,72 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-05T16:08:04Z",
+  "generated": "2026-09-05T17:19:36Z",
+  "outcomes": {
+    "by_repo": {
+      "AndyRBrett/coachvision": {
+        "duplicate": 2,
+        "in_flight": 0,
+        "not_planned": 1,
+        "open": 5,
+        "proposed": 19,
+        "reject_rate": 0.214,
+        "sample": "sufficient",
+        "settled": 14,
+        "ship_rate": 0.786,
+        "shipped": 11
+      },
+      "AndyRBrett/crypto-trading": {
+        "duplicate": 3,
+        "in_flight": 0,
+        "not_planned": 2,
+        "open": 2,
+        "proposed": 23,
+        "reject_rate": 0.238,
+        "sample": "sufficient",
+        "settled": 21,
+        "ship_rate": 0.762,
+        "shipped": 16
+      },
+      "AndyRBrett/overseer": {
+        "duplicate": 5,
+        "in_flight": 0,
+        "not_planned": 0,
+        "open": 0,
+        "proposed": 24,
+        "reject_rate": 0.208,
+        "sample": "sufficient",
+        "settled": 24,
+        "ship_rate": 0.792,
+        "shipped": 19
+      },
+      "AndyRBrett/ufc-dashboard": {
+        "duplicate": 2,
+        "in_flight": 0,
+        "not_planned": 1,
+        "open": 4,
+        "proposed": 21,
+        "reject_rate": 0.176,
+        "sample": "sufficient",
+        "settled": 17,
+        "ship_rate": 0.824,
+        "shipped": 14
+      }
+    },
+    "min_settled": 4,
+    "overall": {
+      "duplicate": 12,
+      "in_flight": 0,
+      "not_planned": 4,
+      "open": 11,
+      "proposed": 87,
+      "reject_rate": 0.211,
+      "sample": "sufficient",
+      "settled": 76,
+      "ship_rate": 0.789,
+      "shipped": 60
+    }
+  },
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1797,19 +1881,7 @@
     ],
     "eligible": 2,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [
-      {
-        "effort": "medium",
-        "fix_ref": "PR #57",
-        "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/57",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 45,
-        "repo": "AndyRBrett/crypto-trading",
-        "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
-      }
-    ],
+    "in_flight": [],
     "last_dispatch": {
       "at": "2026-08-31T22:53:01Z",
       "conclusion": "success"
@@ -1837,17 +1909,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.692,
+    "delivery_rate": 0.782,
     "duplicate": 12,
     "duplicate_rate": 0.133,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 1,
+    "in_flight": 0,
     "not_planned": 6,
-    "open": 17,
+    "open": 11,
     "proposed": 90,
-    "shipped": 54,
+    "shipped": 61,
     "shipped_before_implementer": 44,
-    "shipped_by_hand": 9,
+    "shipped_by_hand": 16,
     "shipped_by_implementer": 1
   }
 }
