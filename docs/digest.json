@@ -28,24 +28,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-05T18:33:49Z",
+      "last_ok": "2026-09-05T19:11:56Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-05T18:33:49Z",
+      "last_ok": "2026-09-05T19:11:56Z",
       "blind_cycles": 0,
       "idle_cycles": 4
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-05T18:33:49Z",
+      "last_ok": "2026-09-05T19:11:56Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-05T18:33:49Z",
+      "last_ok": "2026-09-05T19:11:56Z",
       "blind_cycles": 0
     }
   },
@@ -189,31 +189,31 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.156,
+      "score": 0.126,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.63,
-        "backlog": 0.2
+        "backlog": 0.0
       },
-      "why": "win_rate is 33%; 2 open ideas",
+      "why": "win_rate is 33%",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
       "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
-      "notable": true,
+      "notable": false,
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.106,
+      "score": 0.119,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.229,
+        "kpi": 0.297,
         "backlog": 0.4
       },
-      "why": "4 open ideas; success_rate_7d is 69%",
+      "why": "4 open ideas; success_rate_7d is 63%",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
@@ -240,6 +240,6 @@
       "repo": "AndyRBrett/overseer"
     }
   ],
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
-  "refreshed": "2026-09-05T18:33:49Z"
+  "headline": "coachvision is running, but nothing has happened there lately.",
+  "refreshed": "2026-09-05T19:11:56Z"
 }

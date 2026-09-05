@@ -21,19 +21,19 @@
       {
         "action": "Have a look at its numbers.",
         "name": "Trading bot",
-        "notable": true,
+        "notable": false,
         "plain": "Trading bot is working, but the numbers it reports look bad",
         "repo": "AndyRBrett/crypto-trading",
-        "score": 0.156,
+        "score": 0.126,
         "short": "is working, but the numbers it reports look bad",
         "signals": {
-          "backlog": 0.2,
+          "backlog": 0.0,
           "errors": 0.0,
           "kpi": 0.63,
           "staleness": 0.0
         },
         "status": "ok",
-        "why": "win_rate is 33%; 2 open ideas"
+        "why": "win_rate is 33%"
       },
       {
         "action": "Have a look at its numbers.",
@@ -41,16 +41,16 @@
         "notable": false,
         "plain": "UFC dashboard is working, but the numbers it reports look bad",
         "repo": "AndyRBrett/ufc-dashboard",
-        "score": 0.106,
+        "score": 0.119,
         "short": "is working, but the numbers it reports look bad",
         "signals": {
           "backlog": 0.4,
           "errors": 0.0,
-          "kpi": 0.229,
+          "kpi": 0.297,
           "staleness": 0.0
         },
         "status": "ok",
-        "why": "4 open ideas; success_rate_7d is 69%"
+        "why": "4 open ideas; success_rate_7d is 63%"
       },
       {
         "action": "Nothing to do.",
@@ -92,28 +92,6 @@
         "number": 39,
         "repo": "coachvision",
         "title": "Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate\u2026"
-      },
-      {
-        "effort": "medium",
-        "eligible": false,
-        "filed_at": "2026-08-15T10:17:35Z",
-        "gate": "effort:medium (gate allows low)",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 41,
-        "repo": "crypto-trading",
-        "title": "Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes"
-      },
-      {
-        "effort": "medium",
-        "eligible": false,
-        "filed_at": "2026-08-15T10:17:38Z",
-        "gate": "effort:medium (gate allows low)",
-        "impact": "medium",
-        "kind": "enhancement",
-        "number": 42,
-        "repo": "crypto-trading",
-        "title": "Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals"
       },
       {
         "effort": "high",
@@ -193,9 +171,9 @@
         "title": "Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted"
       }
     ],
-    "backlog_total": 11,
+    "backlog_total": 9,
     "delivery": {
-      "generated": "2026-09-05T18:33:40Z",
+      "generated": "2026-09-05T19:11:46Z",
       "outcomes": {
         "AndyRBrett/coachvision": {
           "duplicate": 2,
@@ -213,13 +191,13 @@
           "duplicate": 3,
           "in_flight": 0,
           "not_planned": 2,
-          "open": 2,
+          "open": 0,
           "proposed": 23,
-          "reject_rate": 0.238,
+          "reject_rate": 0.217,
           "sample": "sufficient",
-          "settled": 21,
-          "ship_rate": 0.762,
-          "shipped": 16
+          "settled": 23,
+          "ship_rate": 0.783,
+          "shipped": 18
         },
         "AndyRBrett/overseer": {
           "duplicate": 5,
@@ -247,6 +225,22 @@
         }
       },
       "recent_shipped": [
+        {
+          "fix": "PR #62",
+          "kind": "enhancement",
+          "merged_at": "2026-09-05T18:48:55Z",
+          "number": 42,
+          "repo": "crypto-trading",
+          "title": "Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals"
+        },
+        {
+          "fix": "PR #61",
+          "kind": "enhancement",
+          "merged_at": "2026-09-05T18:46:51Z",
+          "number": 41,
+          "repo": "crypto-trading",
+          "title": "Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes"
+        },
         {
           "fix": "PR #68",
           "kind": "enhancement",
@@ -326,36 +320,20 @@
           "number": 65,
           "repo": "overseer",
           "title": "Give implement.yml catch-up crons, guarded so they cannot double the weekly bill"
-        },
-        {
-          "fix": "PR #55",
-          "kind": "enhancement",
-          "merged_at": "2026-08-31T23:21:12Z",
-          "number": 51,
-          "repo": "crypto-trading",
-          "title": "Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows"
-        },
-        {
-          "fix": "PR #96",
-          "kind": "enhancement",
-          "merged_at": "2026-08-31T23:17:28Z",
-          "number": 76,
-          "repo": "ufc-dashboard",
-          "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget ca\u2026"
         }
       ],
       "totals": {
-        "delivery_rate": 0.782,
+        "delivery_rate": 0.808,
         "duplicate": 12,
         "duplicate_rate": 0.133,
         "implementer_since": "2026-08-17T22:11:04+00:00",
         "in_flight": 0,
         "not_planned": 6,
-        "open": 11,
+        "open": 9,
         "proposed": 90,
-        "shipped": 61,
+        "shipped": 63,
         "shipped_before_implementer": 44,
-        "shipped_by_hand": 16,
+        "shipped_by_hand": 18,
         "shipped_by_implementer": 1
       }
     },
@@ -370,23 +348,23 @@
       "projects": {
         "Overseer": {
           "blind_cycles": 0,
-          "last_ok": "2026-09-05T18:33:49Z",
+          "last_ok": "2026-09-05T19:11:56Z",
           "status": "ok"
         },
         "Trading bot": {
           "blind_cycles": 0,
-          "last_ok": "2026-09-05T18:33:49Z",
+          "last_ok": "2026-09-05T19:11:56Z",
           "status": "ok"
         },
         "UFC dashboard": {
           "blind_cycles": 0,
-          "last_ok": "2026-09-05T18:33:49Z",
+          "last_ok": "2026-09-05T19:11:56Z",
           "status": "ok"
         },
         "coachvision": {
           "blind_cycles": 0,
           "idle_cycles": 4,
-          "last_ok": "2026-09-05T18:33:49Z",
+          "last_ok": "2026-09-05T19:11:56Z",
           "reason": "read OK but no recent activity",
           "status": "idle"
         }
@@ -535,12 +513,12 @@
       }
     }
   },
-  "facts_json": "{\"attention\":[{\"action\":\"Check whether it has anything to do.\",\"name\":\"coachvision\",\"notable\":true,\"plain\":\"coachvision is running, but nothing has happened there lately\",\"repo\":\"AndyRBrett/coachvision\",\"score\":0.355,\"short\":\"is running, but nothing has happened there lately\",\"signals\":{\"backlog\":0.5,\"errors\":0.0,\"kpi\":0.0,\"staleness\":0.7},\"status\":\"idle\",\"why\":\"no activity for 4 cycle(s); 5 open ideas\"},{\"action\":\"Have a look at its numbers.\",\"name\":\"Trading bot\",\"notable\":true,\"plain\":\"Trading bot is working, but the numbers it reports look bad\",\"repo\":\"AndyRBrett/crypto-trading\",\"score\":0.156,\"short\":\"is working, but the numbers it reports look bad\",\"signals\":{\"backlog\":0.2,\"errors\":0.0,\"kpi\":0.63,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"win_rate is 33%; 2 open ideas\"},{\"action\":\"Have a look at its numbers.\",\"name\":\"UFC dashboard\",\"notable\":false,\"plain\":\"UFC dashboard is working, but the numbers it reports look bad\",\"repo\":\"AndyRBrett/ufc-dashboard\",\"score\":0.106,\"short\":\"is working, but the numbers it reports look bad\",\"signals\":{\"backlog\":0.4,\"errors\":0.0,\"kpi\":0.229,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"4 open ideas; success_rate_7d is 69%\"},{\"action\":\"Nothing to do.\",\"name\":\"Overseer\",\"notable\":false,\"plain\":\"Overseer looks fine\",\"repo\":\"AndyRBrett/overseer\",\"score\":0.0,\"short\":\"looks fine\",\"signals\":{\"backlog\":0.0,\"errors\":0.0,\"kpi\":0.0,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"healthy \\u2014 nothing is asking for attention\"}],\"backlog\":[{\"effort\":\"low\",\"eligible\":true,\"filed_at\":\"2026-08-31T19:08:17Z\",\"gate\":\"enhancement, effort:low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":38,\"repo\":\"coachvision\",\"title\":\"Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a \\u2026\"},{\"effort\":\"low\",\"eligible\":true,\"filed_at\":\"2026-08-31T19:47:50Z\",\"gate\":\"enhancement, effort:low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":39,\"repo\":\"coachvision\",\"title\":\"Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate\\u2026\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:17:35Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":41,\"repo\":\"crypto-trading\",\"title\":\"Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:17:38Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":42,\"repo\":\"crypto-trading\",\"title\":\"Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals\"},{\"effort\":\"high\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:17:44Z\",\"gate\":\"effort:high (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":24,\"repo\":\"coachvision\",\"title\":\"Pose-estimation technique form-scoring that compares ingested clips against a reference-technique library\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:35:32Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":25,\"repo\":\"coachvision\",\"title\":\"Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the \\u2026\"},{\"effort\":\"high\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:35:36Z\",\"gate\":\"effort:high (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":74,\"repo\":\"ufc-dashboard\",\"title\":\"Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongsid\\u2026\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-24T14:35:18Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":34,\"repo\":\"coachvision\",\"title\":\"Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session cl\\u2026\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-24T14:35:21Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":90,\"repo\":\"ufc-dashboard\",\"title\":\"Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-31T19:08:20Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":93,\"repo\":\"ufc-dashboard\",\"title\":\"Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-31T19:47:53Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":94,\"repo\":\"ufc-dashboard\",\"title\":\"Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted\"}],\"backlog_total\":11,\"delivery\":{\"generated\":\"2026-09-05T18:33:40Z\",\"outcomes\":{\"AndyRBrett/coachvision\":{\"duplicate\":2,\"in_flight\":0,\"not_planned\":1,\"open\":5,\"proposed\":19,\"reject_rate\":0.214,\"sample\":\"sufficient\",\"settled\":14,\"ship_rate\":0.786,\"shipped\":11},\"AndyRBrett/crypto-trading\":{\"duplicate\":3,\"in_flight\":0,\"not_planned\":2,\"open\":2,\"proposed\":23,\"reject_rate\":0.238,\"sample\":\"sufficient\",\"settled\":21,\"ship_rate\":0.762,\"shipped\":16},\"AndyRBrett/overseer\":{\"duplicate\":5,\"in_flight\":0,\"not_planned\":0,\"open\":0,\"proposed\":24,\"reject_rate\":0.208,\"sample\":\"sufficient\",\"settled\":24,\"ship_rate\":0.792,\"shipped\":19},\"AndyRBrett/ufc-dashboard\":{\"duplicate\":2,\"in_flight\":0,\"not_planned\":1,\"open\":4,\"proposed\":21,\"reject_rate\":0.176,\"sample\":\"sufficient\",\"settled\":17,\"ship_rate\":0.824,\"shipped\":14}},\"recent_shipped\":[{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":60,\"repo\":\"overseer\",\"title\":\"Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibr\\u2026\"},{\"fix\":\"PR #56\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":50,\"repo\":\"overseer\",\"title\":\"Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generati\\u2026\"},{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":33,\"repo\":\"overseer\",\"title\":\"Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals\"},{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:10Z\",\"number\":25,\"repo\":\"overseer\",\"title\":\"Compute a per-project \\\"attention score\\\" and rank projects on the dashboard by where action is most valuable\"},{\"fix\":\"PR #59\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:27:04Z\",\"number\":53,\"repo\":\"crypto-trading\",\"title\":\"Add ATR/volatility-scaled position sizing (vol-targeting) independent of entry thresholds\"},{\"fix\":\"PR #58\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:21:05Z\",\"number\":52,\"repo\":\"crypto-trading\",\"title\":\"Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals\"},{\"fix\":\"PR #57\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:15:07Z\",\"number\":45,\"repo\":\"crypto-trading\",\"title\":\"Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays n\\u2026\"},{\"fix\":\"PR #56\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T15:41:04Z\",\"number\":44,\"repo\":\"crypto-trading\",\"title\":\"Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage\"},{\"fix\":\"PR #67\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:32:03Z\",\"number\":66,\"repo\":\"overseer\",\"title\":\"Distinguish work the implementer delivered from work done by hand\"},{\"fix\":\"PR #63\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:27:44Z\",\"number\":65,\"repo\":\"overseer\",\"title\":\"Give implement.yml catch-up crons, guarded so they cannot double the weekly bill\"},{\"fix\":\"PR #55\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:21:12Z\",\"number\":51,\"repo\":\"crypto-trading\",\"title\":\"Add per-asset PnL/drawdown attribution breakdown (BTC/ETH/SOL) across 7d/30d/90d windows\"},{\"fix\":\"PR #96\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:17:28Z\",\"number\":76,\"repo\":\"ufc-dashboard\",\"title\":\"Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget ca\\u2026\"}],\"totals\":{\"delivery_rate\":0.782,\"duplicate\":12,\"duplicate_rate\":0.133,\"implementer_since\":\"2026-08-17T22:11:04+00:00\",\"in_flight\":0,\"not_planned\":6,\"open\":11,\"proposed\":90,\"shipped\":61,\"shipped_before_implementer\":44,\"shipped_by_hand\":16,\"shipped_by_implementer\":1}},\"digest\":{\"counts\":{\"enhancements\":4,\"errors\":0,\"issues\":0,\"tools\":9},\"generated\":\"2026-08-31T19:48:15Z\",\"projects\":{\"Overseer\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T18:33:49Z\",\"status\":\"ok\"},\"Trading bot\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T18:33:49Z\",\"status\":\"ok\"},\"UFC dashboard\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T18:33:49Z\",\"status\":\"ok\"},\"coachvision\":{\"blind_cycles\":0,\"idle_cycles\":4,\"last_ok\":\"2026-09-05T18:33:49Z\",\"reason\":\"read OK but no recent activity\",\"status\":\"idle\"}},\"rollup\":{\"attention\":[{\"cycles\":4,\"detail\":\"no recent activity \\u00b7 idle 4 cycles\",\"name\":\"coachvision\",\"nudge\":true,\"status\":\"idle\"}],\"enhancements\":0,\"errors\":0,\"issues\":0,\"nudge_threshold\":2,\"ok\":3,\"total\":4},\"status\":\"completed\",\"summary\":\"Issues Found\\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy or in expected idle/known states \\u2014 no new bugs filed.\\n\\nTop Enhancement Ideas (ranked)\\n1. coachvision \\u2014 Drift-alerting on self-test canary (effort: low, impact: medium): Cheap statistical check on canary history catches silent pipeline/model regressions even while real footage stays idle.\\n2. ufc-dashboard \\u2014 Secondary odds-provider fallback (effort: medium, impact: high): Auto-failover when primary odds API budget is exhausted, fixing the recurring odds-unavailable events instead of just alerting.\\n3. crypto-trading \\u2014 ATR/volatility-scaled position sizing (effort: medium, impact: high): Normalizes per-trade risk to realized volatility, improving risk consistency independent of entry-threshold tuning.\\n4. overseer \\u2014 Track enhancement-proposal outcome rate per project (effort: medium, impact: medium): Feeds shipped/closed ratios back into idea generation so future proposals skew toward higher-yield categories.\"},\"heartbeat\":{\"stale_after_hours\":192.0},\"queue\":{\"benched\":[],\"cap\":3,\"cost_hint\":1.5,\"efforts\":[\"low\"],\"eligible\":2,\"failed_label\":\"overseer:implement-failed\",\"in_flight\":[],\"last_dispatch\":{\"at\":\"2026-08-31T22:53:01Z\",\"conclusion\":\"success\"},\"next\":[{\"effort\":\"low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":38,\"repo\":\"AndyRBrett/coachvision\",\"title\":\"Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge\",\"url\":\"https://github.com/AndyRBrett/coachvision/issues/38\"},{\"effort\":\"low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":39,\"repo\":\"AndyRBrett/coachvision\",\"title\":\"Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline\",\"url\":\"https://github.com/AndyRBrett/coachvision/issues/39\"}],\"tier\":\"light\"},\"spend\":{\"last_run\":{\"agents\":[{\"agent\":\"Bug-Hunter\",\"cache_read\":0,\"cache_write\":13075,\"calls\":1,\"input\":2,\"model\":\"claude-opus-4-8\",\"output\":2112,\"tier\":\"heavy\",\"usd\":0.1345},{\"agent\":\"Idea-Agent\",\"cache_read\":12762,\"cache_write\":15939,\"calls\":2,\"input\":4,\"model\":\"claude-sonnet-5\",\"output\":3300,\"tier\":\"light\",\"usd\":0.1131},{\"agent\":\"Reviewer\",\"cache_read\":3026,\"cache_write\":3791,\"calls\":2,\"input\":3,\"model\":\"claude-sonnet-5\",\"output\":959,\"tier\":\"light\",\"usd\":0.0295}],\"baseline_usd\":0.3722,\"heavy_model\":\"claude-opus-4-8\",\"priced\":true,\"saved_pct\":25.5,\"saved_usd\":0.0951,\"total_usd\":0.2772},\"recent_runs\":[{\"date\":\"2026-07-27\",\"usd\":null},{\"date\":\"2026-08-03\",\"usd\":null},{\"date\":\"2026-08-10\",\"usd\":null},{\"date\":\"2026-08-13\",\"usd\":null},{\"date\":\"2026-08-15\",\"usd\":0.3069},{\"date\":\"2026-08-17\",\"usd\":0.3382},{\"date\":\"2026-08-24\",\"usd\":0.4128},{\"date\":\"2026-08-31\",\"usd\":0.2772}],\"reference_costs_usd\":{\"one_implementation\":1.49,\"one_review\":0.34,\"typical_week\":4.8}}}",
+  "facts_json": "{\"attention\":[{\"action\":\"Check whether it has anything to do.\",\"name\":\"coachvision\",\"notable\":true,\"plain\":\"coachvision is running, but nothing has happened there lately\",\"repo\":\"AndyRBrett/coachvision\",\"score\":0.355,\"short\":\"is running, but nothing has happened there lately\",\"signals\":{\"backlog\":0.5,\"errors\":0.0,\"kpi\":0.0,\"staleness\":0.7},\"status\":\"idle\",\"why\":\"no activity for 4 cycle(s); 5 open ideas\"},{\"action\":\"Have a look at its numbers.\",\"name\":\"Trading bot\",\"notable\":false,\"plain\":\"Trading bot is working, but the numbers it reports look bad\",\"repo\":\"AndyRBrett/crypto-trading\",\"score\":0.126,\"short\":\"is working, but the numbers it reports look bad\",\"signals\":{\"backlog\":0.0,\"errors\":0.0,\"kpi\":0.63,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"win_rate is 33%\"},{\"action\":\"Have a look at its numbers.\",\"name\":\"UFC dashboard\",\"notable\":false,\"plain\":\"UFC dashboard is working, but the numbers it reports look bad\",\"repo\":\"AndyRBrett/ufc-dashboard\",\"score\":0.119,\"short\":\"is working, but the numbers it reports look bad\",\"signals\":{\"backlog\":0.4,\"errors\":0.0,\"kpi\":0.297,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"4 open ideas; success_rate_7d is 63%\"},{\"action\":\"Nothing to do.\",\"name\":\"Overseer\",\"notable\":false,\"plain\":\"Overseer looks fine\",\"repo\":\"AndyRBrett/overseer\",\"score\":0.0,\"short\":\"looks fine\",\"signals\":{\"backlog\":0.0,\"errors\":0.0,\"kpi\":0.0,\"staleness\":0.0},\"status\":\"ok\",\"why\":\"healthy \\u2014 nothing is asking for attention\"}],\"backlog\":[{\"effort\":\"low\",\"eligible\":true,\"filed_at\":\"2026-08-31T19:08:17Z\",\"gate\":\"enhancement, effort:low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":38,\"repo\":\"coachvision\",\"title\":\"Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a \\u2026\"},{\"effort\":\"low\",\"eligible\":true,\"filed_at\":\"2026-08-31T19:47:50Z\",\"gate\":\"enhancement, effort:low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":39,\"repo\":\"coachvision\",\"title\":\"Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate\\u2026\"},{\"effort\":\"high\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:17:44Z\",\"gate\":\"effort:high (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":24,\"repo\":\"coachvision\",\"title\":\"Pose-estimation technique form-scoring that compares ingested clips against a reference-technique library\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:35:32Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":25,\"repo\":\"coachvision\",\"title\":\"Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the \\u2026\"},{\"effort\":\"high\",\"eligible\":false,\"filed_at\":\"2026-08-15T10:35:36Z\",\"gate\":\"effort:high (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":74,\"repo\":\"ufc-dashboard\",\"title\":\"Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongsid\\u2026\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-24T14:35:18Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":34,\"repo\":\"coachvision\",\"title\":\"Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session cl\\u2026\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-24T14:35:21Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":90,\"repo\":\"ufc-dashboard\",\"title\":\"Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-31T19:08:20Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":93,\"repo\":\"ufc-dashboard\",\"title\":\"Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant\"},{\"effort\":\"medium\",\"eligible\":false,\"filed_at\":\"2026-08-31T19:47:53Z\",\"gate\":\"effort:medium (gate allows low)\",\"impact\":\"high\",\"kind\":\"enhancement\",\"number\":94,\"repo\":\"ufc-dashboard\",\"title\":\"Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted\"}],\"backlog_total\":9,\"delivery\":{\"generated\":\"2026-09-05T19:11:46Z\",\"outcomes\":{\"AndyRBrett/coachvision\":{\"duplicate\":2,\"in_flight\":0,\"not_planned\":1,\"open\":5,\"proposed\":19,\"reject_rate\":0.214,\"sample\":\"sufficient\",\"settled\":14,\"ship_rate\":0.786,\"shipped\":11},\"AndyRBrett/crypto-trading\":{\"duplicate\":3,\"in_flight\":0,\"not_planned\":2,\"open\":0,\"proposed\":23,\"reject_rate\":0.217,\"sample\":\"sufficient\",\"settled\":23,\"ship_rate\":0.783,\"shipped\":18},\"AndyRBrett/overseer\":{\"duplicate\":5,\"in_flight\":0,\"not_planned\":0,\"open\":0,\"proposed\":24,\"reject_rate\":0.208,\"sample\":\"sufficient\",\"settled\":24,\"ship_rate\":0.792,\"shipped\":19},\"AndyRBrett/ufc-dashboard\":{\"duplicate\":2,\"in_flight\":0,\"not_planned\":1,\"open\":4,\"proposed\":21,\"reject_rate\":0.176,\"sample\":\"sufficient\",\"settled\":17,\"ship_rate\":0.824,\"shipped\":14}},\"recent_shipped\":[{\"fix\":\"PR #62\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T18:48:55Z\",\"number\":42,\"repo\":\"crypto-trading\",\"title\":\"Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals\"},{\"fix\":\"PR #61\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T18:46:51Z\",\"number\":41,\"repo\":\"crypto-trading\",\"title\":\"Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes\"},{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":60,\"repo\":\"overseer\",\"title\":\"Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibr\\u2026\"},{\"fix\":\"PR #56\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":50,\"repo\":\"overseer\",\"title\":\"Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generati\\u2026\"},{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:11Z\",\"number\":33,\"repo\":\"overseer\",\"title\":\"Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals\"},{\"fix\":\"PR #68\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T17:18:10Z\",\"number\":25,\"repo\":\"overseer\",\"title\":\"Compute a per-project \\\"attention score\\\" and rank projects on the dashboard by where action is most valuable\"},{\"fix\":\"PR #59\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:27:04Z\",\"number\":53,\"repo\":\"crypto-trading\",\"title\":\"Add ATR/volatility-scaled position sizing (vol-targeting) independent of entry thresholds\"},{\"fix\":\"PR #58\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:21:05Z\",\"number\":52,\"repo\":\"crypto-trading\",\"title\":\"Add time-based position aging / rotation cap so stale in-position holds don't perpetually block new signals\"},{\"fix\":\"PR #57\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T16:15:07Z\",\"number\":45,\"repo\":\"crypto-trading\",\"title\":\"Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays n\\u2026\"},{\"fix\":\"PR #56\",\"kind\":\"enhancement\",\"merged_at\":\"2026-09-05T15:41:04Z\",\"number\":44,\"repo\":\"crypto-trading\",\"title\":\"Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage\"},{\"fix\":\"PR #67\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:32:03Z\",\"number\":66,\"repo\":\"overseer\",\"title\":\"Distinguish work the implementer delivered from work done by hand\"},{\"fix\":\"PR #63\",\"kind\":\"enhancement\",\"merged_at\":\"2026-08-31T23:27:44Z\",\"number\":65,\"repo\":\"overseer\",\"title\":\"Give implement.yml catch-up crons, guarded so they cannot double the weekly bill\"}],\"totals\":{\"delivery_rate\":0.808,\"duplicate\":12,\"duplicate_rate\":0.133,\"implementer_since\":\"2026-08-17T22:11:04+00:00\",\"in_flight\":0,\"not_planned\":6,\"open\":9,\"proposed\":90,\"shipped\":63,\"shipped_before_implementer\":44,\"shipped_by_hand\":18,\"shipped_by_implementer\":1}},\"digest\":{\"counts\":{\"enhancements\":4,\"errors\":0,\"issues\":0,\"tools\":9},\"generated\":\"2026-08-31T19:48:15Z\",\"projects\":{\"Overseer\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T19:11:56Z\",\"status\":\"ok\"},\"Trading bot\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T19:11:56Z\",\"status\":\"ok\"},\"UFC dashboard\":{\"blind_cycles\":0,\"last_ok\":\"2026-09-05T19:11:56Z\",\"status\":\"ok\"},\"coachvision\":{\"blind_cycles\":0,\"idle_cycles\":4,\"last_ok\":\"2026-09-05T19:11:56Z\",\"reason\":\"read OK but no recent activity\",\"status\":\"idle\"}},\"rollup\":{\"attention\":[{\"cycles\":4,\"detail\":\"no recent activity \\u00b7 idle 4 cycles\",\"name\":\"coachvision\",\"nudge\":true,\"status\":\"idle\"}],\"enhancements\":0,\"errors\":0,\"issues\":0,\"nudge_threshold\":2,\"ok\":3,\"total\":4},\"status\":\"completed\",\"summary\":\"Issues Found\\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) are healthy or in expected idle/known states \\u2014 no new bugs filed.\\n\\nTop Enhancement Ideas (ranked)\\n1. coachvision \\u2014 Drift-alerting on self-test canary (effort: low, impact: medium): Cheap statistical check on canary history catches silent pipeline/model regressions even while real footage stays idle.\\n2. ufc-dashboard \\u2014 Secondary odds-provider fallback (effort: medium, impact: high): Auto-failover when primary odds API budget is exhausted, fixing the recurring odds-unavailable events instead of just alerting.\\n3. crypto-trading \\u2014 ATR/volatility-scaled position sizing (effort: medium, impact: high): Normalizes per-trade risk to realized volatility, improving risk consistency independent of entry-threshold tuning.\\n4. overseer \\u2014 Track enhancement-proposal outcome rate per project (effort: medium, impact: medium): Feeds shipped/closed ratios back into idea generation so future proposals skew toward higher-yield categories.\"},\"heartbeat\":{\"stale_after_hours\":192.0},\"queue\":{\"benched\":[],\"cap\":3,\"cost_hint\":1.5,\"efforts\":[\"low\"],\"eligible\":2,\"failed_label\":\"overseer:implement-failed\",\"in_flight\":[],\"last_dispatch\":{\"at\":\"2026-08-31T22:53:01Z\",\"conclusion\":\"success\"},\"next\":[{\"effort\":\"low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":38,\"repo\":\"AndyRBrett/coachvision\",\"title\":\"Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge\",\"url\":\"https://github.com/AndyRBrett/coachvision/issues/38\"},{\"effort\":\"low\",\"impact\":\"medium\",\"kind\":\"enhancement\",\"number\":39,\"repo\":\"AndyRBrett/coachvision\",\"title\":\"Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline\",\"url\":\"https://github.com/AndyRBrett/coachvision/issues/39\"}],\"tier\":\"light\"},\"spend\":{\"last_run\":{\"agents\":[{\"agent\":\"Bug-Hunter\",\"cache_read\":0,\"cache_write\":13075,\"calls\":1,\"input\":2,\"model\":\"claude-opus-4-8\",\"output\":2112,\"tier\":\"heavy\",\"usd\":0.1345},{\"agent\":\"Idea-Agent\",\"cache_read\":12762,\"cache_write\":15939,\"calls\":2,\"input\":4,\"model\":\"claude-sonnet-5\",\"output\":3300,\"tier\":\"light\",\"usd\":0.1131},{\"agent\":\"Reviewer\",\"cache_read\":3026,\"cache_write\":3791,\"calls\":2,\"input\":3,\"model\":\"claude-sonnet-5\",\"output\":959,\"tier\":\"light\",\"usd\":0.0295}],\"baseline_usd\":0.3722,\"heavy_model\":\"claude-opus-4-8\",\"priced\":true,\"saved_pct\":25.5,\"saved_usd\":0.0951,\"total_usd\":0.2772},\"recent_runs\":[{\"date\":\"2026-07-27\",\"usd\":null},{\"date\":\"2026-08-03\",\"usd\":null},{\"date\":\"2026-08-10\",\"usd\":null},{\"date\":\"2026-08-13\",\"usd\":null},{\"date\":\"2026-08-15\",\"usd\":0.3069},{\"date\":\"2026-08-17\",\"usd\":0.3382},{\"date\":\"2026-08-24\",\"usd\":0.4128},{\"date\":\"2026-08-31\",\"usd\":0.2772}],\"reference_costs_usd\":{\"one_implementation\":1.49,\"one_review\":0.34,\"typical_week\":4.8}}}",
   "formats": {
     "text": "Answer in plain text, at most a short paragraph or a few lines. Include issue numbers and repo names. No markdown headings.",
     "voice": "This answer will be READ ALOUD by a phone, so write it to be heard, not read: two or three sentences, no markdown, no bullet points, no URLs, no bare issue numbers without their repo. Say \"issue fifty in crypto-trading\", not \"#50\". Round money to the nearest cent and say it as words. Stop when the question is answered \u2014 there is no scrolling back."
   },
-  "generated": "2026-09-05T18:33:50Z",
+  "generated": "2026-09-05T19:11:56Z",
   "model_hint": "claude-sonnet-5",
   "system": "You are the Overseer \u2014 a weekly review pipeline that watches four projects (crypto-trading, coachvision, ufc-dashboard, and overseer itself), files issues for what it finds, and implements a few of them.\n\nYou are being asked a question out loud by the person who built you. Answer from the FACTS block below and nothing else.\n\nHow to be useful here:\n- The facts are a snapshot, not live. If asked about something the snapshot does not cover, say what the snapshot does say and that you cannot see further.\n- Every timestamp in the facts is UTC ISO-8601, and the question you are asked begins with the current time on the same clock. Work out how old something is by comparing the two, and say it the way a person would \u2014 \"about a week ago\", not a number of hours. If the digest or the delivery ledger is more than a few days old, say so before you answer anything from it.\n- Never invent an issue number, a repo, a dollar amount, or a date. Every one of those is in the facts if it is real.\n- `backlog[].gate` is the implementation gate's own verdict on why an item is or is not queued. When asked why something has not been worked on, quote that reason rather than reasoning about labels yourself.\n- The `queue` block is what the next implementation run will actually pick up.\n- `attention` is the projects ranked by where work is worth most, highest score first, each with the reason it scored there. When asked what to work on, lead with the top one and quote its reason. Do not re-rank them yourself.\n- `delivery.outcomes` is how past ideas fared per project. A `ship_rate` of null means too few settled proposals to say \u2014 report that rather than a number.\n- Costs: quote `spend`. A review is about a third of a dollar, one implementation about a dollar fifty \u2014 the implementer is the expensive part.\n- Say \"shipped\" only for work that is MERGED. An issue closed with a fix on an unreviewed branch is in flight, and the facts distinguish the two.\n\nBe direct and concrete. Lead with the answer. Do not include internal or system XML tags in your response."
 }

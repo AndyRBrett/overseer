@@ -1,6 +1,50 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-05T18:48:55+00:00",
+      "created_at": "2026-08-15T10:17:38+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #62",
+      "fix_sha": "80812e5",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/62",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 42,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/42"
+    },
+    {
+      "closed_at": "2026-09-05T18:46:51+00:00",
+      "created_at": "2026-08-15T10:17:35+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #61",
+      "fix_sha": "1ff9cd9",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/61",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 41,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/41"
+    },
+    {
       "closed_at": "2026-09-05T17:18:11+00:00",
       "created_at": "2026-08-31T19:47:57+00:00",
       "delivered_by": "hand",
@@ -568,44 +612,6 @@
       "status": "open",
       "title": "Pose-estimation technique form-scoring that compares ingested clips against a reference-technique library",
       "url": "https://github.com/AndyRBrett/coachvision/issues/24"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:17:38+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 42,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/42"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:17:35+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 41,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/41"
     },
     {
       "closed_at": "2026-08-13T22:00:58+00:00",
@@ -1806,7 +1812,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-05T18:33:40Z",
+  "generated": "2026-09-05T19:11:46Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1825,13 +1831,13 @@
         "duplicate": 3,
         "in_flight": 0,
         "not_planned": 2,
-        "open": 2,
+        "open": 0,
         "proposed": 23,
-        "reject_rate": 0.238,
+        "reject_rate": 0.217,
         "sample": "sufficient",
-        "settled": 21,
-        "ship_rate": 0.762,
-        "shipped": 16
+        "settled": 23,
+        "ship_rate": 0.783,
+        "shipped": 18
       },
       "AndyRBrett/overseer": {
         "duplicate": 5,
@@ -1863,13 +1869,13 @@
       "duplicate": 12,
       "in_flight": 0,
       "not_planned": 4,
-      "open": 11,
+      "open": 9,
       "proposed": 87,
-      "reject_rate": 0.211,
+      "reject_rate": 0.205,
       "sample": "sufficient",
-      "settled": 76,
-      "ship_rate": 0.789,
-      "shipped": 60
+      "settled": 78,
+      "ship_rate": 0.795,
+      "shipped": 62
     }
   },
   "queue": {
@@ -1909,17 +1915,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.782,
+    "delivery_rate": 0.808,
     "duplicate": 12,
     "duplicate_rate": 0.133,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 6,
-    "open": 11,
+    "open": 9,
     "proposed": 90,
-    "shipped": 61,
+    "shipped": 63,
     "shipped_before_implementer": 44,
-    "shipped_by_hand": 16,
+    "shipped_by_hand": 18,
     "shipped_by_implementer": 1
   }
 }
