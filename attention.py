@@ -209,6 +209,112 @@ _SIGNAL_PHRASE = {
 }
 
 
+# ── PLAIN ENGLISH ────────────────────────────────────────────────────────
+# The same finding as `why`, in words that need no context.
+#
+# `why` is written for someone who knows what an SLA is: "data 400h old against
+# a 192h SLA" is precise, and it is the right thing to show beside a score. It
+# is the wrong thing to lead a dashboard with, because the first question the
+# page has to answer — is anything wrong, and with what — should be readable
+# without knowing anything about this project at all.
+#
+# It is generated HERE rather than phrased in app.js for the same reason the
+# score is (invariant 12): two sentences describing one finding, written in two
+# languages, drift the first time the scoring changes, and the plain one is the
+# one people would actually be reading.
+
+# Below this a project is not worth mentioning on the plain summary at all.
+# Every project scores something — an idea in the backlog is a non-zero signal —
+# and a page that reports four "concerns" every week trains you to ignore it.
+NOTABLE = 0.15
+
+
+def _days(hours):
+    """Hours as a whole number of days, for a sentence rather than a gauge."""
+    try:
+        return max(1, int(round(float(hours) / 24.0)))
+    except (TypeError, ValueError):
+        return None
+
+
+def plain_reason(name, health, signals, open_ideas=0) -> str:
+    """One sentence a stranger could act on, for this project's top signal.
+
+    Ordered by the same weights the score uses, so the sentence always describes
+    the thing that put the project where it is in the ranking.
+    """
+    health = health or {}
+    status = health.get("status")
+    if status in ("error", "blind"):
+        # Capitalised at source, unlike every other branch: those begin with the
+        # project's own name, and "coachvision" is spelled that way. Upper-casing
+        # a sentence's first letter would silently rename a project on the one
+        # line of the page most people read.
+        return f"We cannot see {name} at all right now"
+    if status == "stale":
+        days = _days(health.get("age_hours"))
+        return (f"{name} has not sent anything new in {days} days"
+                if days else f"{name} has stopped sending new information")
+    if status == "idle":
+        return f"{name} is running, but nothing has happened there lately"
+    # Reads fine, so the concern (if any) is in what it reports.
+    if signals.get("errors", 0) > 0:
+        return f"{name} is working, but some of its jobs keep failing"
+    if signals.get("kpi", 0) > 0:
+        return f"{name} is working, but the numbers it reports look bad"
+    if open_ideas:
+        return (f"{name} has {open_ideas} "
+                f"idea{'s' if open_ideas != 1 else ''} waiting for someone to look at")
+    return f"{name} looks fine"
+
+
+# What to actually do about it, keyed on the same dominant signal. Short enough
+# to read at a glance and deliberately not a diagnosis — the page's job is to
+# send you to the right project, not to fix it from the sofa.
+_ACTIONS = {
+    "unreadable": "Check whether it is still running.",
+    "stale": "Check whether it is still running.",
+    "idle": "Check whether it has anything to do.",
+    "errors": "Have a look at what keeps failing.",
+    "kpi": "Have a look at its numbers.",
+    "backlog": "Some ideas are waiting for you to look at them.",
+    "fine": "Nothing to do.",
+}
+
+
+def plain_action(health, signals, open_ideas=0) -> str:
+    """The one thing worth doing about this project, in plain words."""
+    status = (health or {}).get("status")
+    if status in ("error", "blind"):
+        return _ACTIONS["unreadable"]
+    if status in ("stale", "idle"):
+        return _ACTIONS[status]
+    if signals.get("errors", 0) > 0:
+        return _ACTIONS["errors"]
+    if signals.get("kpi", 0) > 0:
+        return _ACTIONS["kpi"]
+    if open_ideas:
+        return _ACTIONS["backlog"]
+    return _ACTIONS["fine"]
+
+
+def headline(ranked) -> str:
+    """The one sentence the whole dashboard leads with.
+
+    Deliberately singular. A list of four things needing attention is a list
+    nobody reads to the end of; the ranking exists precisely so there is a first
+    one, and the rest are a count.
+    """
+    notable = [r for r in (ranked or []) if r.get("score", 0) >= NOTABLE]
+    if not notable:
+        return "Everything looks fine."
+    sentence = notable[0]["plain"] + "."
+    others = len(notable) - 1
+    if others:
+        sentence += f" {others} other{'s' if others != 1 else ''} could use a look too."
+    return sentence
+
+
 def score_project(health, data=None, open_ideas=0) -> dict:
     """One project's attention score and the reason for it.
 
@@ -265,6 +371,9 @@ def rank(projects, readings=None, repos=None, ledger=None) -> list[dict]:
                             open_ideas=open_ideas.get(repo, 0))
         row["name"] = name
         row["status"] = (health or {}).get("status")
+        row["plain"] = plain_reason(name, health, row["signals"],
+                                    open_ideas.get(repo, 0))
+        row["action"] = plain_action(health, row["signals"], open_ideas.get(repo, 0))
         if repo:
             row["repo"] = repo
         ranked.append(row)

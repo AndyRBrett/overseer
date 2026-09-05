@@ -280,6 +280,36 @@
                border: 1px solid var(--border); border-radius: 8px; padding: 8px;
                font: 12px/1.4 monospace; }
     code { background: var(--code-bg); border-radius: 5px; padding: 1px 6px; word-break: break-all; }
+    /* The plain summary. Bigger than anything else on the page on purpose:
+       the verdict is the one line that has to survive being read at arm's
+       length, and everything else is reference material. */
+    .card.plain { padding: 18px 16px; }
+    .plain-verdict { font-size: 20px; line-height: 1.35; font-weight: 650;
+                     color: var(--text-strong);
+                     /* A sentence, so it wraps at spaces — never mid-word, which
+                        is what turned "$0.31" into "$0.3 / 1" elsewhere. */
+                     overflow-wrap: normal; word-break: normal; }
+    .plain-verdict.good { color: #34d399; }
+    .plain-verdict.warn { color: #fbbf24; }
+    .plain-line { display: flex; gap: 10px; align-items: baseline; margin-top: 14px; }
+    .plain-line .pq { font-size: 13px; color: var(--muted); flex: none; width: 96px; }
+    .plain-line .pa { font-size: 15px; color: var(--text); line-height: 1.4; }
+    /* On a narrow phone the label and answer stack rather than squeezing the
+       sentence into a 90px column. */
+    @media (max-width: 380px) {
+      .plain-line { display: block; }
+      .plain-line .pq { width: auto; margin-bottom: 2px; }
+    }
+    #plain-checked { margin-top: 16px; }
+    /* What to do about it, under the verdict. */
+    .plain-action { font-size: 15px; color: var(--text); margin-top: 8px; }
+
+    /* One toggle for the whole technical half. */
+    #details > summary { cursor: pointer; list-style: none; padding: 12px 2px;
+                         font-size: 14px; color: var(--muted); text-align: center; }
+    #details > summary::-webkit-details-marker { display: none; }
+    #details > summary:hover { color: var(--text); }
+
     .hidden { display: none; }
     a { color: var(--link); }
   </style>
@@ -290,10 +320,30 @@
       <h1>Project Overseer</h1>
       <button id="refresh" class="icon-btn" type="button" aria-label="Refresh" title="Refresh">↻</button>
     </div>
-    <div class="sub">Three-agent weekly review · Bug-Hunter · Idea · Reviewer</div>
-    <div class="sub" id="generated">Loading…</div>
+    <div class="sub" id="tagline">Checks your projects every week and fixes some of what it finds.</div>
   </header>
   <main>
+    <!-- THE PLAIN HALF. Three questions in words that need no context: is
+         anything wrong, what got finished, what happens next. Everything that
+         requires knowing what an SLA or a dispatch is now lives behind the
+         "Show the details" toggle below. Nothing was deleted — the technical
+         panels are all still there, one tap away, in the same order. -->
+    <div class="card plain" id="plain-card">
+      <div class="plain-verdict" id="plain-verdict">Loading…</div>
+      <div id="plain-lines"></div>
+      <div class="sub" id="plain-checked"></div>
+    </div>
+
+    <details id="details">
+      <summary id="details-toggle">Show the details</summary>
+      <div class="details-body">
+
+    <!-- Moved out of the header: "Last run: 5 days ago — completed" is the
+         run's own bookkeeping, and it sat directly above a plain summary that
+         says the same thing in words. Two dates in the first inch of the page
+         is how the stale half hid in plain sight. -->
+    <div class="sub" id="generated">Loading…</div>
+
     <div class="card" id="rollup-card" style="display:none">
       <div class="section-label">This week at a glance</div>
       <div id="rollup"></div>
@@ -369,6 +419,9 @@
     <!-- Way back after hiding the push card — a quiet footer link, only shown
          while the card is hidden. -->
     <button id="push-restore" class="linklike hidden" type="button">Show push notification setup</button>
+
+      </div>
+    </details>
   </main>
   <script src="app.js"></script>
 </body>

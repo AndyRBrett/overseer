@@ -630,6 +630,103 @@ function renderSpend(spend, runs, queue) {
   $("spend").innerHTML = head + rows + note + outside;
 }
 
+// ── THE PLAIN HALF ───────────────────────────────────────────────────────
+// Three questions, answered in words that assume nothing: is anything wrong,
+// what got finished, what happens next.
+//
+// The VERDICT is published, not composed here (digest.headline, from
+// attention.headline) — the sentence a stranger reads first is the last one
+// that should exist in two languages. What this function does is the rendering
+// the published facts cannot do for themselves: pick the label, count what is
+// already counted, and say when each half was last checked.
+
+function plainLine(question, answer) {
+  return `<div class="plain-line"><span class="pq">${escapeHtml(question)}</span>
+    <span class="pa">${escapeHtml(answer)}</span></div>`;
+}
+
+// "17 days ago" beats a timestamp, and both beat a number of hours. Whole days
+// only: nobody acts differently on 17.4 days than on 17.
+function plainAge(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!isFinite(ms)) return null;
+  const mins = Math.round(ms / 60000);
+  if (mins < 90) return mins <= 1 ? "just now" : `${mins} minutes ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 36) return hours === 1 ? "an hour ago" : `${hours} hours ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+function renderPlain(d, ledger) {
+  // The published verdict. Falls back to a health count for a digest written
+  // before headline existed, rather than showing an empty banner.
+  const rollup = d.rollup || {};
+  const headline = d.headline
+    || (rollup.total ? `${rollup.ok} of ${rollup.total} projects look fine.` : "");
+  const worried = !!(d.attention || []).some((a) => a.score >= 0.15)
+    || !!(rollup.attention || []).some((a) => a.nudge);
+  const verdict = $("plain-verdict");
+  verdict.textContent = headline || "No run yet.";
+  verdict.className = "plain-verdict " + (headline ? (worried ? "warn" : "good") : "");
+
+  const lines = [];
+
+  // What to DO about it — published alongside the reason, for the same project
+  // the headline names. A page that says something is wrong and stops there
+  // makes the reader work out the next step every single time.
+  const top = (d.attention || [])[0];
+  if (top && top.action && worried) {
+    lines.push(`<div class="plain-action">${escapeHtml(top.action)}</div>`);
+  }
+
+  // What got finished. Counted off the ledger's own totals so this can never
+  // disagree with the delivery panel below it.
+  const t = (ledger && ledger.totals) || {};
+  if (typeof t.shipped === "number") {
+    const flight = t.in_flight
+      ? `, and ${t.in_flight} more ${t.in_flight === 1 ? "is" : "are"} waiting to be checked`
+      : "";
+    lines.push(plainLine("Finished", `${t.shipped} jobs so far${flight}.`));
+  }
+
+  // What happens next. The queue block is what the next run WILL pick up —
+  // published by tools.queue_state, never worked out here (invariant 4).
+  const q = (ledger && ledger.queue) || null;
+  if (q) {
+    const next = q.next || [];
+    if (next.length) {
+      // COUNT AND WHERE, never the titles. These are issue titles written by an
+      // agent for an engineer — "Push proactive idle-escalation notifications
+      // (SMS/push) as days_since_last_footage climbs" — and one of them filled
+      // six lines of a phone screen here, burying the two words that mattered.
+      // Truncating it only made it unreadable in less space. The full titles are
+      // on the queue panel in the details half, which is the right place for
+      // them; this line answers "is anything coming, and for what".
+      const repos = [...new Set(next.map((e) => (e.repo || "").split("/").pop()))];
+      const where = repos.length === 1 ? `for ${repos[0]}`
+        : `for ${repos.slice(0, -1).join(", ")} and ${repos[repos.length - 1]}`;
+      lines.push(plainLine("Next", next.length === 1
+        ? `1 job is lined up, ${where}.`
+        : `${next.length} jobs are lined up, ${where}.`));
+    } else {
+      lines.push(plainLine("Next", "nothing is lined up to be built right now."));
+    }
+  }
+
+  $("plain-lines").innerHTML = lines.join("");
+
+  // TWO clocks, said out loud. The health above refreshes several times a day;
+  // the written review is weekly. Showing one date for both is what made a
+  // five-day-old panel look current — the whole reason the refresh exists.
+  const checked = d.refreshed ? plainAge(d.refreshed) : null;
+  const reviewed = d.generated ? plainAge(d.generated) : null;
+  $("plain-checked").textContent = [
+    checked ? `Checked ${checked}` : null,
+    reviewed ? `full review ${reviewed}` : null,
+  ].filter(Boolean).join(" · ");
+}
+
 async function loadDigest() {
   try {
     const res = await fetch("digest.json?" + Date.now()); // bust cache
@@ -657,6 +754,7 @@ async function loadDigest() {
       runs.map((r) => (r.projects && r.projects[name] ? r.projects[name].score : null));
 
     renderGenerated(d);
+    renderPlain(d, ledger);
     renderShipped(ledger);
     renderImplementer(ledger && ledger.queue);
     renderSpend(d.spend, runs, ledger && ledger.queue);
@@ -824,6 +922,9 @@ async function loadDigest() {
     // First-run empty state: explain what will appear and when, instead of a
     // dead end.
     $("generated").textContent = "Waiting for the first weekly run.";
+    $("plain-verdict").textContent = "Nothing has run yet.";
+    $("plain-lines").innerHTML = plainLine("Next",
+      "the first review runs on Monday, and this page fills in by itself.");
     $("digest").innerHTML =
       "<p>No digest yet. This page fills in automatically after the weekly " +
       "review runs (Mondays 14:00 UTC via GitHub Actions) — you'll get the " +
@@ -925,6 +1026,7 @@ $("refresh").addEventListener("click", async () => {
   const btn = $("refresh");
   btn.disabled = true;
   btn.classList.add("spin");
+  lastLoad = Date.now();
   try { await loadDigest(); } finally {
     setTimeout(() => { btn.classList.remove("spin"); btn.disabled = false; }, 400);
   }
@@ -947,6 +1049,47 @@ try {
 } catch (e) { /* private mode */ }
 $("push-hide").addEventListener("click", () => setPushCardHidden(true));
 $("push-restore").addEventListener("click", () => setPushCardHidden(false));
+
+// The details half is one toggle, and which way it was left is remembered per
+// device — someone who wants the numbers wants them every time, and someone who
+// does not should never see them again.
+const DETAILS_KEY = "overseer-details-open";
+function updateDetailsToggle() {
+  const open = $("details").open;
+  $("details-toggle").textContent = open ? "Hide the details" : "Show the details";
+  try { open ? localStorage.setItem(DETAILS_KEY, "1") : localStorage.removeItem(DETAILS_KEY); }
+  catch (e) { /* private mode */ }
+}
+try {
+  if (localStorage.getItem(DETAILS_KEY)) $("details").open = true;
+} catch (e) { /* private mode */ }
+$("details").addEventListener("toggle", updateDetailsToggle);
+updateDetailsToggle();
+
+// Keep an open page current by itself.
+//
+// The data behind this page now moves several times a day (the status and
+// ledger refreshes), but an installed PWA is a window that gets left open for
+// days — it fetched once on launch and then showed whatever it had, with a
+// manual ↻ as the only way forward. A phone brought out of a pocket showing
+// Tuesday's health, with nothing on screen admitting it, is the same failure the
+// refresh job exists to fix, one layer up.
+//
+// Refetching costs three small JSON files, so the rule is simply "not more than
+// once a minute": when the page becomes visible again, and every five minutes
+// while it is.
+const MIN_RELOAD_GAP_MS = 60_000;
+let lastLoad = Date.now();
+
+async function reloadIfStale() {
+  if (document.hidden) return;                 // never poll a backgrounded tab
+  if (Date.now() - lastLoad < MIN_RELOAD_GAP_MS) return;
+  lastLoad = Date.now();
+  await loadDigest();
+}
+
+document.addEventListener("visibilitychange", reloadIfStale);
+setInterval(reloadIfStale, 5 * 60_000);
 
 registerSW();
 loadDigest();

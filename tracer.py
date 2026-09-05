@@ -90,7 +90,8 @@ def _now() -> str:
 
 
 class RunTracer:
-    def __init__(self, jsonl_path="overseer_run.jsonl", html_path="overseer_report.html"):
+    def __init__(self, jsonl_path="overseer_run.jsonl", html_path="overseer_report.html",
+                 count_cycles=True):
         self.events: list[dict] = []
         self.jsonl_path = jsonl_path
         self.html_path = html_path
@@ -109,6 +110,16 @@ class RunTracer:
         self.usage: dict[str, dict] = {}  # per-agent model + token spend, in pipeline order
         self.heavy_model = None       # the heavy tier, for the what-if baseline
         self.ledger = None            # the run's delivery ledger — set by the orchestrator
+        # Whether this tracer's reads COUNT as a cycle.
+        #
+        # blind_cycles / stale_cycles / idle_cycles mean "consecutive weekly
+        # REVIEWS in this state" — that is what the nudge threshold of 2 was
+        # chosen against. scripts/refresh_status.py re-reads the same feeds
+        # roughly six times a day to keep the panel live, and counting those
+        # would have a feed read "stale 42 cycles" by Friday and nudge on its
+        # first afternoon. An observation is not a cycle, so it carries the
+        # review's count forward instead of incrementing it.
+        self.count_cycles = count_cycles
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -337,6 +348,17 @@ class RunTracer:
                          "status": status, "reason": reason, "data": obj})
         return rows
 
+    def _cycles(self, prev, key) -> int:
+        """The cycle count for a project in this state, this run.
+
+        A counting tracer (the weekly review) advances it. A non-counting one
+        (the status refresh) reports the review's figure unchanged — but never
+        zero, because a state this run is the first to observe has been seen
+        once, and "stale 0 cycles" reads as a bug in the panel.
+        """
+        prior = prev.get(key) or 0
+        return prior + 1 if self.count_cycles else max(prior, 1)
+
     def project_health(self) -> dict:
         """Per-project read health with blind-spot continuity (self-review #1).
 
@@ -359,7 +381,8 @@ class RunTracer:
                 # freshness SLA through so the alert can say *how* past-due it is
                 # (overseer #1). UFC nests these under data_* (see read tool).
                 rec = {"status": "stale", "reason": reason, "last_ok": now_iso,
-                       "blind_cycles": 0, "stale_cycles": prev.get("stale_cycles", 0) + 1}
+                       "blind_cycles": 0,
+                       "stale_cycles": self._cycles(prev, "stale_cycles")}
                 age = obj.get("age_hours", obj.get("data_age_hours"))
                 sla = obj.get("sla_hours", obj.get("data_sla_hours"))
                 if age is not None:
@@ -370,11 +393,12 @@ class RunTracer:
             elif status == "idle":
                 # Idle read fine, so last_ok updates; track how long it's been quiet.
                 projects[name] = {"status": "idle", "reason": reason, "last_ok": now_iso,
-                                  "blind_cycles": 0, "idle_cycles": prev.get("idle_cycles", 0) + 1}
+                                  "blind_cycles": 0,
+                                  "idle_cycles": self._cycles(prev, "idle_cycles")}
             else:
                 projects[name] = {"status": status, "reason": reason,
                                   "last_ok": prev.get("last_ok"),
-                                  "blind_cycles": prev.get("blind_cycles", 0) + 1}
+                                  "blind_cycles": self._cycles(prev, "blind_cycles")}
         return projects
 
     def attention(self) -> list[dict]:
@@ -392,6 +416,10 @@ class RunTracer:
                  if self.read_repos.get(row["tool"])}
         return attention.rank(self.project_health(), readings=readings,
                               repos=repos, ledger=self.ledger)
+
+    def headline(self) -> str:
+        """The plain-English sentence the dashboard leads with (see attention)."""
+        return attention.headline(self.attention())
 
     def attention_banner(self) -> str:
         """The digest's ATTENTION RANKING block (see attention.banner)."""
@@ -537,6 +565,10 @@ class RunTracer:
             # Ranked here, never in app.js: the dashboard sorts by this list and
             # renders its `why` verbatim rather than forming a second opinion.
             "attention": self.attention(),
+            # The plain-English verdict the page leads with. Same rule, same
+            # reason: the sentence a stranger reads first is not one to keep a
+            # second copy of in JavaScript.
+            "headline": self.headline(),
             "output_alerts": self.output_alerts(),
             "spend": self.spend(),
             "timeline": timeline,
