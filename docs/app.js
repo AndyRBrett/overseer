@@ -396,13 +396,29 @@ function renderShipped(ledger) {
     </div>`;
   };
 
+  // Per-repo proposal yield (#60), computed by tools.proposal_outcomes and
+  // published with the ledger. Keyed by full slug, matched to the short name
+  // this panel groups by.
+  const outcomes = new Map(
+    Object.entries(((ledger.outcomes || {}).by_repo) || {})
+      .map(([slug, o]) => [slug.split("/").pop(), o]));
+
   const groups = [...byRepo.entries()].sort().map(([repo, items]) => {
     items.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || b.number - a.number);
     const shipped = items.filter((e) => e.status === "shipped").length;
     const pending = items.filter((e) => e.status === "open" || e.status === "in_flight").length;
+    // "8/19 shipped" counts everything filed including untriaged ideas; the
+    // yield counts only proposals that got an answer. Both are shown because
+    // they answer different questions, and the second is the one fed back into
+    // the idea agent's prompt. A rate is withheld below the sample floor rather
+    // than printed at three items, where it is arithmetic and not evidence.
+    const o = outcomes.get(repo);
+    const yield_ = o && o.ship_rate !== null && o.ship_rate !== undefined
+      ? ` · ideas ship at ${Math.round(o.ship_rate * 100)}%`
+      : "";
     return `<details class="repo-group">
       <summary><strong>${escapeHtml(repo)}</strong>
-        <span class="pmeta">${shipped}/${items.length} shipped${pending ? ` · ${pending} pending` : ""}</span>
+        <span class="pmeta">${shipped}/${items.length} shipped${pending ? ` · ${pending} pending` : ""}${yield_}</span>
       </summary>
       ${items.map(row).join("")}
     </details>`;
@@ -670,9 +686,14 @@ async function loadDigest() {
       // AND as tiles directly below, so the same two numbers appeared twice
       // within one screen. The glance answers "is anything wrong"; the tiles
       // below answer "what did the run do".
+      // A blocked duplicate is the one visible sign the dedupe gate did anything
+      // (#33) — without it the check looks identical to a week with no
+      // re-proposals, which is how a working guard gets removed as pointless.
+      const blocked = (d.counts || {}).duplicates_blocked || 0;
       const chips = [
         `<span class="rc ok">${rollup.ok}/${rollup.total} healthy</span>`,
         att.length ? `<span class="rc warn">${att.length} need${att.length === 1 ? "s" : ""} attention</span>` : "",
+        blocked ? `<span class="rc">${blocked} duplicate idea${blocked === 1 ? "" : "s"} blocked</span>` : "",
       ].filter(Boolean).join("");
       // Only projects past the nudge threshold get an explicit call-out row.
       const nudges = att.filter((a) => a.nudge).map((a) => {
@@ -693,9 +714,22 @@ async function loadDigest() {
       $("rollup-card").style.display = "";
     }
 
-    // Per-project health with BLIND badges (blind-spot tracking)
+    // Per-project health with BLIND badges (blind-spot tracking), ordered by the
+    // attention score the run published (#25).
+    //
+    // The ORDER and the "why" both come from Python (tracer.attention →
+    // attention.rank). This panel must never compute a score of its own: it is
+    // the same rule the implementation gate lives under (invariant 4), and a
+    // second scoring formula in JavaScript would drift from the one the digest
+    // and the voice assistant quote, leaving three answers to "what should I
+    // work on" that disagree.
     const projects = d.projects || {};
-    const names = Object.keys(projects);
+    const attention = new Map((d.attention || []).map((a) => [a.name, a]));
+    const names = Object.keys(projects).sort((a, b) => {
+      const sa = attention.get(a), sb = attention.get(b);
+      if (!sa || !sb) return 0;                       // digest predates the field
+      return (sb.score || 0) - (sa.score || 0) || a.localeCompare(b);
+    });
     if (names.length) {
       $("projects-card").style.display = "";
       $("projects").innerHTML = names.map((name) => {
@@ -725,9 +759,17 @@ async function loadDigest() {
           if ((p.blind_cycles || 0) >= nudgeAt) alert = " alert";
         }
         const spark = sparkline(scoreSeries(name), { lo: 0, hi: 1, stroke: SCORE_STROKE[st] || "#94a3b8" });
+        // The attention line answers "why is this one at the top", which is the
+        // only thing that makes an ordering worth having. Rendered verbatim —
+        // `why` is the scorer's own sentence about its own dominant signal.
+        const a = attention.get(name);
+        const why = a && a.score > 0
+          ? `<div class="pmeta attn"><span class="ascore">${a.score.toFixed(2)}</span>
+              ${escapeHtml(a.why || "")}</div>`
+          : "";
         return `<div class="prow${alert}">
           <div><div class="pname">${escapeHtml(name)}</div>
-            <div class="pmeta">${escapeHtml(meta)}</div></div>
+            <div class="pmeta">${escapeHtml(meta)}</div>${why}</div>
           <div class="pright">${spark}<span class="pbadge ${st}">${badge}</span></div></div>`;
       }).join("");
     }

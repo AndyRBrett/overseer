@@ -29,6 +29,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+import dedupe
 from tracer import RAISED_KEY, RunTracer, activity_idle
 
 # ── MODEL TIERS ──────────────────────────────────────────────────────────
@@ -286,6 +287,26 @@ READ_TOOLS = {
     "read_ufc_scraper_status": "UFC dashboard",
     "read_overseer_status": "Overseer",
 }
+
+# Which project each read tool reports on. READ_TOOLS carries the display name;
+# this carries the identity, and the attention score (#25) needs the identity to
+# join a project's telemetry to its open-idea count in the ledger. Keyed on the
+# tool rather than the label because the label is a fallback that a project can
+# override from its own status file (see _app_name) — joining on a name the
+# remote project controls would silently lose the join the day it rebrands,
+# which coachvision has already done once.
+READ_TOOL_PROJECT = {
+    "read_trading_bot_log": "trading_bot",
+    "read_volleyball_results": "volleyball",
+    "read_ufc_scraper_status": "ufc",
+    "read_overseer_status": "overseer",
+}
+
+
+def read_tool_repos():
+    """{read tool: repo slug} for the projects that have one configured."""
+    return {tool: PROJECTS[key]["repo"] for tool, key in READ_TOOL_PROJECT.items()
+            if PROJECTS[key].get("repo")}
 
 # SQL used by read_trading_bot_log. Adjust the table/column names to match your
 # trade log. It must return one row of aggregates. `:since` is bound to the
@@ -617,7 +638,12 @@ def delivery_ledger(merged_only=True, limit_per_repo=100, known=None):
     considered = totals["proposed"] - totals["duplicate"]
     totals["delivery_rate"] = round(totals["shipped"] / considered, 3) if considered else 0.0
     totals["duplicate_rate"] = round(totals["duplicate"] / totals["proposed"], 3) if entries else 0.0
-    return {"entries": entries, "totals": totals, "errors": repo_errors}
+    ledger = {"entries": entries, "totals": totals, "errors": repo_errors}
+    # Attached to the ledger rather than recomputed by each consumer, so the
+    # dashboard, the ask pack and the Idea Agent's prompt cannot disagree about
+    # a project's yield (#60).
+    ledger["outcomes"] = proposal_outcomes(ledger)
+    return ledger
 
 
 def write_ledger(ledger, path=None):
@@ -632,6 +658,9 @@ def write_ledger(ledger, path=None):
     path = path or LEDGER_PATH
     payload = dict(ledger)
     payload["generated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # A ledger read back off disk predates this field; derive it rather than
+    # publishing a panel with the yield section silently missing.
+    payload.setdefault("outcomes", proposal_outcomes(ledger))
     # Ride along with the ledger so the dashboard's implementer panel refreshes
     # on the hourly ledger job — no extra workflow, no model calls, and it
     # cannot disagree with the gate because it IS the gate.
@@ -666,6 +695,101 @@ def known_work_block(ledger, per_repo=12):
                      "open": "STILL OPEN", "duplicate": "closed as duplicate",
                      "not_planned": "closed, not planned"}.get(e["status"], e["status"])
             lines.append(f"  - #{e['number']} [{state}] {e['title']}")
+    return "\n".join(lines)
+
+
+# ── PROPOSAL OUTCOMES ────────────────────────────────────────────────────
+# What became of the ideas the Idea Agent filed, per project (overseer #60).
+#
+# The delivery rate the dashboard leads with is one number across everything.
+# That is the right headline and the wrong feedback signal: it cannot tell the
+# agent that its coachvision ideas ship and its crypto risk ideas get closed as
+# not-planned, which is exactly the thing that would make next week's batch
+# better. Same data, split by repo, fed back into the brainstorm prompt.
+#
+# Enhancements only. A bug's outcome says something about the code, not about
+# the quality of an idea, and mixing them would report the Bug-Hunter's hit rate
+# as the Idea Agent's.
+
+# Below this many settled proposals a rate is arithmetic, not evidence. Three
+# ideas of which one shipped is not "33% — favour other categories"; it is a
+# small sample, and telling an agent otherwise invites it to abandon a whole
+# project on one closed issue.
+OUTCOME_MIN_SETTLED = _int_env("OVERSEER_OUTCOME_MIN_SETTLED", 4) or 4
+
+
+def proposal_outcomes(ledger):
+    """Per-repo outcome counts and ship rate for filed enhancement proposals.
+
+    Returns {"by_repo": {slug: {...}}, "overall": {...}} where each block holds
+    the raw counts plus:
+
+      settled    — shipped + not_planned + duplicate: proposals with an answer.
+      ship_rate  — shipped / settled, or None below OUTCOME_MIN_SETTLED.
+      reject_rate— (not_planned + duplicate) / settled, same caveat.
+
+    Open and in-flight items are counted but deliberately kept OUT of the
+    denominator: an idea nobody has triaged is not a rejected idea, and putting
+    it in the divisor would make every project's rate fall simply because the
+    agent kept filing.
+    """
+    buckets = {}
+
+    def _bucket(key):
+        return buckets.setdefault(key, {"shipped": 0, "in_flight": 0, "open": 0,
+                                        "not_planned": 0, "duplicate": 0, "proposed": 0})
+
+    for entry in (ledger or {}).get("entries", []):
+        if entry.get("kind") != "enhancement":
+            continue
+        status = entry.get("status")
+        if status not in ("shipped", "in_flight", "open", "not_planned", "duplicate"):
+            continue
+        for key in (entry.get("repo"), "__overall__"):
+            row = _bucket(key)
+            row[status] += 1
+            row["proposed"] += 1
+
+    def _finish(row):
+        settled = row["shipped"] + row["not_planned"] + row["duplicate"]
+        row["settled"] = settled
+        enough = settled >= OUTCOME_MIN_SETTLED
+        row["ship_rate"] = round(row["shipped"] / settled, 3) if enough else None
+        row["reject_rate"] = (round((row["not_planned"] + row["duplicate"]) / settled, 3)
+                              if enough else None)
+        # Said out loud rather than left to be inferred from a None: a consumer
+        # that renders "—" without explaining why reads as a bug in the panel.
+        row["sample"] = "sufficient" if enough else "too small"
+        return row
+
+    overall = _finish(buckets.pop("__overall__", _bucket("__overall__")))
+    return {"by_repo": {slug: _finish(row) for slug, row in sorted(buckets.items())},
+            "overall": overall,
+            "min_settled": OUTCOME_MIN_SETTLED}
+
+
+def outcomes_block(outcomes):
+    """The per-repo yield lines injected into the Idea Agent's prompt (#60).
+
+    Phrased as calibration, not as a quota. The failure mode to avoid is an
+    agent that reads "coachvision ships at 40%" and stops filing coachvision
+    ideas — the point is to shift WHAT it proposes for a project, not whether.
+    That instruction lives in the prompt; these lines are only the evidence.
+    """
+    by_repo = (outcomes or {}).get("by_repo") or {}
+    if not by_repo:
+        return "(no proposal outcomes on record yet)"
+    lines = []
+    for slug, row in by_repo.items():
+        if row["ship_rate"] is None:
+            lines.append(f"{slug}: {row['shipped']}/{row['settled']} settled proposals "
+                         f"shipped — too small a sample to read anything into "
+                         f"({row['open']} still open)")
+            continue
+        lines.append(
+            f"{slug}: {row['ship_rate']:.0%} of settled proposals shipped "
+            f"({row['shipped']} shipped, {row['not_planned']} closed not-planned, "
+            f"{row['duplicate']} duplicate, {row['open']} still open)")
     return "\n".join(lines)
 
 
@@ -1341,8 +1465,36 @@ TOOL_SCHEMAS = {
                 "rationale": {"type": "string"},
                 "effort": {"type": "string", "enum": ["low", "medium", "high"]},
                 "impact": {"type": "string", "enum": ["low", "medium", "high"]},
+                "extends": {
+                    "type": "integer",
+                    "description": (
+                        "Only when check_duplicate flagged an existing issue and this "
+                        "genuinely builds on it: the issue number it extends. Say what "
+                        "is new in the rationale. Filing is refused without this when a "
+                        "near-identical issue already exists."
+                    ),
+                },
             },
             "required": ["repo", "title", "rationale", "effort", "impact"],
+        },
+    },
+    "check_duplicate": {
+        "name": "check_duplicate",
+        "description": (
+            "Check whether an enhancement idea has already been filed, BEFORE proposing "
+            "it. Returns a verdict (duplicate / similar / clear) and the closest existing "
+            "issues with similarity scores. A 'duplicate' verdict means propose_enhancement "
+            "will refuse the filing — pick a different idea, or pass `extends` with the "
+            "issue number if you are genuinely building on it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "rationale": {"type": "string"},
+                "repo": {"type": "string"},
+            },
+            "required": ["title", "repo"],
         },
     },
     "send_telegram_summary": {
@@ -1523,6 +1675,58 @@ def read_overseer_status():
     return health
 
 
+# ── DUPLICATE DETECTION ──────────────────────────────────────────────────
+# The pipeline has filed 12 issues that were later closed as duplicates. The
+# `known_work` list in the Idea Agent's prompt was supposed to prevent that; it
+# is a request to remember, and remembering is what an agent does least reliably
+# under a long context. So the check runs instead (#33), off the ledger the run
+# has already fetched — no extra API calls, refreshed every run because the
+# ledger is.
+
+_DUP_INDEX = None
+
+
+def set_duplicate_index(ledger):
+    """Install the run's dedupe index, built from the delivery ledger.
+
+    Called once by the orchestrator after the ledger is fetched. Leaving it
+    unset (a ledger that failed to load, a unit test) makes check_duplicate
+    report "unavailable" and the propose_enhancement guard stand down — a review
+    that cannot dedupe must still be able to file, or one GitHub wobble costs a
+    week of ideas.
+    """
+    global _DUP_INDEX
+    _DUP_INDEX = dedupe.index_from_ledger(ledger) if ledger else None
+    return _DUP_INDEX
+
+
+def duplicate_matches(title, rationale=None, repo=None, limit=3):
+    """Closest already-filed issues to this proposal, or None with no index."""
+    if _DUP_INDEX is None or not len(_DUP_INDEX):
+        return None
+    return _DUP_INDEX.query(title, rationale=rationale, repo=repo, limit=limit)
+
+
+def check_duplicate(title, rationale=None, repo=None):
+    """Tool: has this idea already been filed? -> verdict + the closest matches.
+
+    Three verdicts, and the middle one is the point. `duplicate` (>= the
+    threshold) is a refusal — propose_enhancement will reject it too, so the
+    agent learns the same answer whichever door it tries. `similar` is advice:
+    close enough to be worth reading, not close enough for code to decide. And
+    `clear` means the corpus has nothing like it.
+    """
+    matches = duplicate_matches(title, rationale, repo)
+    if matches is None:
+        return {"status": "unavailable",
+                "detail": "no issue index this run — file as normal, but check the "
+                          "ALREADY ON RECORD list in your prompt first.",
+                "verdict": "clear", "matches": []}
+    top = matches[0]["score"] if matches else None
+    return {"status": "ok", "verdict": dedupe.verdict(top), "top_score": top,
+            "threshold": dedupe.DUPLICATE_THRESHOLD, "matches": matches}
+
+
 def search_existing_issues(repo, query):
     # GitHub's search API requires an `is:issue`/`is:pull-request` qualifier
     # (omitting it 422s). Iterate-and-break instead of slicing the lazy
@@ -1552,7 +1756,42 @@ def file_issue(repo, title, body):
     return {"status": "filed", "number": issue.number, "url": issue.html_url}
 
 
-def propose_enhancement(repo, title, rationale, effort, impact):
+def propose_enhancement(repo, title, rationale, effort, impact, extends=None):
+    """File a labelled enhancement issue, refusing near-exact re-filings.
+
+    The refusal is deterministic and lives HERE rather than in the prompt for the
+    same reason the digest's banners do (invariant 7): the agent was already
+    told, in a list, not to re-propose filed work, and did it twelve times. A
+    check the model can decline to run is not a check.
+
+    `extends` is the escape hatch, and it is deliberately narrow: name the issue
+    number you are building on and the filing goes through, with the link
+    recorded in the body. "This extends #44" written only in the rationale does
+    not count — an override has to be a distinct act, or it becomes the thing the
+    agent says to get past the gate.
+    """
+    # BEFORE the dry-run branch, so a dry run shows the refusal a real run would
+    # make. A --dry-run that quietly files what production would reject is a
+    # rehearsal of a different pipeline.
+    matches = [] if extends else (duplicate_matches(title, rationale, repo) or [])
+    if matches and matches[0]["score"] >= dedupe.DUPLICATE_THRESHOLD:
+        top = matches[0]
+        # Reported as a normal result, not an exception: the agent should move on
+        # to its next idea, and a raised tool error reads as a broken pipeline to
+        # route around rather than as a decision.
+        return {"status": "duplicate", "repo": repo, "title": title,
+                "detail": f"already filed as #{top['number']} ({top['status']}): "
+                          f"{top['title']}. Propose a different idea, or pass "
+                          f"extends={top['number']} if this genuinely builds on it "
+                          f"and say what is new.",
+                "match": top, "score": top["score"]}
+
+    # The claim goes on the ISSUE, where whoever triages it can weigh it —
+    # not only in a tool argument nobody will ever read back.
+    extension = f"\n\nExtends #{extends}." if extends else ""
+    body = (f"{rationale}{extension}\n\n---\n"
+            f"**Effort:** {effort}  **Impact:** {impact}\n{OVERSEER_MARKER}")
+
     if DRY_RUN:
         print("\n[DRY-RUN] propose_enhancement would file a labelled GitHub issue:")
         print(f"          repo  : {repo}")
@@ -1561,7 +1800,7 @@ def propose_enhancement(repo, title, rationale, effort, impact):
         print(f"          why   : {_oneline(rationale, 200)}\n")
         return {"status": "dry_run", "repo": repo, "title": title,
                 "effort": effort, "impact": impact}
-    body = f"{rationale}\n\n---\n**Effort:** {effort}  **Impact:** {impact}\n{OVERSEER_MARKER}"
+
     issue = _github().get_repo(repo).create_issue(title=f"[enhancement] {title}", body=body)
     # Labels may not exist in the repo; best-effort, don't fail the call over it.
     try:
@@ -1617,6 +1856,7 @@ TOOL_FUNCTIONS = {
     "search_existing_issues": search_existing_issues,
     "file_issue": file_issue,
     "propose_enhancement": propose_enhancement,
+    "check_duplicate": check_duplicate,
     "send_telegram_summary": send_telegram_summary,
 }
 
@@ -1769,7 +2009,12 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
                     # read off the ledger. Same reasoning — a section that
                     # depends on an agent remembering to write it is one that
                     # will eventually go quiet without anything failing.
-                    head = tracer.freshness_banner()
+                    # The head is what a phone notification shows without
+                    # scrolling: what is broken, then where an hour is worth
+                    # most. The ranking sits under the staleness alert because a
+                    # halted feed outranks any prioritisation of healthy ones.
+                    head = "\n\n".join(p for p in (
+                        tracer.freshness_banner(), tracer.attention_banner()) if p)
                     ledger = getattr(tracer, "ledger", None)
                     tail = "\n\n".join(p for p in (
                         delivery_banner(ledger), aging_backlog_banner(ledger)) if p)

@@ -167,8 +167,10 @@ def test_shared_reads_are_attributed_to_telemetry_not_to_an_agent(tmp_path, stub
 
 
 def test_idea_agent_no_longer_holds_read_tools(stub_reads):
-    # Leaving them available would have made the saving optional.
-    assert agent_idea.TOOL_NAMES == ["propose_enhancement"]
+    # Leaving them available would have made the saving optional. check_duplicate
+    # is not one of them: it queries an in-memory index built from the ledger the
+    # run already fetched, so it costs no API call and no second telemetry read.
+    assert agent_idea.TOOL_NAMES == ["check_duplicate", "propose_enhancement"]
     assert not any(n in agent_idea.TOOL_NAMES for n in tools.READ_TOOLS)
 
 

@@ -127,6 +127,49 @@ is `in_flight`, not delivered — otherwise the panel flatters itself. Duplicate
 are excluded from the delivery-rate denominator (one dedupe failure shouldn't be
 punished twice) and reported separately as their own rate.
 
+### Where an hour is worth most
+
+Four green feeds hide four different situations: a bot trading through a
+negative 90-day Sharpe, a CV pipeline that has never ingested footage, a scraper
+at 94% of its odds budget, and a project that is genuinely fine. "Everything is
+fresh" is a true answer to a question nobody asked.
+
+So each project gets one **attention score** (`attention.py`), composed from four
+normalised signals and weighted deliberately:
+
+| Signal | Weight | |
+|---|---|---|
+| staleness | 0.40 | can we see it, and is what we see current |
+| errors | 0.25 | is it failing when it runs |
+| domain KPI | 0.20 | Sharpe, footage count, budget exhaustion, accuracy |
+| open backlog | 0.15 | how much untriaged work is queued against it |
+
+A project we cannot see at all outranks one merely reporting bad numbers — a
+blind spot hides both. The backlog term is smallest on purpose: a long idea list
+is a reason to spend an hour, not evidence anything is wrong, and letting it
+dominate produces a ranking that sends you to the healthiest project.
+
+The KPIs are read from whatever a project publishes rather than hardcoded per
+project, so a new repo that publishes a `sharpe` is scored without a code change
+— and one that publishes nothing scores zero rather than being penalised for a
+field it never promised.
+
+The ranking sorts the dashboard's project panel, leads the digest under the
+staleness alerts, and rides in the voice assistant's fact pack. It is computed
+once, in Python, and every surface renders the same list and the same one-line
+reason — the rule the implementation gate already lives under.
+
+```
+ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)
+1. coachvision (0.46) — data 400h old against a 192h SLA; detection_accuracy is 71%
+2. UFC dashboard (0.27) — odds_budget_used_pct at 94%; 2 recent failure(s)
+3. Crypto trading bot (0.14) — sharpe_90d is -0.62; 1 open idea
+4. Overseer (0.01) — 1 open idea
+```
+
+The reason is not decoration. A ranking you cannot interrogate is one you stop
+trusting the first time it surprises you.
+
 The same ledger is injected into the Bug-Hunter's and Idea agent's prompts as an
 **ALREADY ON RECORD** list. That is the more valuable half. Without it the
 pipeline re-proposed its own ideas constantly:
@@ -143,6 +186,50 @@ pipeline re-proposed its own ideas constantly:
 
 `ufc-dashboard#68` is the sharpest case: it proposed a per-bout CLV tracker that
 was already built, running, and computing CLV for 95 bouts in production.
+
+#### And a list is not a check
+
+That **ALREADY ON RECORD** list was already in the prompt for most of the
+filings above. It is a request to remember, and twelve of the pipeline's issues
+still ended up closed as duplicates. So the check runs instead: `dedupe.py`
+scores a candidate title against every issue the pipeline has filed (TF-IDF
+cosine, stdlib arithmetic, an index built from the ledger the run already
+fetched — no new dependency, no extra API call, no model call).
+
+The Idea Agent calls `check_duplicate` before each proposal, and — because a
+check the model can decline to run is not a check — `propose_enhancement`
+refuses a near-identical filing whether or not it asked. The escape hatch is
+explicit: pass `extends=<issue>` and say in the rationale what is new, and the
+link is recorded on the issue where a human triaging it can weigh the claim.
+
+The threshold is measured rather than chosen. Scored across every pair of the 90
+issues filed so far:
+
+| Pair | Score | |
+|---|---|---|
+| overseer #13 / #17 | 0.92 | the heartbeat idea, filed twice |
+| overseer #9 / #12 | 0.76 | the schema-validation idea, filed twice |
+| overseer #9 / #14 | 0.61 | the same idea, a third time |
+| closest distinct pair | 0.51 | two genuinely different ideas |
+
+`0.75` catches both real re-filings with no false positive anywhere in the
+record. Issue #33 proposed 0.8, which would have let #12 through — the exact
+incident the whole thing exists to prevent. The third filing lands in the
+advisory band, where the agent is shown the match and left to judge.
+
+#### What each project's ideas are worth
+
+The delivery rate is one number across four projects. It is the right headline
+and the wrong feedback signal: it cannot tell the agent that coachvision's ideas
+ship and crypto's risk ideas keep getting closed as not-planned. So the ledger
+also carries a per-repo split — shipped / not-planned / duplicate / still open,
+with a ship rate over the ones that got an *answer* — shown on the delivery
+panel and fed back into the brainstorm prompt.
+
+It calibrates **what** the agent proposes, never whether: a project with a low
+ship rate needs different ideas, not fewer. A rate is withheld below four
+settled proposals, because "33%, so avoid this project" out of three issues is
+arithmetic, not evidence.
 
 #### Keeping the ledger live
 
@@ -866,6 +953,13 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
 - `scripts/heartbeat.py` — dead-man's switch: alerts if the weekly run stops
   happening, or completes while blind (stdlib only, no token). Triggered from
   both GitHub and Cloudflare, so it survives the scheduler it watches
+- `attention.py` — the per-project attention score: which project is worth an
+  hour, and the one-line reason it ranks there
+- `dedupe.py` — TF-IDF duplicate detection over the filed backlog, so the
+  pipeline stops re-proposing its own ideas
+- `scripts/pipeline_dryrun.py` — the whole weekly pipeline end to end against
+  fixtures, with GitHub and Anthropic replaced. No key, no spend, runs on every
+  PR (`tests.yml`'s `e2e` job)
 - `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
 - `scripts/weekly_guard.py` — lets any automated Monday trigger no-op once the
   review has published, so covering a missed week (or a second scheduler) costs

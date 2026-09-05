@@ -189,10 +189,18 @@ def build_facts(digest, history, ledger):
                 "typical_week": 4.80,
             },
         },
+        # Where an hour is worth most, ranked by attention.rank (#25). Passed
+        # through as published: the assistant quotes the ranking and its reason,
+        # it does not re-rank. "What should I work on?" is the question this
+        # answers out loud, and it must give the same answer as the dashboard.
+        "attention": digest.get("attention"),
         "delivery": {
             "generated": _stamp(ledger.get("generated")),
             "totals": ledger.get("totals"),
             "recent_shipped": shipped[:MAX_SHIPPED],
+            # Per-project proposal yield (#60) — counts only, no prose: the
+            # phrasing for a human is the model's job, the arithmetic is not.
+            "outcomes": (ledger.get("outcomes") or {}).get("by_repo"),
         },
         # Published by tools.queue_state. Passed through untouched: the Worker
         # must render this, never re-derive it (invariant 4).
@@ -229,6 +237,11 @@ of those is in the facts if it is real.
 or is not queued. When asked why something has not been worked on, quote that \
 reason rather than reasoning about labels yourself.
 - The `queue` block is what the next implementation run will actually pick up.
+- `attention` is the projects ranked by where work is worth most, highest score \
+first, each with the reason it scored there. When asked what to work on, lead \
+with the top one and quote its reason. Do not re-rank them yourself.
+- `delivery.outcomes` is how past ideas fared per project. A `ship_rate` of null \
+means too few settled proposals to say — report that rather than a number.
 - Costs: quote `spend`. A review is about a third of a dollar, one \
 implementation about a dollar fifty — the implementer is the expensive part.
 - Say "shipped" only for work that is MERGED. An issue closed with a fix on an \

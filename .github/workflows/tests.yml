@@ -22,3 +22,26 @@ jobs:
       # to have it — which is exactly how they were first pushed.
       - run: pip install -r requirements.txt pytest pyyaml
       - run: python -m pytest -q
+
+  # The whole weekly pipeline, end to end, against fixtures (overseer #50).
+  #
+  # A separate job from `pytest` on purpose. The unit suite proves the parts;
+  # this proves the seams between them — tracer → digest writer → dashboard JSON,
+  # ledger → agent prompts, run_agent stitching its deterministic banners onto a
+  # digest before it goes out. Those seams have failed in production while every
+  # unit stayed green, and the first thing that noticed was Monday's run.
+  #
+  # It needs no secrets: GitHub and Anthropic are both replaced by fixtures, so
+  # it runs on a fork's pull request like any other check.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      # No requirements.txt: the dry run never imports PyGithub or the Anthropic
+      # SDK — both are replaced before the pipeline starts. Installing them would
+      # hide an accidental import of the real client behind a working wheel.
+      - run: python scripts/pipeline_dryrun.py
