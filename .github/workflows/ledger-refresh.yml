@@ -1,6 +1,6 @@
 name: Refresh Delivery Ledger
 
-# Keeps the Shipped panel live instead of weekly.
+# Keeps the dashboard live instead of weekly.
 #
 # The ledger is pure GitHub reads — no Anthropic key, no agents, no model calls
 # — so it is cheap enough to run constantly, unlike the weekly review it used to
@@ -70,6 +70,24 @@ jobs:
         run: |
           python scripts/refresh_ledger.py ${{ inputs.full && '--full' || '' }}
 
+      # The top half of the dashboard — per-project health, the freshness
+      # alerts, the attention ranking — was written ONLY by the weekly review,
+      # so the page carried two clocks: a delivery panel current to the hour
+      # above project health that could be five days old (0.3h against 117.8h on
+      # 2026-09-05), and the stale half was the half that says whether anything
+      # is broken. None of it needs a model: it is four GitHub reads and some
+      # arithmetic, which is exactly what this job already is.
+      #
+      # It runs BEFORE the ask-context rebuild so the voice assistant answers
+      # from the same freshly-read health the page shows.
+      - name: Refresh project health and the attention ranking
+        env:
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+        run: python scripts/refresh_status.py
+
       # The voice assistant answers from this pack, so it has to move with the
       # ledger — an assistant describing last week's queue out loud is worse
       # than one that says it doesn't know. Free to rebuild: pure file reads,
@@ -79,14 +97,15 @@ jobs:
 
       - name: Publish if anything moved
         run: |
-          if git diff --quiet -- docs/shipped.json docs/ask-context.json; then
-            echo "Ledger unchanged — nothing to publish."
+          FILES="docs/shipped.json docs/ask-context.json docs/digest.json"
+          if git diff --quiet -- $FILES; then
+            echo "Nothing moved — nothing to publish."
             exit 0
           fi
           git config user.name  "overseer-bot"
           git config user.email "overseer-bot@users.noreply.github.com"
-          git add docs/shipped.json docs/ask-context.json
-          git commit -m "Refresh delivery ledger"
+          git add $FILES
+          git commit -m "Refresh delivery ledger and project health"
           # The weekly review commits to the same branch, and on a busy repo the
           # remote can move between checkout and push. Rebase and retry rather
           # than failing a run whose only job is to publish one small file.

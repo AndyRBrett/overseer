@@ -13,6 +13,8 @@ Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repositor
                                     → branch → tests → pull request
       ~6×/day  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
                                     → docs/ask-context.json → voice assistant
+      ~6×/day  refresh_status.py    same job: re-reads the four feeds → digest.json's
+                                    health + ranking (NEVER its `generated`)
   daily 15:20  heartbeat.yml        dead-man's switch, also Cloudflare-triggered
     on demand  worker/              "Hey Siri, ask Overseer" → one model call
                                     (+ the crons above, off GitHub's scheduler)
@@ -26,7 +28,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-407 tests, under a second. There is no JS test runner, so dashboard behaviour is
+448 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 `python scripts/pipeline_dryrun.py` runs the WHOLE pipeline end to end against
@@ -48,6 +50,7 @@ actually failed.
 | `tracer.py` | per-run recording, spend accounting, digest/history writers |
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
 | `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
+| `scripts/refresh_status.py` | same cron: the digest's health + ranking between weekly reviews |
 | `scripts/implement_guard.py` | keeps implement.yml's catch-up crons from dispatching a second batch |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
@@ -116,7 +119,19 @@ Each of these exists because the opposite already happened here.
    voice pack. This is invariant 4's rule applied to a second set of rules: a
    scoring formula re-derived in `app.js` would drift, and the three surfaces
    would then give three answers to "what should I work on".
-13. **A count of tool calls is not a count of work.** `propose_enhancement`
+13. **`digest.json`'s `generated` is the REVIEW's timestamp, and nothing else
+   may set it.** `scripts/heartbeat.py`, the Worker's staleness check and the
+   dashboard's "next run overdue" all read it as "when the weekly review last
+   ran". `refresh_status.py` rewrites the same file six times a day and writes
+   `refreshed` instead, because bumping `generated` would tell the dead-man's
+   switch the review had happened — disabling the one alarm that catches a
+   scheduled event GitHub silently dropped, invisibly, on a 4-hourly cron.
+14. **A refresh is not a cycle.** `blind_cycles` / `stale_cycles` / `idle_cycles`
+   count consecutive weekly REVIEWS, which is what the nudge threshold of 2 was
+   chosen against. `RunTracer(count_cycles=False)` is how an observation reads
+   the counter without advancing it; counting the status refresh would have a
+   feed read "stale 42 cycles" by Friday.
+15. **A count of tool calls is not a count of work.** `propose_enhancement`
    returns `duplicate` when the dedupe gate refuses a filing; the tracer reads the
    result's `status` and counts it under `duplicates_blocked`, not under
    `enhancements`. Counting the call would inflate the dashboard's "ideas
@@ -151,6 +166,15 @@ Each of these exists because the opposite already happened here.
   Voice works here only because the iPhone does speech-to-text and text-to-speech
   on-device for free; any server-side transcription would add a provider, a key
   and a per-minute bill to something that currently costs nothing.
+- **The dashboard had two clocks and only one was visible.** `shipped.json`
+  refreshed ~6×/day and `digest.json` weekly, so on 2026-09-05 the delivery
+  panel was 0.3h old and the project health directly above it was 117.8h — and
+  the stale half is the half that says whether anything is BROKEN. Nothing about
+  it needed a model: health, freshness alerts and the attention ranking are four
+  GitHub reads and arithmetic, welded to a $0.34 run only because that is where
+  the tracer wrote the file. The page now prints both ages ("Checked just now ·
+  full review 5 days ago"); if you ever find yourself adding a third writer to
+  `digest.json`, it needs a third one.
 - **The hourly cron is not delivered hourly.** GitHub deprioritises scheduled
   workflows on free public repos. Measured over 29 consecutive `ledger-refresh`
   runs (2026-08-25 → 08-30): **~6 firings a day, not 24** — median gap 2.6h
@@ -271,6 +295,11 @@ toolchain, the Python suite pins the seams:
   environment before importing `tools`, and `PROJECTS` is built at import time:
   in-process it would either read a `tools` some earlier test imported, or leave
   one configured for a fixture world behind for every test after it.
+- `tests/test_dashboard_plain.py` pins the two-level page: that app.js writes
+  into ids `index.html` has, that the first screen carries none of the ten words
+  a stranger wouldn't know, and — the other half of that rule — that all of them
+  are still there behind the toggle. A jargon check alone would pass if the
+  technical half were deleted outright.
 - `tests/test_ask.py` greps `worker/overseer-ask.js` for prompt sentences and
   gate-rule strings, so the Worker cannot quietly grow a second copy of either.
   It also pins that the Worker never re-serializes the facts (that would miss

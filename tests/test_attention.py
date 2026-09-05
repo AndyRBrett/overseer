@@ -163,3 +163,80 @@ def test_the_ranking_is_stitched_into_the_digest_deterministically():
     import inspect
     source = inspect.getsource(tools.run_agent)
     assert "attention_banner" in source
+
+
+# ── plain English ────────────────────────────────────────────────────────
+# The verdict a stranger reads first. Generated here, next to the scorer,
+# because two sentences describing one finding in two languages drift — and the
+# plain one is the one people actually read.
+
+
+def test_the_plain_reason_describes_the_signal_that_ranked_it():
+    stale = attention.rank({"coachvision": {"status": "stale", "age_hours": 400,
+                                            "sla_hours": 192}})[0]
+    assert stale["plain"] == "coachvision has not sent anything new in 17 days"
+    # Days, not hours: nobody acts differently on 400h than on 17 days.
+    assert "400" not in stale["plain"]
+
+
+def test_a_project_name_is_never_recapitalised():
+    # "coachvision" is spelled that way. Upper-casing a sentence's first letter
+    # would silently rename a project on the most-read line of the page.
+    row = attention.rank({"coachvision": {"status": "stale", "age_hours": 400,
+                                          "sla_hours": 192}})[0]
+    assert attention.headline([row]).startswith("coachvision ")
+
+
+def test_the_unreadable_sentence_is_capitalised_at_source():
+    row = attention.rank({"coachvision": {"status": "blind"}})[0]
+    assert attention.headline([row]).startswith("We cannot see ")
+
+
+def test_the_headline_names_one_project_and_counts_the_rest():
+    ranked = attention.rank({"a": {"status": "blind"}, "b": {"status": "stale",
+                                                             "age_hours": 100,
+                                                             "sla_hours": 48}})
+    line = attention.headline(ranked)
+    assert line.startswith("We cannot see a")
+    assert "1 other" in line
+
+
+def test_a_healthy_week_says_so_plainly():
+    assert attention.headline(attention.rank({"a": {"status": "ok"}})) == "Everything looks fine."
+
+
+def test_a_single_waiting_idea_is_not_a_concern():
+    # Every project scores something, and a page reporting four "concerns" every
+    # week trains you to ignore it.
+    ranked = attention.rank({"a": {"status": "ok"}},
+                            repos={"a": "o/a"},
+                            ledger={"entries": [{"repo": "o/a", "status": "open",
+                                                 "kind": "enhancement"}]})
+    assert ranked[0]["score"] < attention.NOTABLE
+    assert attention.headline(ranked) == "Everything looks fine."
+
+
+def test_every_row_carries_something_to_do():
+    ranked = attention.rank({"a": {"status": "stale", "age_hours": 100, "sla_hours": 48},
+                             "b": {"status": "ok"}})
+    assert ranked[0]["action"] == "Check whether it is still running."
+    assert ranked[1]["action"] == "Nothing to do."
+
+
+def test_the_headline_is_published_not_left_to_the_dashboard(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {}, json.dumps({"status": "not_configured"}), False)
+    path = tmp_path / "digest.json"
+    t.write_digest(str(path))
+    assert json.loads(path.read_text(encoding="utf-8"))["headline"].startswith("We cannot see")
+
+
+def test_the_dashboard_renders_the_published_headline_and_does_not_compose_one():
+    import pathlib
+    app = pathlib.Path("docs/app.js").read_text(encoding="utf-8")
+    assert "d.headline" in app
+    # No second copy of the wording. If these phrases ever appear in JavaScript,
+    # the page has started forming its own opinion.
+    for phrase in ("has not sent anything new", "Everything looks fine",
+                   "cannot see", "could use a look"):
+        assert phrase not in app, f"app.js is composing its own verdict: {phrase!r}"

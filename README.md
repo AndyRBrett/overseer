@@ -127,6 +127,35 @@ is `in_flight`, not delivered — otherwise the panel flatters itself. Duplicate
 are excluded from the delivery-rate denominator (one dedupe failure shouldn't be
 punished twice) and reported separately as their own rate.
 
+### Reading the dashboard
+
+The page opens with three sentences and nothing else:
+
+```
+coachvision has not sent anything new in 17 days. 1 other could use a look too.
+Check whether it is still running.
+
+Finished    61 jobs so far.
+Next        2 jobs are lined up, for coachvision.
+
+Checked just now · full review 5 days ago
+```
+
+Everything else — project health, the delivery ledger, the implementation queue,
+model spend, the digest, the step-by-step trace — is one tap behind **Show the
+details**, unchanged. The split exists because those panels answer "how does
+this work", which you ask once, while the three sentences answer "is anything
+wrong", which you ask every time.
+
+Two things worth knowing about that last line:
+
+- **The two ages are different on purpose.** Project health is re-read several
+  times a day by `refresh_status.py`; the written review is weekly. They used to
+  share one date, which is how a five-day-old panel passed for current.
+- **The page keeps itself current.** It re-fetches when you come back to it and
+  every five minutes while it is open — never in a backgrounded tab, never more
+  than once a minute. An installed PWA is a window that gets left open for days.
+
 ### Where an hour is worth most
 
 Four green feeds hide four different situations: a bot trading through a
@@ -961,6 +990,10 @@ This writes `docs/digest.json`, appends to `docs/history.json`, and writes
   fixtures, with GitHub and Anthropic replaced. No key, no spend, runs on every
   PR (`tests.yml`'s `e2e` job)
 - `scripts/refresh_ledger.py` — incremental ledger refresh between weekly runs
+- `scripts/refresh_status.py` — re-reads the four project feeds on the same cron
+  and republishes `digest.json`'s health, freshness alerts and attention ranking,
+  so the top of the dashboard is hours old rather than a week. Never touches the
+  review's own timestamp or its written summary
 - `scripts/weekly_guard.py` — lets any automated Monday trigger no-op once the
   review has published, so covering a missed week (or a second scheduler) costs
   nothing in a healthy one
