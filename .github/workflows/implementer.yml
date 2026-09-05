@@ -156,7 +156,7 @@ jobs:
       # The caller's toolchain, declared as inputs. A repo that needs neither
       # (or installs nothing) simply leaves them empty.
       - if: inputs.python_version != ''
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ inputs.python_version }}
           cache: ${{ inputs.pip_cache && 'pip' || '' }}
