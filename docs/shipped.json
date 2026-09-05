@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-05T15:41:04+00:00",
+      "created_at": "2026-08-15T10:35:29+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #56",
+      "fix_sha": "60a5a23",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/56",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 44,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/44"
+    },
+    {
       "closed_at": "2026-08-31T23:32:03+00:00",
       "created_at": "2026-08-31T23:27:35+00:00",
       "delivered_by": "hand",
@@ -417,6 +439,8 @@
       "created_at": "2026-08-17T19:55:15+00:00",
       "delivered_by": "hand",
       "effort": "medium",
+      "fix_ref": "PR #57",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/57",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -427,7 +451,7 @@
       "number": 45,
       "repo": "AndyRBrett/crypto-trading",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
     },
@@ -487,25 +511,6 @@
       "status": "open",
       "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
       "url": "https://github.com/AndyRBrett/coachvision/issues/25"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:35:29+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 44,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Add transaction-cost-aware signal gate that suppresses trades where expected edge < round-trip fees+slippage",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/44"
     },
     {
       "closed_at": null,
@@ -1782,7 +1787,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-05T12:47:26Z",
+  "generated": "2026-09-05T16:08:04Z",
   "queue": {
     "benched": [],
     "cap": 3,
@@ -1792,7 +1797,19 @@
     ],
     "eligible": 2,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [],
+    "in_flight": [
+      {
+        "effort": "medium",
+        "fix_ref": "PR #57",
+        "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/57",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 45,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Add a rolling-risk circuit breaker that auto-reduces position sizing when trailing 30d Sharpe/Sortino stays negative beyond a threshold",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/45"
+      }
+    ],
     "last_dispatch": {
       "at": "2026-08-31T22:53:01Z",
       "conclusion": "success"
@@ -1820,17 +1837,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.679,
+    "delivery_rate": 0.692,
     "duplicate": 12,
     "duplicate_rate": 0.133,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 0,
+    "in_flight": 1,
     "not_planned": 6,
-    "open": 19,
+    "open": 17,
     "proposed": 90,
-    "shipped": 53,
+    "shipped": 54,
     "shipped_before_implementer": 44,
-    "shipped_by_hand": 8,
+    "shipped_by_hand": 9,
     "shipped_by_implementer": 1
   }
 }
