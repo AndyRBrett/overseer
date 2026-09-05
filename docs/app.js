@@ -640,11 +640,6 @@ function renderSpend(spend, runs, queue) {
 // the published facts cannot do for themselves: pick the label, count what is
 // already counted, and say when each half was last checked.
 
-function plainLine(question, answer) {
-  return `<div class="plain-line"><span class="pq">${escapeHtml(question)}</span>
-    <span class="pa">${escapeHtml(answer)}</span></div>`;
-}
-
 // "17 days ago" beats a timestamp, and both beat a number of hours. Whole days
 // only: nobody acts differently on 17.4 days than on 17.
 function plainAge(iso) {
@@ -662,59 +657,68 @@ function renderPlain(d, ledger) {
   // The published verdict. Falls back to a health count for a digest written
   // before headline existed, rather than showing an empty banner.
   const rollup = d.rollup || {};
+  const ranked = d.attention || [];
   const headline = d.headline
     || (rollup.total ? `${rollup.ok} of ${rollup.total} projects look fine.` : "");
-  const worried = !!(d.attention || []).some((a) => a.score >= 0.15)
-    || !!(rollup.attention || []).some((a) => a.nudge);
+  const worried = ranked.some((a) => a.notable)
+    || (rollup.attention || []).some((a) => a.nudge);
   const verdict = $("plain-verdict");
   verdict.textContent = headline || "No run yet.";
   verdict.className = "plain-verdict " + (headline ? (worried ? "warn" : "good") : "");
 
-  const lines = [];
+  const out = [];
 
-  // What to DO about it — published alongside the reason, for the same project
-  // the headline names. A page that says something is wrong and stops there
-  // makes the reader work out the next step every single time.
-  const top = (d.attention || [])[0];
+  // What to DO about it, for the project the headline names. A page that says
+  // something is wrong and stops there makes the reader work out the next step
+  // every single time.
+  const top = ranked[0];
   if (top && top.action && worried) {
-    lines.push(`<div class="plain-action">${escapeHtml(top.action)}</div>`);
+    out.push(`<div class="plain-action">${escapeHtml(top.action)}</div>`);
   }
 
-  // What got finished. Counted off the ledger's own totals so this can never
-  // disagree with the delivery panel below it.
+  // EVERY project, in the order the score ranked them. The headline names one
+  // and counts the rest, which answers "is anything wrong" but not "and how is
+  // everything else" — and four projects is a short enough list to just show.
+  // `short` and `notable` are both published (attention.plain_predicate): the
+  // page must not decide for itself which projects are a concern, or it will
+  // eventually disagree with the sentence directly above it.
+  if (ranked.length) {
+    out.push(section("Your projects", ranked.map((a) => `
+      <div class="prow-plain${a.notable ? " flag" : ""}">
+        <span class="pn">${escapeHtml(a.name)}</span>
+        <span class="pd">${escapeHtml(a.short || "")}</span>
+      </div>`).join("")));
+  }
+
+  // WHAT IT FINISHED, with names. "61 jobs so far" is a scoreboard; the titles
+  // are what tells you whether the work was any good.
+  const entries = (ledger && ledger.entries) || [];
+  const shipped = entries
+    .filter((e) => e.status === "shipped" && e.closed_at)
+    .sort((a, b) => (a.closed_at < b.closed_at ? 1 : -1));
   const t = (ledger && ledger.totals) || {};
-  if (typeof t.shipped === "number") {
+  if (shipped.length) {
+    const recent = shipped.slice(0, 4).map((e) => itemRow(e.title, e.repo, relativeTime(e.closed_at)));
     const flight = t.in_flight
-      ? `, and ${t.in_flight} more ${t.in_flight === 1 ? "is" : "are"} waiting to be checked`
+      ? `<div class="plain-note">${t.in_flight} more finished and waiting to be checked.</div>`
       : "";
-    lines.push(plainLine("Finished", `${t.shipped} jobs so far${flight}.`));
+    out.push(section(`Recently finished — ${t.shipped || shipped.length} in total`,
+                     recent.join("") + flight));
   }
 
-  // What happens next. The queue block is what the next run WILL pick up —
-  // published by tools.queue_state, never worked out here (invariant 4).
+  // WHAT IS COMING, with titles. These are written by an agent for an engineer
+  // and run long, so they get their own rows rather than being squeezed into a
+  // sentence — one of them filled six lines of a phone screen when it was.
   const q = (ledger && ledger.queue) || null;
   if (q) {
     const next = q.next || [];
-    if (next.length) {
-      // COUNT AND WHERE, never the titles. These are issue titles written by an
-      // agent for an engineer — "Push proactive idle-escalation notifications
-      // (SMS/push) as days_since_last_footage climbs" — and one of them filled
-      // six lines of a phone screen here, burying the two words that mattered.
-      // Truncating it only made it unreadable in less space. The full titles are
-      // on the queue panel in the details half, which is the right place for
-      // them; this line answers "is anything coming, and for what".
-      const repos = [...new Set(next.map((e) => (e.repo || "").split("/").pop()))];
-      const where = repos.length === 1 ? `for ${repos[0]}`
-        : `for ${repos.slice(0, -1).join(", ")} and ${repos[repos.length - 1]}`;
-      lines.push(plainLine("Next", next.length === 1
-        ? `1 job is lined up, ${where}.`
-        : `${next.length} jobs are lined up, ${where}.`));
-    } else {
-      lines.push(plainLine("Next", "nothing is lined up to be built right now."));
-    }
+    const body = next.length
+      ? next.map((e) => itemRow(e.title, e.repo, null)).join("")
+      : `<div class="plain-note">Nothing is lined up to be built right now.</div>`;
+    out.push(section("It will build next", body));
   }
 
-  $("plain-lines").innerHTML = lines.join("");
+  $("plain-lines").innerHTML = out.join("");
 
   // TWO clocks, said out loud. The health above refreshes several times a day;
   // the written review is weekly. Showing one date for both is what made a
@@ -725,6 +729,23 @@ function renderPlain(d, ledger) {
     checked ? `Checked ${checked}` : null,
     reviewed ? `full review ${reviewed}` : null,
   ].filter(Boolean).join(" · ");
+}
+
+function section(title, body) {
+  return `<div class="plain-section">
+    <div class="plain-head">${escapeHtml(title)}</div>${body}</div>`;
+}
+
+// One piece of work: what it is, which project, and when. The title is an issue
+// title — long, and written for an engineer — so it wraps onto its own line
+// rather than being truncated into something even less readable.
+function itemRow(title, repo, when) {
+  const where = (repo || "").split("/").pop();
+  const meta = [where, when].filter(Boolean).join(" · ");
+  return `<div class="item-plain">
+    <div class="it">${escapeHtml(title || "")}</div>
+    ${meta ? `<div class="im">${escapeHtml(meta)}</div>` : ""}
+  </div>`;
 }
 
 async function loadDigest() {
@@ -923,8 +944,9 @@ async function loadDigest() {
     // dead end.
     $("generated").textContent = "Waiting for the first weekly run.";
     $("plain-verdict").textContent = "Nothing has run yet.";
-    $("plain-lines").innerHTML = plainLine("Next",
-      "the first review runs on Monday, and this page fills in by itself.");
+    $("plain-lines").innerHTML =
+      '<div class="plain-note">The first review runs on Monday, and this page ' +
+      'fills in by itself.</div>';
     $("digest").innerHTML =
       "<p>No digest yet. This page fills in automatically after the weekly " +
       "review runs (Mondays 14:00 UTC via GitHub Actions) — you'll get the " +

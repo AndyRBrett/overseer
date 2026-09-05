@@ -108,3 +108,34 @@ def test_the_toggle_remembers_which_way_it_was_left():
     # wrapped, as the rest of this file's accesses already are.
     body = APP.split("const DETAILS_KEY", 1)[1].split("// Keep an open page", 1)[0]
     assert body.count("try {") >= 2
+
+
+def test_the_summary_answers_more_than_one_question():
+    # "Too simple" was the first verdict on the plain half: a headline and two
+    # one-line counts. It now carries every project's state, what was finished
+    # with titles, and what is queued with titles — still in plain words.
+    for heading in ("Your projects", "Recently finished", "It will build next"):
+        assert heading in APP, f"the summary lost its {heading!r} section"
+
+
+def test_the_project_list_shows_every_project_not_just_the_flagged_one():
+    # The headline names one and counts the rest; the list is what answers "and
+    # how is everything else".
+    block = APP.split("Your projects", 1)[0]
+    assert "ranked.map" in APP
+    assert ".filter(" not in block.rsplit("const ranked", 1)[-1], \
+        "the project list is filtering projects out"
+
+
+def test_the_page_does_not_decide_which_projects_are_a_concern():
+    # `notable` is published by attention.rank, on the same floor the headline
+    # uses. A threshold re-derived here would eventually flag a different set
+    # than the sentence directly above it.
+    assert "a.notable" in APP
+    assert "0.15" not in APP, "the dashboard is carrying its own notability cutoff"
+
+
+def test_work_items_show_their_title_and_where_they_came_from():
+    assert "function itemRow(" in APP
+    body = APP.split("function itemRow(", 1)[1].split("\n}", 1)[0]
+    assert "repo" in body and "escapeHtml(title" in body

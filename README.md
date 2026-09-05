@@ -135,11 +135,27 @@ The page opens with three sentences and nothing else:
 coachvision has not sent anything new in 17 days. 1 other could use a look too.
 Check whether it is still running.
 
-Finished    61 jobs so far.
-Next        2 jobs are lined up, for coachvision.
+YOUR PROJECTS
+  coachvision      has not sent anything new in 17 days
+  UFC dashboard    is working, but the numbers it reports look bad
+  Trading bot      is working, but the numbers it reports look bad
+  Overseer         looks fine
 
-Checked just now · full review 5 days ago
+RECENTLY FINISHED — 61 IN TOTAL
+  Detect semantically duplicate enhancement proposals      overseer · 45 min ago
+  Test the full weekly pipeline against fixtures on every PR   overseer · 45 min ago
+  …
+
+IT WILL BUILD NEXT
+  Push proactive idle-escalation notifications as days_since_last_footage climbs
+                                                           coachvision
+  Add drift-alerting on top of the scheduled self-test canary
+                                                           coachvision
 ```
+
+The projects the headline counts are the ones the list highlights — both read
+the same published `notable` flag, so a headline saying "1 other" beside three
+highlighted rows is not a thing that can happen.
 
 Everything else — project health, the delivery ledger, the implementation queue,
 model spend, the digest, the step-by-step trace — is one tap behind **Show the

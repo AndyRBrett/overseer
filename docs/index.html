@@ -291,15 +291,33 @@
                      overflow-wrap: normal; word-break: normal; }
     .plain-verdict.good { color: #34d399; }
     .plain-verdict.warn { color: #fbbf24; }
-    .plain-line { display: flex; gap: 10px; align-items: baseline; margin-top: 14px; }
-    .plain-line .pq { font-size: 13px; color: var(--muted); flex: none; width: 96px; }
-    .plain-line .pa { font-size: 15px; color: var(--text); line-height: 1.4; }
-    /* On a narrow phone the label and answer stack rather than squeezing the
-       sentence into a 90px column. */
-    @media (max-width: 380px) {
-      .plain-line { display: block; }
-      .plain-line .pq { width: auto; margin-bottom: 2px; }
+    /* Sections of the summary. Each one answers a question you would actually
+       ask out loud, and the heading is the question. */
+    .plain-section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border2); }
+    .plain-head { font-size: 12px; font-weight: 700; letter-spacing: .04em;
+                  text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .plain-note { font-size: 14px; color: var(--muted); margin-top: 8px; }
+
+    /* One project: name, then what is going on with it. Both published. */
+    .prow-plain { display: flex; gap: 10px; align-items: baseline; padding: 5px 0; }
+    .prow-plain .pn { font-size: 14px; font-weight: 600; color: var(--text-strong);
+                      flex: none; width: 118px; }
+    .prow-plain .pd { font-size: 14px; color: var(--muted); line-height: 1.4; }
+    /* The one that needs you reads as the one that needs you. */
+    .prow-plain.flag .pd { color: #fbbf24; }
+    /* On a narrow phone the name and the phrase stack rather than squeezing a
+       sentence into a 118px column. */
+    @media (max-width: 400px) {
+      .prow-plain { display: block; padding: 7px 0; }
+      .prow-plain .pn { width: auto; }
+      .prow-plain .pd { display: block; margin-top: 1px; }
     }
+
+    /* One piece of work. The title is an issue title — long, and written for an
+       engineer — so it gets a full-width line and wraps at spaces. */
+    .item-plain { padding: 7px 0; }
+    .item-plain .it { font-size: 14px; color: var(--text); line-height: 1.4; }
+    .item-plain .im { font-size: 12px; color: var(--faint); margin-top: 2px; }
     #plain-checked { margin-top: 16px; }
     /* What to do about it, under the verdict. */
     .plain-action { font-size: 15px; color: var(--text); margin-top: 8px; }
