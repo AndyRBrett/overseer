@@ -13,7 +13,7 @@
     "ok": 3,
     "total": 4,
     "issues": 0,
-    "enhancements": 5,
+    "enhancements": 0,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
@@ -29,37 +29,37 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-06T14:11:19Z",
+      "last_ok": "2026-09-06T14:14:44Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-06T14:11:19Z",
+      "last_ok": "2026-09-06T14:14:44Z",
       "blind_cycles": 0,
       "idle_cycles": 5
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-06T14:11:19Z",
+      "last_ok": "2026-09-06T14:14:44Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-06T14:11:19Z",
+      "last_ok": "2026-09-06T14:14:44Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.395,
+      "score": 0.41,
       "signals": {
         "staleness": 0.8,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.5
+        "backlog": 0.6
       },
-      "why": "no activity for 5 cycle(s); 5 open ideas",
+      "why": "no activity for 5 cycle(s); 6 open ideas",
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
@@ -69,31 +69,31 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.126,
+      "score": 0.156,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.63,
-        "backlog": 0.0
+        "backlog": 0.2
       },
-      "why": "win_rate is 33%",
+      "why": "win_rate is 33%; 2 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
       "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
-      "notable": false,
+      "notable": true,
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.109,
+      "score": 0.124,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.244,
-        "backlog": 0.4
+        "backlog": 0.5
       },
-      "why": "4 open ideas; success_rate_7d is 68%",
+      "why": "5 open ideas; success_rate_7d is 68%",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
@@ -103,24 +103,24 @@
       "repo": "AndyRBrett/ufc-dashboard"
     },
     {
-      "score": 0.0,
+      "score": 0.015,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.0
+        "backlog": 0.1
       },
-      "why": "healthy \u2014 nothing is asking for attention",
+      "why": "1 open idea",
       "name": "Overseer",
       "status": "ok",
-      "plain": "Overseer looks fine",
-      "short": "looks fine",
-      "action": "Nothing to do.",
+      "plain": "Overseer has 1 idea waiting for someone to look at",
+      "short": "has 1 idea waiting for someone to look at",
+      "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/overseer"
     }
   ],
-  "headline": "coachvision is running, but nothing has happened there lately.",
+  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -277,5 +277,6 @@
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
     }
-  ]
+  ],
+  "refreshed": "2026-09-06T14:14:44Z"
 }
