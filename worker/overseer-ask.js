@@ -35,10 +35,37 @@ const API_URL = "https://api.anthropic.com/v1/messages";
 // healthy right up until someone notices a stale digest. A test pins all three
 // together for exactly that reason.
 const DISPATCH_EVENTS = {
-  "5 14 * * 1": "weekly-review",
-  "5 17 * * 1": "weekly-review",
+  "5 14 * * 2": "weekly-review",
+  "5 17 * * 2": "weekly-review",
   "20 15 * * *": "heartbeat",
 };
+
+// THE TWO SCHEDULERS DO NOT AGREE ON WHAT DAY 1 IS (2026-09-06).
+//
+// The crons above were written to mirror weekly-review.yml's `0 14 * * 1`, one
+// field at a time, and the day-of-week field does not survive the copy. GitHub
+// runs POSIX cron, where the field is 0-6 and Sunday is 0, so 1 is Monday.
+// Cloudflare's parser counts the week from 1, so 1 is SUNDAY. Same five
+// characters, one day apart.
+//
+// So on Sunday 2026-09-06 at 14:05 UTC this Worker fired weekly-review into a
+// day with no digest. weekly_guard.py did exactly its job — no review had
+// landed that day, so it ran one — and a full $0.43 pipeline reviewed four
+// projects, filed five enhancements and pushed a digest a day early. Monday's
+// GitHub cron then owed a second one, because the guard asks "did a review land
+// TODAY", and Monday is a different day. Two reviews a week, neither wrong.
+//
+// Nothing was red, and the test that should have caught it asserted the
+// day-of-week field was "1" — encoding the same POSIX assumption as the bug.
+//
+// The crons are Cloudflare's convention now (2 = Monday). This check is the
+// belt: getUTCDay() is unambiguous in a way a cron field is not, so a schedule
+// that drifts again — a re-edit, a parser change, a fourth vendor — costs a
+// skipped redundant poke rather than an unasked-for review. It is a CALENDAR
+// check, not a judgement about whether the review is owed: that stays in
+// weekly_guard.py, on the GitHub side, per invariant 8. This Worker has always
+// claimed to know only "it is Monday, ask". Now it actually checks.
+const REVIEW_UTC_DAY = 1; // Date#getUTCDay: 0 = Sunday, 1 = Monday.
 const DEFAULT_MODEL = "claude-sonnet-5";
 
 // Voice answers are two or three sentences. Nothing here needs room to ramble,
@@ -237,6 +264,12 @@ export default {
       // A cron added to wrangler.toml and not here fires into nothing. Loud,
       // because silence is this system's characteristic failure.
       console.error(`[dispatch] no event mapped for cron ${event.cron}`);
+      return;
+    }
+    if (eventType === "weekly-review" && new Date().getUTCDay() !== REVIEW_UTC_DAY) {
+      // See REVIEW_UTC_DAY. Loud, because a cron firing on the wrong day looks
+      // from GitHub's side exactly like a healthy extra trigger.
+      console.error(`[dispatch] ${event.cron} fired on the wrong day; not asking for a review`);
       return;
     }
     ctx.waitUntil(fireDispatch(env, eventType));

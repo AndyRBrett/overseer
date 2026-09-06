@@ -142,13 +142,65 @@ def test_the_worker_has_a_cron_schedule():
         assert len(cron.split()) == 5, f"not a 5-field cron: {cron}"
 
 
+# Cloudflare's cron parser counts the week from 1, so Sunday is 1 and Monday is
+# 2. GitHub runs POSIX cron, counting from 0, so Monday is 1 there. The same
+# five characters mean different days on the two schedulers, and this file is
+# the only place that says so.
+CLOUDFLARE_MONDAY = "2"
+GITHUB_MONDAY = "1"
+
+
 def test_the_review_cron_fires_on_monday():
-    # Day-of-week 1 = Monday, matching the review's own crons. A trigger that
-    # fires on the wrong day is a trigger that never covers the run it exists
-    # for.
+    # 2026-09-06, and this assertion is the bug. It used to read `== "1"`,
+    # copied from weekly-review.yml's own crons on the reasonable assumption
+    # that a cron is a cron. On Cloudflare `5 14 * * 1` is SUNDAY: the Worker
+    # fired weekly-review at 14:05 on Sunday 09-06, weekly_guard.py correctly
+    # saw no digest for that day and let a full $0.43 review run, and Monday's
+    # GitHub cron then owed a second one. Nothing was red; the test agreed with
+    # the mistake because it shared the mistake's premise.
+    #
+    # A trigger that fires on the wrong day is not covering the run it exists
+    # for — it is buying an extra one.
     for cron, event_type in dispatch_map().items():
         if event_type == "weekly-review":
-            assert cron.split()[4] == "1", f"{cron} does not fire on Monday"
+            assert cron.split()[4] == CLOUDFLARE_MONDAY, (
+                f"{cron} does not fire on Cloudflare's Monday")
+
+
+def test_the_two_schedulers_disagree_deliberately():
+    # The halves of the incident, pinned facing each other: if these two ever
+    # read the same day-of-week field, one of them is firing on the wrong day.
+    # Written as an inequality on purpose — the next person to touch either file
+    # should have to come here and read why.
+    github = {c.split()[4] for c in github_crons("weekly-review.yml")}
+    assert github == {GITHUB_MONDAY}, f"GitHub's review crons moved off Monday: {github}"
+    for cron, event_type in dispatch_map().items():
+        if event_type == "weekly-review":
+            assert cron.split()[4] != GITHUB_MONDAY, (
+                f"{cron} mirrors GitHub's day field, which is Sunday on Cloudflare")
+
+
+def test_the_worker_checks_the_day_itself():
+    # The belt to the cron's braces. A cron field is a claim about a parser this
+    # repo does not own; getUTCDay() is not. The check exists so the next drift
+    # — a re-edit, a parser change, a fourth vendor — costs a skipped redundant
+    # poke rather than a review nobody asked for.
+    src = worker_source()
+    assert "REVIEW_UTC_DAY = 1" in src, "the worker does not know which day Monday is"
+    scheduled = src.split("async scheduled(")[1].split("async fetch(")[0]
+    guard = scheduled.split("ctx.waitUntil(fireDispatch(")[0]
+    assert "getUTCDay()" in guard, "the day is not checked before the review is asked for"
+    assert "REVIEW_UTC_DAY" in guard
+
+
+def test_the_day_check_does_not_gate_the_heartbeat():
+    # The heartbeat is daily and is the dead-man's switch. Gating it on a
+    # weekday would silence the alarm six days out of seven, which is the one
+    # thing this Worker may never do.
+    scheduled = worker_source().split("async scheduled(")[1].split("async fetch(")[0]
+    guard = scheduled.split("ctx.waitUntil(fireDispatch(")[0]
+    assert '"weekly-review"' in guard, (
+        "the day check is not scoped to the review, so it also gates the heartbeat")
 
 
 def test_the_heartbeat_cron_fires_daily():
