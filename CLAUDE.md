@@ -16,6 +16,8 @@ Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repositor
       ~6×/day  refresh_status.py    same job: re-reads the four feeds → digest.json's
                                     health + ranking (NEVER its `generated`)
   daily 15:20  heartbeat.yml        dead-man's switch, also Cloudflare-triggered
+ on push main  deploy-worker.yml    worker/** → wrangler deploy, then assert
+                                    the installed schedule matches the file
     on demand  worker/              "Hey Siri, ask Overseer" → one model call
                                     (+ the crons above, off GitHub's scheduler)
 ```
@@ -53,6 +55,7 @@ actually failed.
 | `scripts/refresh_status.py` | same cron: the digest's health + ranking between weekly reviews |
 | `scripts/implement_guard.py` | keeps implement.yml's catch-up crons from dispatching a second batch |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
+| `scripts/verify_worker_triggers.py` | reads the schedule `wrangler deploy` says it installed back against `wrangler.toml`; run by `deploy-worker.yml` |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
 | `ask.py` / `ask_context.py` | the voice assistant: one call, no tool loop; `ask_context` owns its prompt AND its facts |
 | `worker/` | the Cloudflare Worker Siri talks to — deliberately knows nothing |

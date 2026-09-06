@@ -3,3 +3,10 @@ __pycache__/
 .env
 overseer_report.html
 overseer_run.jsonl
+
+# wrangler's local build cache (worker/.wrangler/). Untracked, regenerated on
+# every deploy, and exactly the sort of directory a wildcard `git add` sweeps in.
+.wrangler/
+
+# `wrangler deploy` output, captured by the deploy workflow for verification.
+deploy.log
