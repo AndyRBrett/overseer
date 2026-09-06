@@ -435,6 +435,42 @@
         "baseline_usd": 0.3722,
         "saved_usd": 0.0951
       }
+    },
+    {
+      "date": "2026-09-06",
+      "generated": "2026-09-06T14:11:19Z",
+      "status": "completed",
+      "summary": "ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. coachvision (0.40) \u2014 no activity for 5 cycle(s); 5 open ideas\n2. Trading bot (0.13) \u2014 win_rate is 33%\n3. UFC dashboard (0.11) \u2014 4 open ideas; success_rate_7d is 68%\n\nIssues Found\n- None this week. Bug-Hunter reviewed all projects (crypto-trading, coachvision, ufc-dashboard, overseer) \u2014 no confirmed, diagnosable bugs. Crypto bot flagged as healthy despite weak performance, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Cross-project systemic-risk correlation widget (effort: low, impact: medium): Surfaces when multiple projects degrade simultaneously, hinting at shared root cause (infra/API/billing) \u2014 cheap to build, useful signal.\n2. crypto-trading \u2014 Correlated-cluster drawdown circuit breaker (effort: medium, impact: high): Cuts new entries into a specific overheating cluster (e.g. BTC/ETH) using existing correlation/drawdown data, independent of the global Sharpe breaker.\n3. crypto-trading \u2014 Signal-proximity trend tracking (effort: medium, impact: medium): Flags \"signal building\" momentum toward trigger thresholds instead of only point-in-time quiet-market reads.\n4. ufc-dashboard \u2014 Card-announcement ETA heuristic (effort: medium, impact: medium): Uses historical announcement-timing patterns to give an ETA for the 5 awaiting-card events instead of a static flag.\n5. coachvision \u2014 Configurable technique-taxonomy schema (effort: medium, impact: medium): Replaces hardcoded martial_arts taxonomy with a config-driven vocabulary, extending reporting to more disciplines.\n\nIMPLEMENTED (LAST 7 DAYS)\n- crypto-trading #42 \u2014 Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals (PR #62)\n- crypto-trading #41 \u2014 Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes (PR #61)\n- overseer #60 \u2014 Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation (PR #68)\n- overseer #50 \u2014 Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR (PR #56)\n- overseer #33 \u2014 Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals (PR #68)\n- overseer #25 \u2014 Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable (PR #68)\n- \u2026and 11 more merged.",
+      "counts": {
+        "tools": 15,
+        "errors": 0,
+        "issues": 0,
+        "enhancements": 5,
+        "duplicates_blocked": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.4277,
+        "baseline_usd": 0.5706,
+        "saved_usd": 0.1429
+      }
     }
   ]
 }
