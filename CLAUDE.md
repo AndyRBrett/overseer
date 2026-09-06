@@ -219,6 +219,20 @@ Each of these exists because the opposite already happened here.
   `docs/digest.json` standing still and the heartbeat trips on that within a day.
   When diagnosing "the run didn't happen", check `total_count` on the workflow
   before reading logs — no new run number means there was never a job.
+- **Two schedulers, two definitions of day 1.** The Cloudflare crons that back
+  up the weekly review were written by mirroring `weekly-review.yml`'s
+  `0 14 * * 1` field for field. Every field survives that copy except the last:
+  GitHub runs POSIX cron (0-6, **Sunday is 0**, so 1 is Monday) and Cloudflare
+  counts the week from 1 (**Sunday is 1**, so Monday is 2). So `5 14 * * 1`
+  fired on **Sunday 2026-09-06** — a day the guard correctly saw no digest for,
+  which is why it ran a full $0.43 review, filed five enhancements and pushed a
+  digest a day early, with Monday's GitHub cron still owing a second one. Two
+  reviews a week and nothing red. The daily heartbeat has no day field, which is
+  why the first Sunday after deployment was the first symptom. `wrangler.toml`
+  now reads `* * 2` on purpose, `overseer-ask.js` checks `getUTCDay()` as well
+  so the next drift costs a skipped poke rather than a review, and the test that
+  used to assert the day field was `"1"` — agreeing with the bug because it
+  shared its premise — now pins the two conventions facing each other.
 - **`wrangler secret put` takes the NAME, not the value.** Pasting the key onto
   the command line creates a secret *named* after your credential, echoes it to
   the terminal, and leaves the real slot unset — surfacing much later as an

@@ -69,5 +69,15 @@ DISPATCH_REPO = "AndyRBrett/overseer"
 #
 # Cron is UTC here too. Keep DISPATCH_EVENTS in overseer-ask.js in step with
 # these, and with the repository_dispatch `types:` in each workflow.
+#
+# THE DAY-OF-WEEK FIELD IS NOT GITHUB'S (2026-09-06). These read `* * 2` where
+# weekly-review.yml reads `* * 1`, and both mean Monday. GitHub runs POSIX cron,
+# counting the week from 0, so Sunday is 0 and Monday is 1. Cloudflare counts
+# from 1, so Sunday is 1 and Monday is 2. Written as `* * 1` here — mirroring
+# the workflow field for field, which is how they were first set — these fired
+# on SUNDAY 2026-09-06 and bought an unasked-for $0.43 review a day early, plus
+# a second one on the Monday. Do not "correct" these back to match the workflow;
+# overseer-ask.js checks getUTCDay() as well, so a wrong day now costs a skipped
+# poke instead.
 [triggers]
-crons = ["5 14 * * 1", "5 17 * * 1", "20 15 * * *"]
+crons = ["5 14 * * 2", "5 17 * * 2", "20 15 * * *"]
