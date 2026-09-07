@@ -9,6 +9,7 @@ Mon 14:00 UTC  weekly-review.yml    Bug-Hunter → Idea-Agent → Reviewer
                                     (+14:05 Cloudflare cron → repository_dispatch,
                                      because GitHub drops scheduled events)
 Mon 15:00 UTC  implement.yml        ledger → gate → ≤3 picks → repository_dispatch
+                                    (+15:20/17:05 Cloudflare, same reason)
       ~10 min  implement-worker.yml the coding agent, IN EACH TARGET REPO
                                     → branch → tests → pull request
       ~6×/day  ledger-refresh.yml   PR merged → docs/shipped.json → dashboard
@@ -30,7 +31,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-490 tests, under a second. There is no JS test runner, so dashboard behaviour is
+530 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 `python scripts/pipeline_dryrun.py` runs the WHOLE pipeline end to end against
@@ -53,7 +54,7 @@ actually failed.
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
 | `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
 | `scripts/refresh_status.py` | same cron: the digest's health + ranking between weekly reviews |
-| `scripts/implement_guard.py` | keeps implement.yml's catch-up crons from dispatching a second batch |
+| `scripts/implement_guard.py` | keeps implement.yml's catch-up crons and its Cloudflare poke from dispatching a second batch |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `scripts/verify_worker_triggers.py` | reads the schedule `wrangler deploy` says it installed back against `wrangler.toml`; run by `deploy-worker.yml` |
 | `docs/` | the PWA dashboard (`index.html` + `app.js`), fed by `digest.json`, `history.json`, `shipped.json` |
@@ -86,8 +87,11 @@ Each of these exists because the opposite already happened here.
    the workflow refuses them again. A test pushes
    `"opus --dangerously-skip-permissions"` through the dispatch path.
 6. **A pull request is where the automation stops.** Nothing merges itself.
-6b. **Every automated trigger asks `weekly_guard`; only `workflow_dispatch`
-   doesn't.** Two schedulers now aim at the same Monday (GitHub's crons and the
+6b. **Every automated trigger asks its guard; only `workflow_dispatch`
+   doesn't.** This is `weekly_guard` for the review and `implement_guard` for
+   the dispatcher — the latter only since 2026-09-07, when it asked the question
+   of the catch-up crons but not the primary, GitHub delivered the primary 3h55m
+   late after a manual run, and the day cost ~$9 instead of $4.50. Two schedulers now aim at the same Monday (GitHub's crons and the
    Cloudflare `repository_dispatch`), so "am I the review?" is the wrong
    question and "has today's review already landed?" is the right one. The
    14:00 cron used to run unguarded; against a second trigger that is a
@@ -222,6 +226,59 @@ Each of these exists because the opposite already happened here.
   `docs/digest.json` standing still and the heartbeat trips on that within a day.
   When diagnosing "the run didn't happen", check `total_count` on the workflow
   before reading logs — no new run number means there was never a job.
+- **The dispatcher was the last stage on one scheduler, and 09-07 collected.**
+  On 2026-09-07 GitHub again created *no run at all* for anything scheduled in
+  this repo. The review never noticed — it came in on Cloudflare's 14:05 poke,
+  and the 17:05 one no-opped against the guard exactly as designed. `implement.yml`
+  had no such backup: its 15:00 cron and its 17:00 catch-up both produced no run
+  (`total_count` stayed at 5), and the week's implementation stage was skipped
+  until a human fired `workflow_dispatch` by hand at 17:32. The catch-ups added
+  on 08-31 could not help — they are `schedule:` entries queued through the
+  scheduler that dropped the primary, which is the same thing the review's
+  16:00/18:00 catch-ups could not do on 08-31. **The fix added no new cron.**
+  Cloudflare's docs contradict themselves on the free-plan cap (the Cron Triggers
+  page says per Worker, the Limits page says 5 per *account*, third-party
+  references say 3 per Worker) and three were already declared, so `implement`
+  rides the existing 15:20 daily and 17:05 Monday crons as a second event on
+  each — both still landing after GitHub's own 15:00 and 17:00. `DISPATCH_EVENTS`
+  maps a cron to a LIST for this reason, and `MONDAY_EVENTS` is what keeps the
+  daily cron from asking for a $4.50 implementation run every morning.
+- **"Which trigger am I?" is the wrong question, and it cost $9.** `implement_guard`
+  asked whether today's dispatch had landed only of the crons it had listed as
+  catch-ups; `0 15 * * 1` was exempt because it *is* the dispatch. On 2026-09-07
+  GitHub delivered that primary cron at **18:55Z, 3h55m late**, after a manual
+  run at 17:32 had already handed over the day's three. The guard logged *"not a
+  catch-up run — this is the dispatch itself"* and dispatched three more: six
+  attempts, ~$9, on a Monday designed to cost $4.50 — the exact doubling the
+  module's own docstring exists to prevent, reached without any second scheduler
+  being involved. Note the test that should have caught it *passed*: it asserted
+  `CATCHUP_SCHEDULES` matched the workflow's crons, and it did — the list was
+  complete and its premise was wrong. The guard now asks EVERY automated trigger
+  and holds no list of crons at all, which also makes the check a hard per-day
+  cap rather than a rule that must classify a trigger correctly first. The
+  measured cost of one attempt that day was **$1.77**, not $1.50.
+- **The dispatcher must not run before the review it reads.** Two schedulers now
+  aim at the same Monday, so `implement` can be poked while the weekly review is
+  still filing this week's issues — and a dispatcher that fires early reads last
+  week's ledger and spends the week's budget on a stale queue. The guard checks
+  `docs/digest.json`'s `generated` for today's date (invariant 13 is what keeps
+  that field meaning "the review ran"; `refreshed` moves six times a day and
+  would answer a different question). The cost of the check is a week with no
+  review is also a week with no implementation — deliberate, since there is
+  nothing new to implement, but it is a second way for this stage to go quiet.
+  It is a skipped week of delivery, never a skipped alarm: the heartbeat still
+  trips on the standing-still digest within a day.
+- **A dry run is not a dispatch, and the guard could not tell.**
+  `implement_guard.dispatched_today()` counted any green run today, and the API
+  does not expose a run's `workflow_dispatch` inputs — so a `--dry-run` run, which
+  hands nothing over and is the DEFAULT for a manual dispatch, read as "today's
+  dispatch already ran" and silently disarmed every remaining catch-up. Looking
+  before firing was the move that would have thrown the week away; on 09-07 it
+  would have eaten the last chance left. `implement.yml` now marks its own
+  `run-name` with `(dry run)` and the guard reads the marker back. That is the
+  guard's stated principle — *when in doubt it RUNS* — restored: a dry run made it
+  confident, and confidently wrong in the direction that costs the week.
+
 - **Two schedulers, two definitions of day 1.** The Cloudflare crons that back
   up the weekly review were written by mirroring `weekly-review.yml`'s
   `0 14 * * 1` field for field. Every field survives that copy except the last:

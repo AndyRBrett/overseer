@@ -29,17 +29,58 @@ week — and every other path here (an unreadable run list, a GitHub outage, no
 token) leaves the day's work undone, which is the more expensive mistake. The cap
 inside tools.implementation_queue still bounds whatever a doubtful run does.
 
-Only the catch-up crons are asked. The 15:00 run and any manual dispatch are the
-run, not a second guess at it, so they always proceed — FIRED_BY_SCHEDULE (the
-workflow's `github.event.schedule`, empty for a dispatch) is what tells them
-apart. Keeping that comparison here rather than in workflow YAML is what makes it
-testable.
+EVERY AUTOMATED TRIGGER ASKS; ONLY workflow_dispatch DOESN'T (2026-09-07). This
+module used to ask only the crons it recognised as catch-ups, on the premise that
+`0 15 * * 1` IS the dispatch and not a second guess at it. That premise was false,
+and it cost a duplicate batch the same evening it was written down:
+
+    run #6  17:32Z  workflow_dispatch  -> coachvision#38, overseer#72, crypto#71
+    run #7  18:55Z  schedule 0 15 * * 1 -> coachvision#39, overseer#77, coachvision#43
+    [guard] running: not a catch-up run — this is the dispatch itself.
+
+GitHub delivered the PRIMARY cron three hours fifty-five minutes late, after a
+manual run had already handed over the day's batch. Six attempts, ~$9, where the
+design intends three at ~$4.50 — the exact $9.00 Monday described above, reached
+without any second scheduler being involved at all.
+
+So the question is no longer "which trigger am I?" but "has today's dispatch
+already landed?", which is invariant 6b and what weekly_guard has always done.
+Every automated trigger asks it: a cron, whenever delivered, and the Cloudflare
+repository_dispatch alike. FIRED_BY_EVENT (`github.event_name`) exempts only
+`workflow_dispatch`, because a human at the keyboard asking for a run twice means
+it. That also makes the successful-run check a hard per-day cap on automated
+spend rather than a rule that has to classify a trigger correctly first — the
+classification is what failed.
+
+AND TODAY'S REVIEW HAS TO HAVE LANDED. The dispatcher reads a ledger the weekly
+review fills. Fire it before the review and it picks from last week's backlog,
+spending the week's budget on a stale queue — reachable now that two schedulers
+aim at the same Monday and the Cloudflare poke for `implement` can arrive while
+the review is still running. So an automated run also checks that
+docs/digest.json carries today's date, which is the same file and the same
+question weekly_guard asks, read on the GitHub side per invariant 8.
+
+The cost of that check: on a week where the review never lands at all, the
+implementer does not run either. That is deliberate — there is nothing new to
+implement — but it IS a second way for this stage to go quiet, which is this
+system's characteristic failure mode. It is a skipped week of delivery, never a
+skipped alarm: the heartbeat still trips on the standing-still digest within a
+day, which is the thing that actually needs saying out loud.
+
+WHAT A DRY RUN IS NOT (2026-09-07). A `--dry-run` run hands nothing over, so it
+must not count as today's dispatch. The API does not expose a run's
+workflow_dispatch inputs, so implement.yml marks its own run-name instead and
+this module reads the marker back. It matters because dry_run DEFAULTS to true on
+a manual run: looking at the queue before firing — the careful thing to do — would
+otherwise disarm every catch-up left in the day, and would have eaten the last
+one on 09-07.
 
 Writes `should_run=true|false` to $GITHUB_OUTPUT for the workflow's `if:`
 conditions, and prints the reasoning for the run log. Always exits 0 — this is a
 decision, not a verdict, and it must never be the thing that fails the workflow.
 """
 
+import json
 import os
 import sys
 from datetime import datetime, timezone
@@ -50,11 +91,32 @@ import tools  # noqa: E402
 
 WORKFLOW_FILE = os.getenv("IMPLEMENT_WORKFLOW_FILE", "implement.yml")
 
-# The crons in implement.yml that are catch-ups rather than the run itself.
-# Keep in step with the `schedule:` block there — a cron listed in one and not
-# the other just means the catch-up dispatches unconditionally, which is the
-# double-spend this whole module exists to prevent.
-CATCHUP_SCHEDULES = {"0 17 * * 1", "0 19 * * 1"}
+# The only trigger that does not ask. A human choosing to dispatch a second batch
+# has seen the first one; every other trigger here is a machine that cannot tell.
+#
+# There is deliberately no list of which crons are "catch-ups" any more. That list
+# existed, it had to be kept in step with the workflow by a test, and it was still
+# wrong in the way that mattered: it classified `0 15 * * 1` as the dispatch, so a
+# late delivery of the primary sailed past the check and bought a second batch.
+MANUAL_EVENT = "workflow_dispatch"
+
+# What implement.yml's `run-name` carries when the run was a dry run. A substring
+# match on the run's title is not elegant; it is the only signal GitHub gives back
+# about how a workflow_dispatch was parameterised. Keep in step with the run-name
+# expression in implement.yml.
+DRY_RUN_MARKER = "(dry run)"
+
+
+def _was_dry_run(run):
+    """Did this run hand nothing over because it was a dry run?
+
+    Runs created before the run-name marker existed carry no title of their own
+    and so read as real dispatches. That is the conservative direction for
+    history — it can only make a catch-up skip, never double-spend — and it ages
+    out after one Monday.
+    """
+    title = getattr(run, "display_title", None) or getattr(run, "name", "") or ""
+    return DRY_RUN_MARKER in title
 
 
 def dispatched_today(runs, now=None, exclude_id=None):
@@ -70,6 +132,9 @@ def dispatched_today(runs, now=None, exclude_id=None):
             continue
         if getattr(run, "conclusion", None) != "success":
             continue
+        if _was_dry_run(run):
+            # Green, and it dispatched nothing. See DRY_RUN_MARKER.
+            continue
         created = getattr(run, "created_at", None)
         if created is None:
             continue
@@ -80,17 +145,46 @@ def dispatched_today(runs, now=None, exclude_id=None):
     return None
 
 
-def should_run(schedule, runs, now=None, exclude_id=None):
-    """(run?, reason) for a dispatch fired by `schedule` against `runs`."""
-    if (schedule or "").strip() not in CATCHUP_SCHEDULES:
-        return True, "not a catch-up run — this is the dispatch itself."
+def reviewed_today(digest, now=None):
+    """Did the weekly review publish a digest today (UTC)? None if unreadable.
+
+    Reads `generated`, which invariant 13 reserves for the REVIEW's timestamp —
+    refresh_status.py writes `refreshed` precisely so this question keeps its
+    meaning between reviews.
+    """
+    stamp = (digest or {}).get("generated")
+    if not isinstance(stamp, str) or not stamp:
+        return None
+    try:
+        when = datetime.strptime(stamp[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    return when == (now or datetime.now(timezone.utc)).date()
+
+
+def should_run(runs, now=None, exclude_id=None, event=None, digest=None):
+    """(run?, reason) for a dispatch fired by `event`, against `runs`/`digest`."""
+    if (event or "").strip() == MANUAL_EVENT:
+        return True, "manual dispatch — a human asked for this run."
+
     if runs is None:
         return True, "could not read this workflow's own run history; proceeding."
     earlier = dispatched_today(runs, now, exclude_id)
     if earlier is not None:
         return False, (f"today's dispatch already ran successfully "
                        f"(run {earlier.id} at {earlier.created_at}).")
-    return True, "no successful dispatch yet today — covering for the missed run."
+
+    reviewed = reviewed_today(digest, now)
+    if reviewed is False:
+        return False, ("today's review has not landed yet — the ledger is last "
+                       "week's, so there is nothing new to hand over.")
+    if reviewed is None:
+        # Unreadable digest is the in-doubt case, and in doubt this RUNS: a
+        # skipped week costs more than a batch picked from a slightly stale
+        # queue, and the cap above still bounds it to one batch.
+        return True, "could not read the published digest; proceeding."
+
+    return True, "no dispatch yet today and the review has landed."
 
 
 def recent_runs(limit=20):
@@ -112,11 +206,26 @@ def recent_runs(limit=20):
         return None
 
 
+def published_digest(path=None):
+    """The published digest, or None if it cannot be read.
+
+    None and a digest with no `generated` are both "cannot tell", which
+    should_run treats as a reason to proceed rather than to skip.
+    """
+    try:
+        with open(path or tools.DIGEST_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as exc:
+        print(f"[guard] could not read the digest: {exc}", file=sys.stderr)
+        return None
+
+
 def main():
     run, reason = should_run(
-        os.getenv("FIRED_BY_SCHEDULE"),
         recent_runs(),
         exclude_id=os.getenv("GITHUB_RUN_ID"),
+        event=os.getenv("FIRED_BY_EVENT"),
+        digest=published_digest(),
     )
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")
 
