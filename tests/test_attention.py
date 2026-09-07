@@ -273,3 +273,65 @@ def test_an_unreadable_project_still_reads_as_a_phrase_in_the_list():
     row = attention.rank({"coachvision": {"status": "blind"}})[0]
     assert row["short"] == "cannot be seen at all right now"
     assert row["plain"].startswith("We cannot see")
+
+
+# ── systemic risk (#72) ──────────────────────────────────────────────────
+# A per-project ranking answers "which project needs attention". It cannot
+# answer "do these alerts share a cause" — that only shows up by noticing two
+# or more fire in the SAME run.
+
+
+def test_a_quiet_run_is_not_flagged():
+    ranked = attention.rank({"a": {"status": "ok"}, "b": {"status": "ok"}})
+    assert attention.systemic_risk(ranked) == {"flagged": False, "projects": []}
+
+
+def test_one_notable_project_alone_is_not_systemic():
+    # One project having a bad week is the ordinary case the ranking already
+    # covers; the widget exists for the coincidence of two or more.
+    ranked = attention.rank({"a": {"status": "blind"}, "b": {"status": "ok"}})
+    assert attention.systemic_risk(ranked) == {"flagged": False, "projects": []}
+
+
+def test_two_notable_projects_in_one_run_are_flagged_together():
+    # Mirrors the issue's own example: two different signal TYPES (unreadable,
+    # a bad KPI) tripping in the same run — the point being the coincidence
+    # across projects, not that they failed the same way.
+    ranked = attention.rank(
+        {"a": {"status": "blind"}, "b": {"status": "ok"}},
+        readings={"b": {"odds_budget_used_pct": 94}})
+    risk = attention.systemic_risk(ranked)
+    assert risk["flagged"] is True
+    assert set(risk["projects"]) == {"a", "b"}
+    assert "a" in risk["message"] and "b" in risk["message"]
+
+
+def test_systemic_risk_reuses_the_published_notable_flag_not_its_own_threshold():
+    # It must never disagree with the per-project list about which projects
+    # count — that list is `notable`, computed once in `rank`.
+    ranked = attention.rank(
+        {"a": {"status": "blind"}, "b": {"status": "ok"}},
+        readings={"b": {"odds_budget_used_pct": 94}})
+    risk = attention.systemic_risk(ranked)
+    flagged_names = {r["name"] for r in ranked if r["notable"]}
+    assert set(risk["projects"]) == flagged_names
+
+
+def test_the_digest_publishes_systemic_risk(tmp_path):
+    t = _tracer(tmp_path)
+    t.tool_call(0, "read_trading_bot_log", {}, json.dumps({"status": "not_configured"}), False)
+    t.tool_call(0, "read_ufc_scraper_status", {}, json.dumps({"odds_budget_used_pct": 94}), False)
+    path = tmp_path / "digest.json"
+    t.write_digest(str(path))
+    risk = json.loads(path.read_text(encoding="utf-8"))["systemic_risk"]
+    assert risk["flagged"] is True
+    assert set(risk["projects"]) == {"Trading bot", "UFC dashboard"}
+
+
+def test_the_dashboard_renders_the_systemic_risk_widget_and_does_not_compose_one():
+    import pathlib
+    app = pathlib.Path("docs/app.js").read_text(encoding="utf-8")
+    assert "d.systemic_risk" in app
+    # Same rule as the headline (invariant 12): the message is composed once in
+    # Python and printed verbatim, not reworded in JavaScript.
+    assert "shared cause" not in app
