@@ -660,6 +660,42 @@ def test_the_example_points_at_a_ref_a_project_repo_can_reach():
     assert uses.startswith("AndyRBrett/overseer/.github/workflows/implementer.yml@"), uses
 
 
+def test_the_pull_request_can_be_opened_with_a_token_that_triggers_ci():
+    # 2026-09-07: the two implementer PRs in this repo were the only changes on
+    # it that nothing tested and nothing reviewed — GitHub raises no workflow
+    # events for the built-in GITHUB_TOKEN. Both carried a P1 bug, found only
+    # because a human asked for a review by hand. The machine-written change is
+    # the one that most needs checking and was the one getting least.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+
+    assert "pr_token" in _wf("implementer.yml")[True]["workflow_call"]["secrets"], (
+        "the reusable workflow declares no pr_token, so no caller can supply one")
+    assert "github_token: ${{ secrets.pr_token || secrets.GITHUB_TOKEN }}" in body, (
+        "the agent still opens its PR with the token that raises no events")
+
+
+def test_the_missing_pr_token_is_announced_rather_than_silent():
+    # The fallback keeps every repo working, which is exactly what makes it easy
+    # to leave in place forever. A repo running without the token is a repo whose
+    # agent-written PRs arrive unchecked, so the run says so out loud — silence
+    # is this system's characteristic failure.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    assert "::warning title=This PR will get no CI and no review::" in body
+
+
+def test_every_caller_passes_the_pr_token_through():
+    # Declared and unused is the same as absent. Both callers wire it up; a new
+    # project repo copying the example gets it by default.
+    for name, caller in (("implement-worker.yml", _wf("implement-worker.yml")),
+                         ("examples/implementer", _example())):
+        secrets = caller["jobs"]["implement"].get("secrets") or {}
+        assert "pr_token" in secrets, f"{name} does not pass pr_token"
+
+
 def test_the_agent_is_told_to_close_issues_that_do_not_hold_up():
     # An issue the agent judges obsolete stays eligible while it is open, so
     # leaving it open means paying for the same investigation every week.

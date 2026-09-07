@@ -62,6 +62,17 @@ on:
     secrets:
       anthropic_api_key:
         required: true
+      pr_token:
+        description: >
+          A token to open the pull request with, INSTEAD of the built-in
+          GITHUB_TOKEN. Optional, and the whole point of it is CI: GitHub
+          deliberately does not fire workflow events for anything the built-in
+          token does, so a PR opened with it gets no test run and no review bot
+          — see the block above the "Implement it" step. Prefer a GitHub App
+          installation token (actions/create-github-app-token) over a PAT: it is
+          scoped to the repo and expires in an hour. Whatever is used needs
+          contents:write and pull-requests:write on THIS repo.
+        required: false
 
 jobs:
   implement:
@@ -180,11 +191,40 @@ jobs:
       - if: inputs.install != ''
         run: ${{ inputs.install }}
 
+      # WHOSE TOKEN OPENS THE PR DECIDES WHETHER ANYONE CHECKS IT (2026-09-07).
+      #
+      # GitHub does not raise workflow events for actions taken with the built-in
+      # GITHUB_TOKEN — deliberately, to stop a workflow triggering itself in a
+      # loop. The consequence here is not a loop that does not happen; it is that
+      # a pull request this agent opens gets NO test run and NO review bot. The
+      # changes written by a machine, unattended, are the only ones on the repo
+      # that nothing checks. That is backwards, and it is not theoretical: on
+      # 2026-09-07 both implementer PRs in the overseer repo were reviewed for
+      # the first time only because a human asked, and BOTH carried a P1 bug —
+      # one of them a cost-tracking feature blind to the exact duplicate-run
+      # spend that had occurred hours earlier.
+      #
+      # So the PR is opened with `pr_token` when the calling repo supplies one.
+      # Without it the fallback still works and still opens the PR; it just goes
+      # unchecked, which the step below says out loud rather than leaving to be
+      # discovered.
+      - name: Will this pull request get checked?
+        env:
+          PR_TOKEN: ${{ secrets.pr_token }}
+        run: |
+          if [ -z "$PR_TOKEN" ]; then
+            echo "::warning title=This PR will get no CI and no review::Opening it with the built-in GITHUB_TOKEN, which raises no workflow events. Nothing will test or review the agent's work. Pass a pr_token secret from the calling workflow to fix this."
+          else
+            echo "pr_token supplied — the pull request will trigger this repo's checks."
+          fi
+
       - name: Implement it
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # See the block above: this is what decides whether the resulting PR
+          # gets a test run. The fallback keeps every repo working today.
+          github_token: ${{ secrets.pr_token || secrets.GITHUB_TOKEN }}
           prompt: |
             Implement GitHub issue #${{ steps.issue.outputs.number }} in this repository.
 

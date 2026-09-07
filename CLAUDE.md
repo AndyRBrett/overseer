@@ -159,7 +159,18 @@ Each of these exists because the opposite already happened here.
   *Settings → Actions → General → Workflow permissions*. It fails at the very
   end, after all the work and spend, and the job still reports **success**.
 - **PRs opened with `GITHUB_TOKEN` do not trigger the repo's other workflows.**
-  That is why the agent is told to run the suite itself before opening one.
+  That is why the agent is told to run the suite itself before opening one —
+  which is the agent grading its own homework, and on 2026-09-07 that showed.
+  Two implementer PRs (#78, #82) reached a human with **no CI and no Codex
+  pass**: both claimed a green suite in their own descriptions, and both carried
+  a P1 the moment anyone looked. One was a cost-tracking widget blind to
+  duplicate-run spend — the exact thing that had cost $9 hours earlier. The
+  change with the least human authorship was getting the least scrutiny, which
+  is backwards. `implementer.yml` now takes an optional `pr_token` secret and
+  opens the PR with it; absent, it falls back and **says so as a run warning**,
+  because a silent fallback is one nobody ever notices. Prefer a GitHub App
+  installation token over a PAT: scoped to the repo, expires in an hour, and it
+  is being handed to an agent running Bash.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.

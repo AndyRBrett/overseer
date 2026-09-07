@@ -21,14 +21,27 @@
 #      fails LATE: the run does all the work, pushes the branch, and only then
 #      can't open the PR — while still reporting success.
 #   1. Add secret ANTHROPIC_API_KEY.
-#   2. Fill in the toolchain + test command below.
-#   3. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
+#   2. Add secret OVERSEER_PR_TOKEN so the agent's pull requests get CI — see
+#      the note below. Without it everything still runs; the PRs just arrive
+#      unchecked, and the workflow says so in its log.
+#   3. Fill in the toolchain + test command below.
+#   4. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
 #      Actions: write and Issues: write on this repo — otherwise the dispatch
 #      is rejected and the overseer reports it as a failed hand-over.
 #
-# NOTE ON CI: a pull request opened with the built-in GITHUB_TOKEN does not
-# trigger this repo's other workflows, so your normal PR checks will not run on
-# it. That is why the agent is told to run the suite itself before opening one.
+# NOTE ON CI: GitHub raises no workflow events for anything done with the
+# built-in GITHUB_TOKEN, so a pull request opened with it gets no test run and
+# no review bot. The agent is told to run the suite itself before opening one,
+# but that is the agent grading its own homework: on 2026-09-07 the first two
+# implementer PRs anyone reviewed each carried a P1 bug that their own passing
+# suite did not catch. OVERSEER_PR_TOKEN opens the PR instead, and your normal
+# checks then run on it like any other contributor's.
+#
+# Prefer a GitHub App installation token (actions/create-github-app-token) to a
+# personal access token: it is scoped to this repo and expires within the hour,
+# where a PAT carries your whole account for as long as it exists. Either way it
+# needs contents:write and pull-requests:write, and it is handed to an agent
+# running Bash — so scope it to this repo and nothing else.
 
 name: Implement a filed issue
 
@@ -79,3 +92,6 @@ jobs:
       # ─────────────────────────────────────────────────────────────────────
     secrets:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Optional. Absent, the PR is opened with GITHUB_TOKEN and gets no CI and
+      # no review — the workflow logs a warning saying exactly that.
+      pr_token: ${{ secrets.OVERSEER_PR_TOKEN }}
