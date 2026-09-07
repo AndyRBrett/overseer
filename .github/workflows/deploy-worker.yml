@@ -1,0 +1,106 @@
+name: Deploy the Cloudflare Worker
+
+# WHY THIS EXISTS (2026-09-06). worker/ is the only part of this system that
+# main does not actually control. Everything else here IS the deployment: a
+# merge changes what runs. The Worker needed a human to remember a command, and
+# the first time that mattered it went wrong twice.
+#
+# The review's off-GitHub trigger was firing a day early — wrangler.toml carried
+# GitHub's day-of-week convention (0-6, Sunday is 0) where Cloudflare counts
+# from 1, so `5 14 * * 1` meant Sunday there. The fix merged the same afternoon.
+# It then did not go live, because nobody ran wrangler; and when it was run, it
+# ran against a checkout four days old and re-installed the broken schedule,
+# printing "Deployed overseer-ask triggers" while doing it. For those days main
+# said Monday, Cloudflare ran Sunday, and nothing anywhere reported the
+# disagreement. It was caught by a human reading trigger lines out of terminal
+# output — luck, not a check.
+#
+# Both failures are the same failure: the deploy came from a workspace instead
+# of from main. So it comes from main now. GitHub Actions checks out the merge
+# commit by definition and cannot deploy a stale tree.
+#
+# This is also why the Worker matters more than its size suggests. It is the
+# off-GitHub redundancy for the weekly review and the dead-man's switch that
+# notices when the review stops (see worker/overseer-ask.js). A Worker silently
+# running last month's code is an alarm that has quietly stopped watching.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only what actually changes the deployed Worker. The verifier is here
+      # because a change to the check must re-run the check.
+      - "worker/**"
+      - "scripts/verify_worker_triggers.py"
+      - ".github/workflows/deploy-worker.yml"
+  # For a redeploy without a commit — a rotated secret, or confirming that what
+  # Cloudflare runs still matches main.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# Two deploys racing would leave whichever finished last installed, which may
+# not be the newer commit. Not cancel-in-progress: a deploy mid-upload should
+# finish rather than leave the Worker half-updated.
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "20"
+
+      # Fail here rather than at the API call. Without the secret, wrangler
+      # reports "In a non-interactive environment, it's necessary to set a
+      # CLOUDFLARE_API_TOKEN" — which reads like a broken workflow rather than
+      # an unset repository secret, and cost an afternoon exactly once.
+      - name: Check the deploy credential is present
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not set. Add it under" \
+                 "Settings → Secrets and variables → Actions. It wants a" \
+                 "Cloudflare token from the 'Edit Cloudflare Workers' template."
+            exit 1
+          fi
+
+      # Pinned to the major. An unattended deploy should not be the place a
+      # wrangler v5 lands, and pinning the exact patch would mean a bump PR for
+      # every release of a tool this repo invokes three times a month.
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes wrangler@4 deploy 2>&1 | tee deploy.log
+
+      # THE HALF THAT WOULD HAVE CAUGHT 09-06. wrangler prints the schedules it
+      # installed; this reads them back and compares them to the file that was
+      # supposed to produce them. A deploy that reports success while installing
+      # the wrong schedule is now a red run.
+      - name: Verify Cloudflare installed the schedule main declares
+        run: python3 ../scripts/verify_worker_triggers.py deploy.log wrangler.toml
+
+      # The trigger lines in the job summary, so "what is Cloudflare running?"
+      # is answerable from the Actions tab without a token or a local wrangler.
+      - name: Record the deployed schedule
+        if: always()
+        run: |
+          {
+            echo "### Deployed schedule"
+            echo '```'
+            grep -E "schedule:|Current Version ID" deploy.log || echo "(no schedule lines in output)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
