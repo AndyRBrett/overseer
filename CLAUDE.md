@@ -159,7 +159,25 @@ Each of these exists because the opposite already happened here.
   *Settings → Actions → General → Workflow permissions*. It fails at the very
   end, after all the work and spend, and the job still reports **success**.
 - **PRs opened with `GITHUB_TOKEN` do not trigger the repo's other workflows.**
-  That is why the agent is told to run the suite itself before opening one.
+  That is why the agent is told to run the suite itself before opening one —
+  which is the agent grading its own homework, and on 2026-09-07 that showed.
+  Two implementer PRs (#78, #82) reached a human with **no CI and no Codex
+  pass**: both claimed a green suite in their own descriptions, and both carried
+  a P1 the moment anyone looked. One was a cost-tracking widget blind to
+  duplicate-run spend — the exact thing that had cost $9 hours earlier. The
+  change with the least human authorship was getting the least scrutiny, which
+  is backwards. `implementer.yml` now mints a **GitHub App installation token**
+  per run (`pr_app_id` + `pr_app_private_key`), falling back to a PAT
+  (`pr_token`) and then to the built-in token — and **says so as a run warning**
+  when it falls back, because a silent fallback is one nobody ever notices.
+  Two traps, both found by Codex on the PR that fixed the first problem: an App
+  token **cannot be a stored secret** (it dies in an hour, and an expired secret
+  is still non-empty, so the `||` fallback never engages and every later run
+  fails auth), and the token needs **`issues:write` as well** — it is the
+  credential for every `gh` command the agent runs, and the prompt opens with
+  `gh issue view` and closes obsolete issues with `gh issue close`. Contents +
+  Pull requests looks like least privilege and breaks the close path, which
+  quietly re-buys the same investigation every week.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.

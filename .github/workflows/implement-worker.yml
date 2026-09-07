@@ -46,3 +46,10 @@ jobs:
       test_command: python -m pytest -q
     secrets:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      # This repo is reviewed by the same pipeline it runs, so it eats its own
+      # cooking here too: without this the agent's PRs against overseer arrive
+      # with no CI and no Codex pass, which is how #78 and #82 reached a human
+      # unchecked on 2026-09-07.
+      pr_app_id: ${{ secrets.OVERSEER_PR_APP_ID }}
+      pr_app_private_key: ${{ secrets.OVERSEER_PR_APP_PRIVATE_KEY }}
+      pr_token: ${{ secrets.OVERSEER_PR_TOKEN }}

@@ -21,14 +21,46 @@
 #      fails LATE: the run does all the work, pushes the branch, and only then
 #      can't open the PR — while still reporting success.
 #   1. Add secret ANTHROPIC_API_KEY.
-#   2. Fill in the toolchain + test command below.
-#   3. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
+#   2. Give the agent a token that makes its pull requests get CI — see the
+#      note below. Without one everything still runs; the PRs just arrive
+#      unchecked, and the workflow says so in its log.
+#   3. Fill in the toolchain + test command below.
+#   4. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
 #      Actions: write and Issues: write on this repo — otherwise the dispatch
 #      is rejected and the overseer reports it as a failed hand-over.
 #
-# NOTE ON CI: a pull request opened with the built-in GITHUB_TOKEN does not
-# trigger this repo's other workflows, so your normal PR checks will not run on
-# it. That is why the agent is told to run the suite itself before opening one.
+# NOTE ON CI: GitHub raises no workflow events for anything done with the
+# built-in GITHUB_TOKEN, so a pull request opened with it gets no test run and
+# no review bot. The agent is told to run the suite itself before opening one,
+# but that is the agent grading its own homework: on 2026-09-07 the first two
+# implementer PRs anyone reviewed each carried a P1 bug that their own passing
+# suite did not catch. Give it a token of its own and your normal checks run on
+# its PRs like any other contributor's.
+#
+# TWO WAYS, and they are not interchangeable:
+#
+#   PREFERRED — a GitHub App. Create one, install it on this repo, and add its
+#   id and private key as OVERSEER_PR_APP_ID and OVERSEER_PR_APP_PRIVATE_KEY.
+#   The workflow mints an installation token per run: scoped to this repo and
+#   expiring within the hour.
+#
+#   An App installation token is NOT something you paste into a secret. It dies
+#   in about an hour, and an expired secret is still non-empty — so the
+#   fallback would not engage and every run after the first hour would fail
+#   authentication, an hour after you last saw it work.
+#
+#   OTHERWISE — a personal access token as OVERSEER_PR_TOKEN. It works and it
+#   never expires, which is also the problem: it carries your whole account for
+#   as long as it exists, and it is being handed to an agent running Bash. Scope
+#   it to this repo alone.
+#
+# EITHER WAY IT NEEDS THREE PERMISSIONS: contents:write, pull-requests:write and
+# issues:write. Not two. This token is the credential for every `gh` command the
+# agent runs, not just `gh pr create` — the prompt opens with `gh issue view`,
+# and an issue it judges obsolete is closed with `gh issue close`. Without the
+# issue permissions a private-repo run dies on its first command, and a public
+# one fails the close quietly, leaving the issue eligible so the same
+# investigation is paid for again next week.
 
 name: Implement a filed issue
 
@@ -79,3 +111,9 @@ jobs:
       # ─────────────────────────────────────────────────────────────────────
     secrets:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+      # All three optional; the App pair wins where both are set. With none of
+      # them the PR is opened with GITHUB_TOKEN and gets no CI and no review —
+      # the workflow logs a warning saying exactly that.
+      pr_app_id: ${{ secrets.OVERSEER_PR_APP_ID }}
+      pr_app_private_key: ${{ secrets.OVERSEER_PR_APP_PRIVATE_KEY }}
+      pr_token: ${{ secrets.OVERSEER_PR_TOKEN }}

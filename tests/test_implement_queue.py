@@ -660,6 +660,87 @@ def test_the_example_points_at_a_ref_a_project_repo_can_reach():
     assert uses.startswith("AndyRBrett/overseer/.github/workflows/implementer.yml@"), uses
 
 
+def test_the_pull_request_can_be_opened_with_a_token_that_triggers_ci():
+    # 2026-09-07: the two implementer PRs in this repo were the only changes on
+    # it that nothing tested and nothing reviewed — GitHub raises no workflow
+    # events for the built-in GITHUB_TOKEN. Both carried a P1 bug, found only
+    # because a human asked for a review by hand. The machine-written change is
+    # the one that most needs checking and was the one getting least.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+
+    declared = _wf("implementer.yml")[True]["workflow_call"]["secrets"]
+    assert {"pr_app_id", "pr_app_private_key", "pr_token"} <= set(declared), (
+        "the reusable workflow declares no PR credential, so no caller can supply one")
+    assert ("github_token: ${{ steps.app_token.outputs.token || secrets.pr_token "
+            "|| secrets.GITHUB_TOKEN }}") in body, (
+        "the agent still opens its PR with the token that raises no events")
+
+
+def test_an_app_token_is_minted_per_run_not_stored():
+    # Codex P1 on this PR's first commit, which recommended an App token AND
+    # told people to paste it into a secret. Those are incompatible: an
+    # installation token dies in about an hour, and an expired secret is still
+    # NON-EMPTY — so `|| secrets.GITHUB_TOKEN` would not engage and every run
+    # after the first hour would fail authentication, an hour after anyone last
+    # saw it work. App credentials go in; the token is minted here.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    assert "actions/create-github-app-token@" in body, "no App token is minted"
+    assert "steps.app_token.outputs.token" in body, "the minted token is not used"
+    example = (root / "examples" / "implementer" / "implement.yml").read_text(encoding="utf-8")
+    assert "NOT something you paste into a secret" in example, (
+        "the example does not warn that an App token cannot be stored")
+
+
+def test_the_documented_permissions_cover_every_gh_verb_the_prompt_uses():
+    # The token is the credential for EVERY gh command the agent runs, not just
+    # `gh pr create`. Codex P1: contents + pull-requests was documented, while
+    # the prompt opens with `gh issue view` and closes obsolete issues with
+    # `gh issue close`. A private-repo run would die on the first command; a
+    # public one fails the close quietly, leaving the issue eligible and paying
+    # for the same investigation every week.
+    #
+    # Written as a check on the PROMPT rather than a fixed list, so a future
+    # `gh release create` or `gh label add` has to come here and update the
+    # documented scopes with it.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    example = (root / "examples" / "implementer" / "implement.yml").read_text(encoding="utf-8")
+
+    scope_for = {"gh issue": "issues:write", "gh pr": "pull-requests:write"}
+    prompt = body.split("prompt: |")[1].split("claude_args:")[0]
+    used = {verb for verb in scope_for if verb in prompt}
+    assert "gh issue" in used, "the prompt no longer reads the issue — check this test"
+    for verb in used:
+        assert scope_for[verb] in example, (
+            f"the prompt runs `{verb}` but the setup notes never ask for "
+            f"{scope_for[verb]}")
+
+
+def test_the_missing_pr_token_is_announced_rather_than_silent():
+    # The fallback keeps every repo working, which is exactly what makes it easy
+    # to leave in place forever. A repo running without the token is a repo whose
+    # agent-written PRs arrive unchecked, so the run says so out loud — silence
+    # is this system's characteristic failure.
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    body = (root / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    assert "::warning title=This PR will get no CI and no review::" in body
+
+
+def test_every_caller_passes_the_pr_token_through():
+    # Declared and unused is the same as absent. Both callers wire it up; a new
+    # project repo copying the example gets it by default.
+    for name, caller in (("implement-worker.yml", _wf("implement-worker.yml")),
+                         ("examples/implementer", _example())):
+        secrets = caller["jobs"]["implement"].get("secrets") or {}
+        assert "pr_token" in secrets, f"{name} does not pass pr_token"
+
+
 def test_the_agent_is_told_to_close_issues_that_do_not_hold_up():
     # An issue the agent judges obsolete stays eligible while it is open, so
     # leaving it open means paying for the same investigation every week.
