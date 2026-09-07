@@ -122,6 +122,35 @@ def test_it_republishes_health_and_the_ranking(tmp_path, stub, monkeypatch):
     assert "17 days" in after["headline"]
 
 
+def test_the_systemic_risk_flag_is_refreshed_with_the_ranking(tmp_path, stub, monkeypatch):
+    # Codex P1 on #78. systemic_risk is derived from `attention`, which this
+    # script recomputes roughly six times a day. Published by the weekly review
+    # and then left alone, the widget would keep claiming what was true on
+    # Monday while the ranking directly beneath it moved — the two-clocks bug
+    # this whole file exists to prevent, reproduced one panel higher.
+    ledger = tmp_path / "shipped.json"
+    ledger.write_text(json.dumps(LEDGER), encoding="utf-8")
+    monkeypatch.setattr(tools, "LEDGER_PATH", str(ledger))
+    stale = dict(PUBLISHED, systemic_risk={"flagged": True,
+                                           "projects": ["coachvision", "ufc-dashboard"],
+                                           "message": "as of last Monday"})
+    _, after = _run(tmp_path, published=stale)
+
+    fresh = after["systemic_risk"]
+    assert fresh != stale["systemic_risk"], "the widget was carried forward unchanged"
+    # And it agrees with the list it summarises, which is the whole point of
+    # computing both off one ranking (invariant 12).
+    notable = {p["name"] for p in after["attention"] if p.get("notable")}
+    assert set(fresh.get("projects") or ()) == (notable if fresh.get("flagged") else set())
+
+
+def test_systemic_risk_is_watched_for_changes(tmp_path, stub):
+    # `changed()` decides whether the refresh commits at all. A refreshed key
+    # missing from REFRESHED_KEYS would be written only when something else
+    # happened to move — stale for hours at a time, unpredictably.
+    assert "systemic_risk" in refresh_status.REFRESHED_KEYS
+
+
 def test_a_refresh_is_not_a_cycle(tmp_path, stub):
     # blind/stale/idle_cycles mean "consecutive weekly REVIEWS in this state",
     # which is what the nudge threshold of 2 was chosen against. Counting a
