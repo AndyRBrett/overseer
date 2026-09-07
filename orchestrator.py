@@ -155,14 +155,14 @@ def run_pipeline(dry_run=False):
         status = f"crashed: {exc}"
         tracer.finish(status)
         tracer.write()
-        tracer.write_digest(tools.DIGEST_PATH)
+        tracer.write_digest(tools.DIGEST_PATH, tools.HISTORY_PATH)
         tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
         tools.write_ledger(ledger)
         raise
 
     tracer.finish(status)
     tracer.write()
-    tracer.write_digest(tools.DIGEST_PATH)
+    tracer.write_digest(tools.DIGEST_PATH, tools.HISTORY_PATH)
     tracer.write_history(tools.HISTORY_PATH, tools.HISTORY_MAX_RUNS)
     tools.write_ledger(ledger)
 

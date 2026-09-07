@@ -61,12 +61,17 @@ from tracer import RunTracer  # noqa: E402
 # (2026-09-05: delivery panel 0.3h old, project health 117.8h, and the stale half
 # was the half that says whether anything is broken).
 #
-# systemic_risk joined the list on 2026-09-07 for exactly that reason: it is
-# derived from `attention`, which IS refreshed, so leaving it out would let the
-# widget claim two projects are notable together while the ranking directly
-# beneath it — recomputed minutes earlier — showed one.
+# systemic_risk joined the list on 2026-09-07 because it is derived from
+# `attention`, which IS refreshed: left out, the widget could claim two projects
+# were notable together while the ranking directly beneath it — recomputed
+# minutes earlier — showed one.
+#
+# cost_trend joined it the same day for a sharper reason: its WINDOW moves even
+# when nothing else does. A run eight days old drops out of "last 7d" on its own,
+# with no new run to trigger a rewrite, so published weekly it would keep quoting
+# a window that closed days ago (issue #77).
 REFRESHED_KEYS = ("projects", "rollup", "attention", "systemic_risk", "headline",
-                  "refreshed")
+                  "cost_trend", "refreshed")
 
 
 def load(path):
@@ -103,6 +108,9 @@ def rebuild(published, ledger, readings):
         # the same lie one layer up.
         "systemic_risk": tracer.systemic_risk(),
         "headline": tracer.headline(),
+        # Read off docs/history.json, which this script never writes — it is the
+        # weekly review's file. Recomputing the window here is the whole point.
+        "cost_trend": tracer.cost_trend(tools.HISTORY_PATH),
         "refreshed": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
