@@ -50,4 +50,6 @@ jobs:
       # cooking here too: without this the agent's PRs against overseer arrive
       # with no CI and no Codex pass, which is how #78 and #82 reached a human
       # unchecked on 2026-09-07.
+      pr_app_id: ${{ secrets.OVERSEER_PR_APP_ID }}
+      pr_app_private_key: ${{ secrets.OVERSEER_PR_APP_PRIVATE_KEY }}
       pr_token: ${{ secrets.OVERSEER_PR_TOKEN }}

@@ -62,16 +62,29 @@ on:
     secrets:
       anthropic_api_key:
         required: true
+      pr_app_id:
+        description: >
+          GitHub App id, supplied with pr_app_private_key. PREFERRED over
+          pr_token: the installation token is minted per run, scoped to this
+          repo, and expires within the hour, where a PAT carries the whole
+          account for as long as it exists. The App's installation needs
+          Contents: write, Pull requests: write AND Issues: write — see the
+          block above the "Implement it" step for why issues are load-bearing.
+        required: false
+      pr_app_private_key:
+        description: "The App's private key (PEM). Supplied with pr_app_id."
+        required: false
       pr_token:
         description: >
-          A token to open the pull request with, INSTEAD of the built-in
-          GITHUB_TOKEN. Optional, and the whole point of it is CI: GitHub
-          deliberately does not fire workflow events for anything the built-in
-          token does, so a PR opened with it gets no test run and no review bot
-          — see the block above the "Implement it" step. Prefer a GitHub App
-          installation token (actions/create-github-app-token) over a PAT: it is
-          scoped to the repo and expires in an hour. Whatever is used needs
-          contents:write and pull-requests:write on THIS repo.
+          A personal access token to open the pull request with, for a repo not
+          using a GitHub App. Same scopes needed: contents:write,
+          pull-requests:write and issues:write on THIS repo.
+
+          An App installation token CANNOT be stored here — it expires in about
+          an hour, and an expired secret is still non-empty, so the fallback
+          would not engage and every run after the first hour would fail
+          authentication. Supply App credentials above instead; those are minted
+          fresh on each run.
         required: false
 
 jobs:
@@ -204,27 +217,60 @@ jobs:
       # one of them a cost-tracking feature blind to the exact duplicate-run
       # spend that had occurred hours earlier.
       #
-      # So the PR is opened with `pr_token` when the calling repo supplies one.
-      # Without it the fallback still works and still opens the PR; it just goes
+      # So the PR is opened with App credentials when the calling repo supplies
+      # them, a PAT if not, and the built-in token as a last resort. Without any
+      # of them everything still runs and still opens the PR; it just goes
       # unchecked, which the step below says out loud rather than leaving to be
       # discovered.
-      - name: Will this pull request get checked?
+      #
+      # THE TOKEN IS NOT ONLY FOR `gh pr create`. It becomes the credential for
+      # every gh command the agent runs — the prompt opens with
+      # `gh issue view --comments`, and the obsolete-issue path runs
+      # `gh issue close`. A credential without Issues: write fails at the first
+      # command on a private repo, and fails the close silently on a public one,
+      # which leaves the issue eligible and pays for the same investigation again
+      # every week. Contents + Pull requests is NOT enough here.
+      - name: Which token opens the pull request?
+        id: creds
         env:
+          APP_ID: ${{ secrets.pr_app_id }}
+          APP_KEY: ${{ secrets.pr_app_private_key }}
           PR_TOKEN: ${{ secrets.pr_token }}
         run: |
-          if [ -z "$PR_TOKEN" ]; then
-            echo "::warning title=This PR will get no CI and no review::Opening it with the built-in GITHUB_TOKEN, which raises no workflow events. Nothing will test or review the agent's work. Pass a pr_token secret from the calling workflow to fix this."
+          if [ -n "$APP_ID" ] && [ -n "$APP_KEY" ]; then
+            echo "app=yes" >> "$GITHUB_OUTPUT"
+            echo "Minting a GitHub App installation token — the pull request will trigger this repo's checks."
+          elif [ -n "$APP_ID" ] || [ -n "$APP_KEY" ]; then
+            # Half a credential is the case that looks configured and is not.
+            echo "app=" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Incomplete App credentials::pr_app_id and pr_app_private_key must BOTH be set. Falling back."
           else
-            echo "pr_token supplied — the pull request will trigger this repo's checks."
+            echo "app=" >> "$GITHUB_OUTPUT"
           fi
+          if [ -z "$APP_ID" ] && [ -z "$PR_TOKEN" ]; then
+            echo "::warning title=This PR will get no CI and no review::Opening it with the built-in GITHUB_TOKEN, which raises no workflow events. Nothing will test or review the agent's work. Pass pr_app_id + pr_app_private_key (preferred) or pr_token from the calling workflow to fix this."
+          fi
+
+      # Minted per run and expiring within the hour, which is exactly why an App
+      # token cannot be a stored secret — an expired one is still non-empty, so
+      # a `||` fallback would never engage and every run after the first hour
+      # would fail authentication.
+      - name: Mint the installation token
+        id: app_token
+        if: steps.creds.outputs.app == 'yes'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.pr_app_id }}
+          private-key: ${{ secrets.pr_app_private_key }}
 
       - name: Implement it
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           # See the block above: this is what decides whether the resulting PR
-          # gets a test run. The fallback keeps every repo working today.
-          github_token: ${{ secrets.pr_token || secrets.GITHUB_TOKEN }}
+          # gets a test run. App token first, then a PAT, then the built-in
+          # token — which keeps every repo working today and gets no CI.
+          github_token: ${{ steps.app_token.outputs.token || secrets.pr_token || secrets.GITHUB_TOKEN }}
           prompt: |
             Implement GitHub issue #${{ steps.issue.outputs.number }} in this repository.
 
