@@ -243,6 +243,120 @@ def test_a_run_with_no_model_calls_reports_nothing_rather_than_free(tmp_path):
     assert spend["total_usd"] is None and spend["saved_usd"] is None
 
 
+# ── cost outlier alert (issue #77) ───────────────────────────────────────
+
+
+def _history(tmp_path, totals):
+    """Write a history.json fixture whose runs carry only a spend total each —
+    the shape write_history actually produces (agents are stripped, see
+    test_spend_is_trended_in_history)."""
+    path = tmp_path / "history.json"
+    runs = [{"date": f"2026-08-{i + 1:02d}", "spend": {"total_usd": v}}
+            for i, v in enumerate(totals)]
+    path.write_text(json.dumps({"runs": runs}))
+    return str(path)
+
+
+def _priced_tracer(tmp_path, total_usd):
+    t = _tracer(tmp_path)
+    t.set_agent_model("Bug-Hunter", "claude-opus-4-8", "heavy")
+    # $5/M in, $25/M out on Opus: total_usd/5 million input tokens gives an
+    # exact price without touching output tokens.
+    t.record_usage("Bug-Hunter", "claude-opus-4-8",
+                    _usage(inp=int(total_usd / 5.0 * 1_000_000)))
+    assert t.spend()["total_usd"] == pytest.approx(total_usd)
+    return t
+
+
+def test_cost_alert_is_none_without_three_prior_runs(tmp_path):
+    # Two points is not a baseline — a quiet first week must not manufacture a
+    # false alarm out of having nothing to compare against yet.
+    history = _history(tmp_path, [0.30, 0.32])
+    t = _priced_tracer(tmp_path, 5.00)
+    assert t.cost_alert(history) is None
+
+
+def test_cost_alert_is_quiet_when_the_run_is_unremarkable(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28])
+    t = _priced_tracer(tmp_path, 0.40)  # well under 2x the $0.30 median
+    assert t.cost_alert(history) is None
+
+
+def test_cost_alert_fires_at_twice_the_trailing_median(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28, 0.31])  # median 0.305
+    t = _priced_tracer(tmp_path, 0.75)  # ~2.46x
+    alert = t.cost_alert(history)
+    assert alert is not None
+    assert alert["total_usd"] == pytest.approx(0.75)
+    assert alert["median_usd"] == pytest.approx(0.305)
+    assert alert["multiple"] == pytest.approx(2.5, abs=0.05)
+    assert alert["prior_runs"] == 4
+
+
+def test_cost_alert_ignores_history_that_predates_spend_tracking(tmp_path):
+    # An older history.json entry with no "spend" key (or an unpriced run) must
+    # not crash the median, just be excluded from it.
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps({"runs": [
+        {"date": "2026-08-01"},
+        {"date": "2026-08-08", "spend": {"total_usd": None}},
+        {"date": "2026-08-15", "spend": {"total_usd": 0.30}},
+        {"date": "2026-08-22", "spend": {"total_usd": 0.32}},
+        {"date": "2026-08-29", "spend": {"total_usd": 0.28}},
+    ]}))
+    t = _priced_tracer(tmp_path, 0.40)
+    assert t.cost_alert(str(path)) is None  # 0.40 is under 2x the $0.30 median
+
+
+def test_cost_alert_is_none_when_spend_is_unpriced(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28])
+    t = _tracer(tmp_path)
+    t.set_agent_model("Bug-Hunter", "claude-something-unreleased", "heavy")
+    t.record_usage("Bug-Hunter", "claude-something-unreleased", _usage(inp=1_000_000))
+    assert t.cost_alert(history) is None
+
+
+def test_cost_alert_tolerates_a_missing_history_file(tmp_path):
+    # The very first run has no docs/history.json yet.
+    t = _priced_tracer(tmp_path, 5.00)
+    assert t.cost_alert(str(tmp_path / "nope.json")) is None
+
+
+def test_cost_alert_banner_reads_as_a_digest_section(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28, 0.31])
+    t = _priced_tracer(tmp_path, 0.75)
+    banner = t.cost_alert_banner(history)
+    assert banner.startswith("COST ALERT\n")
+    assert "$0.75" in banner and "2.5x" in banner and "$0.30" in banner
+
+
+def test_cost_alert_banner_is_empty_on_an_unremarkable_run(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28])
+    t = _priced_tracer(tmp_path, 0.31)
+    assert t.cost_alert_banner(history) == ""
+
+
+def test_write_digest_carries_the_cost_alert_when_a_history_path_is_given(tmp_path):
+    history = _history(tmp_path, [0.30, 0.32, 0.28, 0.31])
+    t = _priced_tracer(tmp_path, 0.75)
+    t.finish("completed")
+    digest_path = tmp_path / "digest.json"
+    t.write_digest(str(digest_path), history)
+    payload = json.load(open(digest_path))
+    assert payload["cost_alert"]["multiple"] == pytest.approx(2.5, abs=0.05)
+
+
+def test_write_digest_omits_the_cost_alert_without_a_history_path(tmp_path):
+    # Older call sites (and most tests) don't pass one — the field must read as
+    # "nothing to report" rather than raising.
+    t = _priced_tracer(tmp_path, 5.00)
+    t.finish("completed")
+    digest_path = tmp_path / "digest.json"
+    t.write_digest(str(digest_path))
+    payload = json.load(open(digest_path))
+    assert payload["cost_alert"] is None
+
+
 def test_every_model_the_pipeline_can_select_by_default_is_priced():
     # If a default model isn't in the rate card the dashboard silently loses its
     # cost panel, so pin the two defaults rather than trusting they stay listed.

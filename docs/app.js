@@ -581,6 +581,22 @@ function renderSpend(spend, runs, queue) {
                 usd(scored.reduce((a, r) => a + r.spend.saved_usd, 0))]);
   }
 
+  // Rolling totals (issue #77): "this run" answers "what did today cost",
+  // these answer "what did the last N days actually cost" — the number a
+  // monthly bill gets compared against. `runs` holds one record per weekly
+  // pipeline run (write_history), each dated the day it ran, so this sums
+  // real runs rather than interpolating a day that never happened.
+  const priced = (runs || []).filter((r) => r.spend && r.spend.total_usd != null && r.date);
+  if (priced.length) {
+    const DAY_MS = 86400000;
+    const now = Date.now();
+    const sumSince = (days) => priced
+      .filter((r) => now - Date.parse(r.date + "T00:00:00Z") <= days * DAY_MS)
+      .reduce((a, r) => a + r.spend.total_usd, 0);
+    stats.push(["last 7d", usd(sumSince(7))]);
+    stats.push(["last 30d", usd(sumSince(30))]);
+  }
+
   const head = hero + (stats.length
     ? `<div class="stats">` + stats.map(([l, v]) =>
         `<div class="stat"><div class="n">${escapeHtml(v)}</div><div class="l">${escapeHtml(l)}</div></div>`
@@ -828,8 +844,17 @@ async function loadDigest() {
         `<div class="nudge blind"><span class="pbadge blind">SILENT</span>
           <span class="ntext"><b>${escapeHtml(a.agent)}</b> — ${escapeHtml(a.detail)}</span></div>`
       ).join("");
+      // A run whose cost is a multi-x outlier against recent runs (issue #77) —
+      // computed in Python (tracer.cost_alert) against docs/history.json, same
+      // rule as the rest of this panel (invariant 12): the score is derived
+      // once, never re-guessed in JavaScript from whatever runs happen to be
+      // loaded here.
+      const ca = d.cost_alert;
+      const costLine = ca ? `<div class="nudge blind"><span class="pbadge blind">COST</span>
+          <span class="ntext">this run cost $${ca.total_usd.toFixed(2)} — ${ca.multiple}x the trailing
+          median of $${ca.median_usd.toFixed(2)} over the last ${ca.prior_runs} run(s)</span></div>` : "";
       $("rollup").innerHTML = `<div class="rollup-chips">${chips}</div>` +
-        (nudges || silent ? `<div class="nudges">${nudges}${silent}</div>` : "");
+        (nudges || silent || costLine ? `<div class="nudges">${nudges}${silent}${costLine}</div>` : "");
       $("rollup-card").style.display = "";
     }
 
@@ -899,13 +924,19 @@ async function loadDigest() {
       const dates = runs.map((r) => r.date);
       const issues = runs.map((r) => (r.counts && r.counts.issues) || 0);
       const enh = runs.map((r) => (r.counts && r.counts.enhancements) || 0);
-      const trow = (label, series, stroke) =>
+      const trow = (label, series, stroke, fmt) =>
         `<div class="trow"><span class="tlabel">${label}</span>
           ${sparkline(series, { stroke }) || '<span class="tnone">—</span>'}
-          <span class="tlast">${series[series.length - 1]}</span></div>`;
+          <span class="tlast">${fmt ? fmt(series[series.length - 1]) : series[series.length - 1]}</span></div>`;
+      // Run cost (issue #77): the last value is "unpriced" rather than a
+      // misleading "0" on a run whose model isn't in tracer.MODEL_PRICES, or
+      // on a run before spend tracking shipped — both report total_usd: null.
+      const cost = runs.map((r) => (r.spend && r.spend.total_usd != null) ? r.spend.total_usd : null);
+      const costLast = (v) => (v == null ? "—" : `$${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`);
       $("trends").innerHTML =
         trow("Issues filed", issues, "#f87171") +
         trow("Enhancements", enh, "#fbbf24") +
+        trow("Run cost", cost, "#60a5fa", costLast) +
         `<div class="trange">${escapeHtml(dates[0])} → ${escapeHtml(dates[dates.length - 1])} · ${runs.length} runs</div>`;
     }
 

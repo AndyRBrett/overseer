@@ -70,6 +70,11 @@ MODEL_PRICES = {
 CACHE_WRITE_MULTIPLIER = 1.25
 CACHE_READ_MULTIPLIER = 0.10
 
+# How many times the trailing median a run's cost must reach before
+# cost_alert() flags it (issue #77) — catches a runaway prompt size or an
+# accidental retry loop before it shows up as a surprise bill.
+COST_OUTLIER_MULTIPLE = 2.0
+
 
 def price_usd(model: str, tokens: dict) -> float | None:
     """Estimated USD for one agent's token counts, or None if the model is unpriced."""
@@ -272,6 +277,57 @@ class RunTracer:
             "saved_pct": (round(100 * (baseline - total) / baseline, 1)
                           if have_baseline and baseline else None),
         }
+
+    def cost_alert(self, history_path: str) -> dict | None:
+        """Flag this run's estimated spend as an outlier against the trailing
+        median of prior runs (issue #77), so a runaway prompt or an accidental
+        retry loop shows up here instead of only in a bill at month's end.
+
+        Reads `history_path` directly rather than the history this run is
+        about to append — `write_digest` runs before `write_history` (see
+        orchestrator.py) so the file on disk here holds only PRIOR runs, never
+        this one. Returns None when spend is unpriced, there isn't enough
+        history to judge against, or this run isn't at least
+        COST_OUTLIER_MULTIPLE times the median.
+        """
+        total = self.spend().get("total_usd")
+        if total is None:
+            return None
+        try:
+            with open(history_path, encoding="utf-8") as f:
+                history = json.load(f)
+            runs = history.get("runs", []) if isinstance(history, dict) else []
+        except (FileNotFoundError, ValueError):
+            runs = []
+        prior = sorted(r["spend"]["total_usd"] for r in runs
+                       if r.get("spend") and r["spend"].get("total_usd") is not None)
+        n = len(prior)
+        if n < 3:
+            return None
+        median = prior[n // 2] if n % 2 else (prior[n // 2 - 1] + prior[n // 2]) / 2
+        if median <= 0 or total < median * COST_OUTLIER_MULTIPLE:
+            return None
+        return {
+            "total_usd": total,
+            "median_usd": round(median, 4),
+            "multiple": round(total / median, 1),
+            "prior_runs": n,
+        }
+
+    def cost_alert_banner(self, history_path: str) -> str:
+        """A short plain-text COST ALERT block for the digest when this run's
+        spend is a multi-x outlier against recent runs (issue #77) — same
+        shape as freshness_banner, so a spend spike can't hide behind a
+        confident summary. Returns "" when nothing is unusual."""
+        alert = self.cost_alert(history_path)
+        if not alert:
+            return ""
+        return (
+            "COST ALERT\n"
+            f"- this run cost ${alert['total_usd']:.2f}, {alert['multiple']}x the "
+            f"trailing median of ${alert['median_usd']:.2f} over the last "
+            f"{alert['prior_runs']} run(s)"
+        )
 
     def set_digest(self, text: str) -> None:
         """The final digest the agent publishes — surfaced on the dashboard."""
@@ -533,8 +589,13 @@ class RunTracer:
         lines += [f"- {a['name']} — {a['detail']}" for a in alerts]
         return "\n".join(lines)
 
-    def write_digest(self, path: str) -> None:
-        """Emit docs/digest.json — what the installable web app reads."""
+    def write_digest(self, path: str, history_path: str | None = None) -> None:
+        """Emit docs/digest.json — what the installable web app reads.
+
+        `history_path` is optional so callers that only care about the rest of
+        the payload (mostly tests) don't need a history.json fixture on disk —
+        `cost_alert` is simply omitted rather than guessed at.
+        """
         timeline = []
         for ev in self.events:
             # Tag each row with the agent that produced it so the dashboard can
@@ -571,6 +632,7 @@ class RunTracer:
             "headline": self.headline(),
             "output_alerts": self.output_alerts(),
             "spend": self.spend(),
+            "cost_alert": self.cost_alert(history_path) if history_path else None,
             "timeline": timeline,
         }
         with open(path, "w", encoding="utf-8") as f:

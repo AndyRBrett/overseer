@@ -568,6 +568,20 @@ def test_the_spend_panel_says_what_it_leaves_out():
     assert "Model spend (the review run)" in page, "the title must scope itself to the run"
 
 
+def test_the_dashboard_renders_rolling_cost_and_a_cost_alert():
+    # issue #77: a rolling 7d/30d total (so a bill is legible without adding up
+    # the per-run trend by eye) and a call-out when Python (tracer.cost_alert)
+    # flagged this run as an outlier — rendered here, never re-scored in JS
+    # (invariant 12's rule applied to spend instead of the attention score).
+    from pathlib import Path
+    app = (Path(__file__).resolve().parent.parent / "docs" / "app.js").read_text(
+        encoding="utf-8")
+    assert '"last 7d"' in app and '"last 30d"' in app
+    assert 'trow("Run cost"' in app
+    assert "d.cost_alert" in app
+    assert '<span class="pbadge blind">COST</span>' in app
+
+
 
 # ── ONE COPY OF THE IMPLEMENTER ──────────────────────────────────────────
 #

@@ -2001,7 +2001,11 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
                     # Lead the digest with any deterministic staleness alert so a
                     # halted feed can't hide behind a quiet LLM summary (overseer
                     # #1 / issue #34). Prepending BEFORE the send means Telegram
-                    # and the dashboard summary both carry it.
+                    # and the dashboard summary both carry it. A cost outlier
+                    # (issue #77) rides along right after it — this run's own
+                    # spend against the trailing median of docs/history.json —
+                    # for the same reason: a runaway prompt or retry loop should
+                    # show up here, not just at the end of the month's bill.
                     #
                     # The foot of the digest gets two other deterministic blocks:
                     # what the implementer actually landed since last week, and
@@ -2011,10 +2015,12 @@ def run_agent(client, *, agent, system, tool_names, user_message, tracer):
                     # will eventually go quiet without anything failing.
                     # The head is what a phone notification shows without
                     # scrolling: what is broken, then where an hour is worth
-                    # most. The ranking sits under the staleness alert because a
-                    # halted feed outranks any prioritisation of healthy ones.
+                    # most. The ranking sits under the staleness/cost alerts
+                    # because a halted feed or a runaway run outranks any
+                    # prioritisation of healthy ones.
                     head = "\n\n".join(p for p in (
-                        tracer.freshness_banner(), tracer.attention_banner()) if p)
+                        tracer.freshness_banner(), tracer.cost_alert_banner(HISTORY_PATH),
+                        tracer.attention_banner()) if p)
                     ledger = getattr(tracer, "ledger", None)
                     tail = "\n\n".join(p for p in (
                         delivery_banner(ledger), aging_backlog_banner(ledger)) if p)
