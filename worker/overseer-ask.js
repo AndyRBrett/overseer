@@ -34,11 +34,29 @@ const API_URL = "https://api.anthropic.com/v1/messages";
 // a dispatch GitHub accepts with 204 that no workflow reacts to, which reads as
 // healthy right up until someone notices a stale digest. A test pins all three
 // together for exactly that reason.
+// A cron maps to a LIST because the implementer rides these crons rather than
+// getting its own (2026-09-07). Cloudflare's docs contradict themselves on the
+// cap — the Cron Triggers page says "per Worker", the Limits page says 5 per
+// account on the free plan, and third-party write-ups claim 3 per Worker — and
+// three are already declared here. Two more lands on the cap under the generous
+// reading and over it under the strict one, and a `wrangler deploy` that starts
+// failing is not a thing to discover during the outage this exists to survive.
 const DISPATCH_EVENTS = {
-  "5 14 * * 2": "weekly-review",
-  "5 17 * * 2": "weekly-review",
-  "20 15 * * *": "heartbeat",
+  "5 14 * * 2": ["weekly-review"],
+  // 17:05 backs up the review's failed POST and, five minutes behind GitHub's
+  // own 17:00 implement catch-up, that dispatch too.
+  "5 17 * * 2": ["weekly-review", "implement"],
+  // The daily heartbeat, which on Mondays also carries the implementer's
+  // primary backup: 15:20 is twenty minutes after GitHub's 15:00 dispatch, so a
+  // Monday GitHub handles normally is untouched — the poke arrives second and
+  // implement_guard.py no-ops it.
+  "20 15 * * *": ["heartbeat", "implement"],
 };
+
+// Everything that is a Monday job, and so must be checked against the calendar
+// before it is asked for. The heartbeat is deliberately absent: it is daily, and
+// gating the dead-man's switch on a weekday would silence it six days in seven.
+const MONDAY_EVENTS = new Set(["weekly-review", "implement"]);
 
 // THE TWO SCHEDULERS DO NOT AGREE ON WHAT DAY 1 IS (2026-09-06).
 //
@@ -65,7 +83,11 @@ const DISPATCH_EVENTS = {
 // check, not a judgement about whether the review is owed: that stays in
 // weekly_guard.py, on the GitHub side, per invariant 8. This Worker has always
 // claimed to know only "it is Monday, ask". Now it actually checks.
-const REVIEW_UTC_DAY = 1; // Date#getUTCDay: 0 = Sunday, 1 = Monday.
+//
+// It was REVIEW_UTC_DAY until the implementer started riding these crons too
+// (2026-09-07); the dispatcher is a Monday job for the same reason and reads the
+// same calendar.
+const MONDAY_UTC_DAY = 1; // Date#getUTCDay: 0 = Sunday, 1 = Monday.
 const DEFAULT_MODEL = "claude-sonnet-5";
 
 // Voice answers are two or three sentences. Nothing here needs room to ramble,
@@ -259,24 +281,30 @@ export default {
   // Cloudflare's scheduler, not GitHub's — that separation is the whole point.
   // waitUntil so the POST is not cut off when the handler returns.
   async scheduled(event, env, ctx) {
-    const eventType = DISPATCH_EVENTS[event.cron];
-    if (!eventType) {
+    const eventTypes = DISPATCH_EVENTS[event.cron];
+    if (!eventTypes) {
       // A cron added to wrangler.toml and not here fires into nothing. Loud,
       // because silence is this system's characteristic failure.
       console.error(`[dispatch] no event mapped for cron ${event.cron}`);
       return;
     }
-    if (eventType === "weekly-review" && new Date().getUTCDay() !== REVIEW_UTC_DAY) {
-      // See REVIEW_UTC_DAY. Loud, because a cron firing on the wrong day looks
-      // from GitHub's side exactly like a healthy extra trigger.
-      console.error(`[dispatch] ${event.cron} fired on the wrong day; not asking for a review`);
-      return;
+    const isMonday = new Date().getUTCDay() === MONDAY_UTC_DAY;
+    for (const eventType of eventTypes) {
+      if (MONDAY_EVENTS.has(eventType) && !isMonday) {
+        // See MONDAY_UTC_DAY. Loud, because a cron firing on the wrong day looks
+        // from GitHub's side exactly like a healthy extra trigger. `continue`
+        // rather than `return`: the daily heartbeat shares a cron with the
+        // implementer's Monday backup, and skipping the wrong-day job must never
+        // take the alarm down with it.
+        console.error(`[dispatch] ${event.cron} fired on the wrong day; not asking for ${eventType}`);
+        continue;
+      }
+      ctx.waitUntil(fireDispatch(env, eventType));
+      // Poking GitHub and checking whether the poking has been working are
+      // independent: the watchdog must still report when the dispatch above
+      // fails, so it is not chained to it.
+      if (eventType === "heartbeat") ctx.waitUntil(checkDigestFreshness(env));
     }
-    ctx.waitUntil(fireDispatch(env, eventType));
-    // Poking GitHub and checking whether the poking has been working are
-    // independent: the watchdog must still report when the dispatch above
-    // fails, so it is not chained to it.
-    if (eventType === "heartbeat") ctx.waitUntil(checkDigestFreshness(env));
   },
 
   async fetch(request, env) {

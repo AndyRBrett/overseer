@@ -195,6 +195,10 @@
     .nudge.idle { background: var(--nudge-idle-bg); border-color: var(--nudge-idle-border); }
     .nudge .ntext { font-size: 13px; color: var(--text); }
     .nudge .ntext b { color: var(--text-strong); }
+    /* Systemic risk (#72): a cross-project coincidence, not one project's
+       failure, so it gets the "investigate" blue rather than a per-project
+       status colour. */
+    .pbadge.risk { background: #1e3a8a; color: #bfdbfe; }
 
     /* Per-project health (blind-spot tracking) */
     .prow { display: flex; align-items: center; justify-content: space-between; gap: 10px;

@@ -847,17 +847,32 @@ async function loadDigest() {
         `<div class="nudge blind"><span class="pbadge blind">SILENT</span>
           <span class="ntext"><b>${escapeHtml(a.agent)}</b> — ${escapeHtml(a.detail)}</span></div>`
       ).join("");
+      // Multiple projects notable in the same run (overseer #72). Rendered
+      // above the individual nudges — the coincidence across projects is the
+      // finding, so it leads rather than getting lost among the per-project
+      // rows that make it up. The message is composed in attention.py and
+      // printed verbatim, same rule as the headline: not a second opinion.
+      const risk = d.systemic_risk || {};
+      const systemic = risk.flagged
+        ? `<div class="nudge risk"><span class="pbadge risk">LINKED?</span>
+            <span class="ntext">${escapeHtml(risk.message)}</span></div>`
+        : "";
       // A run whose cost is a multi-x outlier against recent runs (issue #77) —
       // computed in Python (tracer.cost_alert) against docs/history.json, same
       // rule as the rest of this panel (invariant 12): the score is derived
       // once, never re-guessed in JavaScript from whatever runs happen to be
       // loaded here.
+      //
+      // It sits BELOW the systemic-risk row and above the per-project nudges:
+      // a shared root cause across projects is the more urgent reading of the
+      // same morning, and money is the one that can wait five seconds.
       const ca = d.cost_alert;
       const costLine = ca ? `<div class="nudge blind"><span class="pbadge blind">COST</span>
           <span class="ntext">this run cost $${ca.total_usd.toFixed(2)} — ${ca.multiple}x the trailing
           median of $${ca.median_usd.toFixed(2)} over the last ${ca.prior_runs} run(s)</span></div>` : "";
       $("rollup").innerHTML = `<div class="rollup-chips">${chips}</div>` +
-        (nudges || silent || costLine ? `<div class="nudges">${nudges}${silent}${costLine}</div>` : "");
+        (systemic || nudges || silent || costLine
+          ? `<div class="nudges">${systemic}${costLine}${nudges}${silent}</div>` : "");
       $("rollup-card").style.display = "";
     }
 

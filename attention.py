@@ -418,3 +418,43 @@ def banner(ranked, limit=4) -> str:
     for position, row in enumerate(rows[:limit], start=1):
         lines.append(f"{position}. {row['name']} ({row['score']:.2f}) — {row['why']}")
     return "\n".join(lines)
+
+
+# ── SYSTEMIC RISK (overseer #72) ─────────────────────────────────────────
+# The ranking above treats every project as its own story. Two or more
+# unrelated-sounding alerts landing in the SAME run is itself a signal the
+# per-project view can't show: independently-run projects don't usually break
+# in the same week for independent reasons, so the more likely explanation is
+# one shared cause underneath them — a cloud runner outage, an expired API
+# key, a billing lapse. This doesn't diagnose that cause, only flags that the
+# coincidence is worth checking before triaging each project alone.
+
+# Below this many simultaneously-notable projects, it's just one project
+# having a bad week — not a pattern.
+SYSTEMIC_RISK_MIN = 2
+
+
+def systemic_risk(ranked) -> dict:
+    """Whether >= SYSTEMIC_RISK_MIN projects are notable in the same run.
+
+    Reads the `notable` flag `rank` already computed rather than re-deriving a
+    threshold, so this can never flag a project the per-project list doesn't
+    also mark — the same rule that keeps the headline and the list agreeing
+    (see `rank`). Returns `{"flagged": False, "projects": []}` on a quiet run,
+    so callers render nothing rather than testing for a missing key.
+    """
+    notable = [r for r in (ranked or []) if r.get("notable")]
+    if len(notable) < SYSTEMIC_RISK_MIN:
+        return {"flagged": False, "projects": []}
+    names = [r["name"] for r in notable]
+    return {
+        "flagged": True,
+        "projects": names,
+        "message": (
+            f"{', '.join(names)} are all showing risk signals in the same run. "
+            "That many independently-run projects going wrong at once is more "
+            "likely one shared cause — a cloud runner outage, an expired API "
+            "key, a billing lapse — than several unrelated problems. Worth "
+            "checking for that before triaging each one separately."
+        ),
+    }
