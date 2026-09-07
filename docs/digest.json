@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-07T21:41:12Z",
+      "last_ok": "2026-09-07T21:45:18Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-07T21:41:12Z",
+      "last_ok": "2026-09-07T21:45:18Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-07T21:41:12Z",
+      "last_ok": "2026-09-07T21:45:18Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-07T21:41:12Z",
+      "last_ok": "2026-09-07T21:45:18Z",
       "blind_cycles": 0
     }
   },
@@ -291,5 +291,25 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-07T21:41:12Z"
+  "refreshed": "2026-09-07T21:45:18Z",
+  "systemic_risk": {
+    "flagged": true,
+    "projects": [
+      "coachvision",
+      "Trading bot"
+    ],
+    "message": "coachvision, Trading bot are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+  },
+  "cost_trend": {
+    "last_7d": {
+      "total_usd": 0.8562,
+      "runs": 2,
+      "unpriced_runs": 0
+    },
+    "last_30d": {
+      "total_usd": 2.1913,
+      "runs": 6,
+      "unpriced_runs": 2
+    }
+  }
 }

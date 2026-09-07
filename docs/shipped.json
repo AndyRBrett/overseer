@@ -1,6 +1,29 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-07T21:41:32+00:00",
+      "created_at": "2026-09-07T14:10:53+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "fix_ref": "PR #82",
+      "fix_sha": "86b8d79",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/82",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 77,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard",
+      "url": "https://github.com/AndyRBrett/overseer/issues/77"
+    },
+    {
       "closed_at": "2026-09-07T21:39:46+00:00",
       "created_at": "2026-09-06T14:11:00+00:00",
       "delivered_by": "implementer",
@@ -82,28 +105,6 @@
       "status": "not_planned",
       "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
       "url": "https://github.com/AndyRBrett/coachvision/issues/38"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-09-07T14:10:53+00:00",
-      "delivered_by": "implementer",
-      "effort": "low",
-      "fix_ref": "PR #82",
-      "fix_url": "https://github.com/AndyRBrett/overseer/pull/82",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium",
-        "overseer:implementing"
-      ],
-      "number": 77,
-      "repo": "AndyRBrett/overseer",
-      "state": "open",
-      "status": "in_flight",
-      "title": "Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard",
-      "url": "https://github.com/AndyRBrett/overseer/issues/77"
     },
     {
       "closed_at": null,
@@ -1861,7 +1862,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-07T21:41:00Z",
+  "generated": "2026-09-07T21:45:06Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1890,15 +1891,15 @@
       },
       "AndyRBrett/overseer": {
         "duplicate": 5,
-        "in_flight": 1,
+        "in_flight": 0,
         "not_planned": 0,
         "open": 0,
         "proposed": 26,
-        "reject_rate": 0.2,
+        "reject_rate": 0.192,
         "sample": "sufficient",
-        "settled": 25,
-        "ship_rate": 0.8,
-        "shipped": 20
+        "settled": 26,
+        "ship_rate": 0.808,
+        "shipped": 21
       },
       "AndyRBrett/ufc-dashboard": {
         "duplicate": 1,
@@ -1916,15 +1917,15 @@
     "min_settled": 4,
     "overall": {
       "duplicate": 11,
-      "in_flight": 4,
+      "in_flight": 3,
       "not_planned": 7,
       "open": 11,
       "proposed": 89,
-      "reject_rate": 0.243,
+      "reject_rate": 0.24,
       "sample": "sufficient",
-      "settled": 74,
-      "ship_rate": 0.757,
-      "shipped": 56
+      "settled": 75,
+      "ship_rate": 0.76,
+      "shipped": 57
     }
   },
   "queue": {
@@ -1937,17 +1938,6 @@
     "eligible": 0,
     "failed_label": "overseer:implement-failed",
     "in_flight": [
-      {
-        "effort": "low",
-        "fix_ref": "PR #82",
-        "fix_url": "https://github.com/AndyRBrett/overseer/pull/82",
-        "impact": "medium",
-        "kind": "enhancement",
-        "number": 77,
-        "repo": "AndyRBrett/overseer",
-        "title": "Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard",
-        "url": "https://github.com/AndyRBrett/overseer/issues/77"
-      },
       {
         "effort": "low",
         "fix_ref": "PR #44",
@@ -1990,17 +1980,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.704,
+    "delivery_rate": 0.716,
     "duplicate": 11,
     "duplicate_rate": 0.12,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 4,
+    "in_flight": 3,
     "not_planned": 9,
     "open": 11,
     "proposed": 92,
-    "shipped": 57,
+    "shipped": 58,
     "shipped_before_implementer": 37,
     "shipped_by_hand": 18,
-    "shipped_by_implementer": 2
+    "shipped_by_implementer": 3
   }
 }
