@@ -8,6 +8,8 @@ real token counts rather than a claim.
 """
 
 import json
+import os
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -334,6 +336,106 @@ def test_cost_alert_banner_is_empty_on_an_unremarkable_run(tmp_path):
     history = _history(tmp_path, [0.30, 0.32, 0.28])
     t = _priced_tracer(tmp_path, 0.31)
     assert t.cost_alert_banner(history) == ""
+
+
+def test_same_day_runs_accumulate_spend(tmp_path):
+    # Codex P1 on #77. write_history replaces a same-day record so the health
+    # snapshot stays one-per-day — but the earlier run was still BILLED. Dropping
+    # its spend would make a cost feature blind to duplicate-run spend, which is
+    # the single most expensive failure this system has: on 2026-09-07 a guard
+    # bug dispatched two batches in one day, ~$9 against a designed $4.50.
+    path = tmp_path / "history.json"
+    first = _priced_tracer(tmp_path, 0.30)
+    first.write_history(str(path))
+    second = _priced_tracer(tmp_path, 0.45)
+    second.write_history(str(path))
+
+    runs = json.loads(path.read_text(encoding="utf-8"))["runs"]
+    assert len(runs) == 1, "the day should still be one row"
+    assert runs[0]["spend"]["total_usd"] == pytest.approx(0.75)
+    assert runs[0]["runs_today"] == 2
+
+
+def test_an_unpriced_run_does_not_read_as_zero(tmp_path):
+    # A missing figure must not be summed as 0.0 — a confident total that
+    # quietly dropped a billed run is the bug being fixed, not a smaller version
+    # of it that the fix is allowed to reintroduce.
+    path = tmp_path / "history.json"
+    _priced_tracer(tmp_path, 0.30).write_history(str(path))
+    unpriced = _priced_tracer(tmp_path, 0.20)
+    unpriced.usage = {"Bug-Hunter": {"model": "not-a-model-we-price",
+                                     "input": 10, "output": 10}}
+    unpriced.write_history(str(path))
+
+    runs = json.loads(path.read_text(encoding="utf-8"))["runs"]
+    assert runs[0]["spend"]["total_usd"] is None
+
+
+def test_the_cost_alert_is_snapshotted_not_recomputed(tmp_path):
+    # Codex P2 on #77. The banner is built while the Reviewer's
+    # send_telegram_summary tool_use is handled; run_agent then makes one more
+    # model call whose usage lands afterwards. Recomputing in write_digest would
+    # publish a different figure than the one already sent to Telegram — two
+    # answers to "what did this run cost".
+    history = _history(tmp_path, [0.30, 0.32, 0.28, 0.31])
+    t = _priced_tracer(tmp_path, 0.75)
+    sent = t.cost_alert(history)
+    assert sent is not None
+
+    # The final Reviewer turn lands after the message has gone out.
+    t.usage["Reviewer"] = {"model": "claude-sonnet-5", "input": 200_000, "output": 5_000}
+    assert t.cost_alert(history) == sent, "the digest disagrees with the message sent"
+
+
+def test_the_snapshot_is_per_history_file(tmp_path):
+    # The cache must not make a second, differently-based question return the
+    # first one's answer — that would be a new way to publish a wrong number.
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    t = _priced_tracer(tmp_path, 0.75)
+    assert t.cost_alert(_history(a, [0.30, 0.32, 0.28, 0.31])) is not None
+    assert t.cost_alert(_history(b, [9.0, 9.1, 9.2, 9.3])) is None
+
+
+def test_cost_trend_sums_the_windows_in_python(tmp_path):
+    # Codex P1 on #77: the totals are computed here so app.js can render them
+    # verbatim, rather than filtering history.json against the viewer's clock.
+    path = tmp_path / "history.json"
+    now = datetime(2026, 9, 7, tzinfo=timezone.utc)
+    runs = [
+        {"date": "2026-09-07", "spend": {"total_usd": 1.00}},
+        {"date": "2026-09-03", "spend": {"total_usd": 0.50}},   # inside 7d
+        {"date": "2026-08-20", "spend": {"total_usd": 0.25}},   # inside 30d only
+        {"date": "2026-07-01", "spend": {"total_usd": 9.99}},   # outside both
+    ]
+    path.write_text(json.dumps({"runs": runs}), encoding="utf-8")
+
+    trend = RunTracer(jsonl_path=os.devnull, html_path=os.devnull).cost_trend(
+        str(path), now=now)
+    assert trend["last_7d"]["total_usd"] == pytest.approx(1.50)
+    assert trend["last_7d"]["runs"] == 2
+    assert trend["last_30d"]["total_usd"] == pytest.approx(1.75)
+
+
+def test_cost_trend_counts_unpriced_runs_rather_than_ignoring_them(tmp_path):
+    # A window missing a priced run reads low. Saying so is what stops the tile
+    # looking exact when it isn't — the dashboard prints "(partial)".
+    path = tmp_path / "history.json"
+    path.write_text(json.dumps({"runs": [
+        {"date": "2026-09-07", "spend": {"total_usd": 1.00}},
+        {"date": "2026-09-06", "spend": {"total_usd": None}},
+    ]}), encoding="utf-8")
+    trend = RunTracer(jsonl_path=os.devnull, html_path=os.devnull).cost_trend(
+        str(path), now=datetime(2026, 9, 7, tzinfo=timezone.utc))
+    assert trend["last_7d"]["unpriced_runs"] == 1
+    assert trend["last_7d"]["total_usd"] == pytest.approx(1.00)
+
+
+def test_cost_trend_survives_a_missing_history_file(tmp_path):
+    trend = RunTracer(jsonl_path=os.devnull, html_path=os.devnull).cost_trend(
+        str(tmp_path / "nope.json"))
+    assert trend["last_7d"]["runs"] == 0
 
 
 def test_write_digest_carries_the_cost_alert_when_a_history_path_is_given(tmp_path):

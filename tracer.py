@@ -36,6 +36,10 @@ NUDGE_CYCLES = max(1, int(os.getenv("OVERSEER_NUDGE_CYCLES", "2")))
 # the other way round would be a circular import.
 RAISED_KEY = "_tool_raised"
 
+# Distinguishes "no alert was computed for this path yet" from a computed None,
+# which is the ordinary answer on a run that spent nothing unusual.
+_UNSET = object()
+
 # Maps each tool to a visual category: a label + colour used in the timeline.
 # This is what turns a flat log into something you can read at a glance —
 # "investigate" steps look different from a filed bug or a proposed idea.
@@ -90,6 +94,23 @@ def price_usd(model: str, tokens: dict) -> float | None:
     ) / 1_000_000
 
 
+def _add_spend(earlier: dict | None, current: dict) -> dict:
+    """Sum two runs' spend figures, keeping None (unpriced) as None.
+
+    Money accumulates across same-day runs; see write_history for why. A missing
+    figure on either side leaves the sum missing rather than reading as zero — a
+    confident total that quietly dropped a billed run is the failure this exists
+    to prevent, so it must not be introduced by the fix.
+    """
+    if not earlier:
+        return current
+    out = {}
+    for key, value in current.items():
+        prior = earlier.get(key)
+        out[key] = None if (value is None or prior is None) else round(value + prior, 4)
+    return out
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%H:%M:%S")
 
@@ -125,6 +146,8 @@ class RunTracer:
         # first afternoon. An observation is not a cycle, so it carries the
         # review's count forward instead of incrementing it.
         self.count_cycles = count_cycles
+        # history_path -> the cost alert as first computed. See cost_alert.
+        self._cost_alerts: dict = {}
 
     # ── recording ────────────────────────────────────────────────────────
 
@@ -290,6 +313,24 @@ class RunTracer:
         history to judge against, or this run isn't at least
         COST_OUTLIER_MULTIPLE times the median.
         """
+        # SNAPSHOT, not a recomputation (Codex P2 on #77). This is first called
+        # while the Reviewer's send_telegram_summary tool_use is being handled,
+        # to prepend the banner to the message. run_agent then makes one more
+        # model request with the tool result, and THAT response's usage lands in
+        # self.usage afterwards — so a second call here, from write_digest, would
+        # produce a different figure than the one already sent to Telegram and
+        # stored in the summary. The last Reviewer turn is unknowable before the
+        # message goes out; two different answers to "what did this run cost" are
+        # avoidable, so the first answer is kept and reused.
+        cached = self._cost_alerts.get(history_path, _UNSET)
+        if cached is not _UNSET:
+            return cached
+
+        alert = self._compute_cost_alert(history_path)
+        self._cost_alerts[history_path] = alert
+        return alert
+
+    def _compute_cost_alert(self, history_path: str) -> dict | None:
         total = self.spend().get("total_usd")
         if total is None:
             return None
@@ -328,6 +369,47 @@ class RunTracer:
             f"trailing median of ${alert['median_usd']:.2f} over the last "
             f"{alert['prior_runs']} run(s)"
         )
+
+    def cost_trend(self, history_path: str, windows=(7, 30), now=None) -> dict:
+        """Rolling spend totals over `windows` days, from the run history.
+
+        Published rather than summed in the dashboard (issue #77, Codex P1): a
+        second implementation of cost accounting in JavaScript would carry the
+        VIEWER's clock and timezone into a figure the digest also states, and the
+        two would disagree for anyone not browsing in UTC. Same rule as the
+        attention ranking and the implementation gate — computed once, in Python
+        (invariants 4 and 12).
+
+        Unpriced runs are excluded from the totals and counted separately, so a
+        window that is missing spend says so instead of quietly reading low.
+        """
+        try:
+            with open(history_path, encoding="utf-8") as f:
+                history = json.load(f)
+            runs = history.get("runs", []) if isinstance(history, dict) else []
+        except (FileNotFoundError, ValueError, OSError):
+            runs = []
+
+        today = (now or datetime.now(timezone.utc)).date()
+        out = {}
+        for days in windows:
+            total, counted, unpriced = 0.0, 0, 0
+            for run in runs:
+                try:
+                    when = datetime.strptime(str(run.get("date"))[:10], "%Y-%m-%d").date()
+                except (ValueError, TypeError):
+                    continue
+                if (today - when).days >= days:
+                    continue
+                usd = (run.get("spend") or {}).get("total_usd")
+                if usd is None:
+                    unpriced += 1
+                    continue
+                total += usd
+                counted += 1
+            out[f"last_{days}d"] = {"total_usd": round(total, 4), "runs": counted,
+                                    "unpriced_runs": unpriced}
+        return out
 
     def set_digest(self, text: str) -> None:
         """The final digest the agent publishes — surfaced on the dashboard."""
@@ -633,6 +715,11 @@ class RunTracer:
             "output_alerts": self.output_alerts(),
             "spend": self.spend(),
             "cost_alert": self.cost_alert(history_path) if history_path else None,
+            # Rolling totals, summed here rather than in app.js. Also refreshed
+            # by scripts/refresh_status.py: the WINDOW moves every day even when
+            # no new run lands, so a figure published only on Mondays would drift
+            # out of date on its own — the two-clocks failure again.
+            "cost_trend": self.cost_trend(history_path) if history_path else None,
             "timeline": timeline,
         }
         with open(path, "w", encoding="utf-8") as f:
@@ -644,7 +731,9 @@ class RunTracer:
         file the dashboard turns into trend sparklines (overseer #6).
 
         Each run contributes one record keyed by date; a same-day re-run replaces
-        that day's record rather than double-counting. The file is capped to the
+        that day's snapshot rather than double-counting it, while ACCUMULATING
+        its spend — the earlier run was billed even though its health scores were
+        superseded (see the comment at the replace, and issue #77). The file is capped to the
         last `max_runs` records so it (and the sparklines) stay small. Per project
         we store a 0..1 health score (ok=1, idle=0.5, error/blind=0) so a
         regression shows up as the line dropping week over week. The run's digest
@@ -672,8 +761,20 @@ class RunTracer:
             # (or not) without bloating a 26-run file.
             "spend": {k: self.spend()[k] for k in ("total_usd", "baseline_usd", "saved_usd")},
         }
-        # Replace a record from the same day (re-run) instead of appending a dup.
+        # Replace a record from the same day (re-run) instead of appending a dup
+        # — but CARRY ITS SPEND FORWARD (issue #77, Codex P1). The health scores
+        # and summary are a snapshot and the newest one wins; money is not a
+        # snapshot, it is a total, and the earlier run was billed whether or not
+        # a later one replaced its row.
+        #
+        # This is not hypothetical. On 2026-09-07 a guard bug let implement.yml
+        # dispatch twice in one day, and the weekly review itself ran twice in
+        # the week of 09-06 when a Cloudflare cron fired on the wrong day. A cost
+        # trend built on this file would have been blind to precisely the
+        # duplicate-run spend it exists to expose, and shown a normal Monday.
         if runs and runs[-1].get("date") == record["date"]:
+            record["spend"] = _add_spend(runs[-1].get("spend"), record["spend"])
+            record["runs_today"] = (runs[-1].get("runs_today") or 1) + 1
             runs[-1] = record
         else:
             runs.append(record)

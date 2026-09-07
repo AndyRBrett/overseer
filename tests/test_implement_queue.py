@@ -564,7 +564,9 @@ def test_the_spend_panel_says_what_it_leaves_out():
     page = (root / "docs" / "index.html").read_text(encoding="utf-8")
 
     assert "Excludes the implementer" in app
-    assert "renderSpend(d.spend, runs, ledger && ledger.queue)" in app
+    # The queue is passed in so the panel can say so; `cost_trend` joined it
+    # when the rolling totals stopped being summed in this file (issue #77).
+    assert "renderSpend(d.spend, runs, ledger && ledger.queue, d.cost_trend)" in app
     assert "Model spend (the review run)" in page, "the title must scope itself to the run"
 
 
@@ -580,6 +582,20 @@ def test_the_dashboard_renders_rolling_cost_and_a_cost_alert():
     assert 'trow("Run cost"' in app
     assert "d.cost_alert" in app
     assert '<span class="pbadge blind">COST</span>' in app
+
+    # And the totals are RENDERED, not summed here. The first draft of this
+    # feature filtered history.json by Date.now() in the browser — a second
+    # implementation of cost accounting carrying the viewer's clock and timezone
+    # into a figure the digest also states, so the two disagreed for anyone not
+    # browsing in UTC. Same rule as the attention ranking and the gate.
+    assert "cost_trend" in app, "the rolling totals must come from the digest"
+    # Scoped to the spend panel: Date.now() is legitimate elsewhere on this page
+    # (relative ages, cache-busting). It is only a second opinion HERE, where the
+    # digest already states the answer.
+    panel = app.split("function renderSpend(")[1].split("\nfunction ")[0]
+    for recompute in ("sumSince", "Date.now()", "DAY_MS"):
+        assert recompute not in panel, (
+            f"the spend panel is re-deriving the cost window with {recompute!r}")
 
 
 

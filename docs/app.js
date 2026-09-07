@@ -555,7 +555,7 @@ function renderImplementer(q) {
 // rather than an assertion. It stays hidden on older digests that predate the
 // accounting, and on any run whose model isn't in the rate card — a confident
 // $0.00 would be worse than showing nothing.
-function renderSpend(spend, runs, queue) {
+function renderSpend(spend, runs, queue, trend) {
   if (!spend || !spend.agents || !spend.agents.length) return;
   $("spend-card").style.display = "";
 
@@ -581,20 +581,23 @@ function renderSpend(spend, runs, queue) {
                 usd(scored.reduce((a, r) => a + r.spend.saved_usd, 0))]);
   }
 
-  // Rolling totals (issue #77): "this run" answers "what did today cost",
-  // these answer "what did the last N days actually cost" — the number a
-  // monthly bill gets compared against. `runs` holds one record per weekly
-  // pipeline run (write_history), each dated the day it ran, so this sums
-  // real runs rather than interpolating a day that never happened.
-  const priced = (runs || []).filter((r) => r.spend && r.spend.total_usd != null && r.date);
-  if (priced.length) {
-    const DAY_MS = 86400000;
-    const now = Date.now();
-    const sumSince = (days) => priced
-      .filter((r) => now - Date.parse(r.date + "T00:00:00Z") <= days * DAY_MS)
-      .reduce((a, r) => a + r.spend.total_usd, 0);
-    stats.push(["last 7d", usd(sumSince(7))]);
-    stats.push(["last 30d", usd(sumSince(30))]);
+  // Rolling totals (issue #77): "this run" answers "what did today cost", these
+  // answer "what did the last N days actually cost" — the number a monthly bill
+  // gets compared against.
+  //
+  // RENDERED, NOT COMPUTED. These are summed by RunTracer.cost_trend and
+  // republished by scripts/refresh_status.py; this file only prints them. The
+  // first draft summed history.json here, which put the VIEWER's clock and
+  // timezone into a figure the digest also states — two answers to "what did the
+  // last week cost", disagreeing for anyone not browsing in UTC. Same rule as
+  // the attention ranking and the implementation gate (invariants 4 and 12).
+  const windows = trend || {};
+  for (const [days, label] of [[7, "last 7d"], [30, "last 30d"]]) {
+    const window = windows[`last_${days}d`];
+    if (!window || !window.runs) continue;
+    // A window missing a priced run reads low; say so rather than looking exact.
+    stats.push([window.unpriced_runs ? `${label} (partial)` : label,
+                usd(window.total_usd)]);
   }
 
   const head = hero + (stats.length
@@ -794,7 +797,7 @@ async function loadDigest() {
     renderPlain(d, ledger);
     renderShipped(ledger);
     renderImplementer(ledger && ledger.queue);
-    renderSpend(d.spend, runs, ledger && ledger.queue);
+    renderSpend(d.spend, runs, ledger && ledger.queue, d.cost_trend);
     $("digest").innerHTML = formatDigest(d.summary || "");
 
     const c = d.counts || {};

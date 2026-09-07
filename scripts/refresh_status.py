@@ -55,7 +55,16 @@ from tracer import RunTracer  # noqa: E402
 # weekly review and is passed through untouched — listed explicitly so that a
 # new key added by the review is carried forward by default rather than dropped
 # by an omission here.
-REFRESHED_KEYS = ("projects", "rollup", "attention", "headline", "refreshed")
+# Every block this script republishes. A field written by the weekly review and
+# absent here does not stay still — it goes STALE beside neighbours that move
+# every few hours, which is the "two clocks" failure this file exists to end.
+#
+# cost_trend is here because its WINDOW moves even when nothing else does: a run
+# eight days old drops out of "last 7d" on its own, with no new run to trigger a
+# rewrite. Published weekly and never refreshed, the tile would keep quoting a
+# window that closed days ago (issue #77).
+REFRESHED_KEYS = ("projects", "rollup", "attention", "headline", "cost_trend",
+                  "refreshed")
 
 
 def load(path):
@@ -87,6 +96,9 @@ def rebuild(published, ledger, readings):
         "rollup": tracer.rollup(),
         "attention": tracer.attention(),
         "headline": tracer.headline(),
+        # Read off docs/history.json, which this script never writes — it is the
+        # weekly review's file. Recomputing the window here is the whole point.
+        "cost_trend": tracer.cost_trend(tools.HISTORY_PATH),
         "refreshed": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
