@@ -1,21 +1,84 @@
 {
   "entries": [
     {
-      "closed_at": null,
-      "created_at": "2026-09-07T14:10:53+00:00",
-      "delivered_by": "hand",
+      "closed_at": "2026-09-07T18:58:34+00:00",
+      "created_at": "2026-08-31T19:47:50+00:00",
+      "delivered_by": "implementer",
       "effort": "low",
       "impact": "medium",
       "kind": "enhancement",
       "labels": [
         "effort:low",
         "enhancement",
-        "impact:medium"
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 39,
+      "repo": "AndyRBrett/coachvision",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/39"
+    },
+    {
+      "closed_at": "2026-09-07T17:36:18+00:00",
+      "created_at": "2026-09-07T14:10:42+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 71,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Expand exit_reasons taxonomy to cover take-profit, signal-flip, and rotation-cap exits",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/71"
+    },
+    {
+      "closed_at": "2026-09-07T17:35:11+00:00",
+      "created_at": "2026-08-31T19:08:17+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 38,
+      "repo": "AndyRBrett/coachvision",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/38"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-09-07T14:10:53+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "fix_ref": "PR #82",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/82",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
       ],
       "number": 77,
       "repo": "AndyRBrett/overseer",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard",
       "url": "https://github.com/AndyRBrett/overseer/issues/77"
     },
@@ -41,40 +104,24 @@
     {
       "closed_at": null,
       "created_at": "2026-09-07T14:10:46+00:00",
-      "delivered_by": "hand",
+      "delivered_by": "implementer",
       "effort": "low",
+      "fix_ref": "PR #44",
+      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
       "impact": "medium",
       "kind": "enhancement",
       "labels": [
         "effort:low",
         "enhancement",
-        "impact:medium"
+        "impact:medium",
+        "overseer:implementing"
       ],
       "number": 43,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add automated clip quality/completeness gate before frame processing",
       "url": "https://github.com/AndyRBrett/coachvision/issues/43"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-09-07T14:10:42+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 71,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "open",
-      "title": "Expand exit_reasons taxonomy to cover take-profit, signal-flip, and rotation-cap exits",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/71"
     },
     {
       "closed_at": null,
@@ -98,19 +145,22 @@
     {
       "closed_at": null,
       "created_at": "2026-09-06T14:11:00+00:00",
-      "delivered_by": "hand",
+      "delivered_by": "implementer",
       "effort": "low",
+      "fix_ref": "PR #78",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/78",
       "impact": "medium",
       "kind": "enhancement",
       "labels": [
         "effort:low",
         "enhancement",
-        "impact:medium"
+        "impact:medium",
+        "overseer:implementing"
       ],
       "number": 72,
       "repo": "AndyRBrett/overseer",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add cross-project systemic-risk correlation widget to overseer dashboard",
       "url": "https://github.com/AndyRBrett/overseer/issues/72"
     },
@@ -596,25 +646,6 @@
     },
     {
       "closed_at": null,
-      "created_at": "2026-08-31T19:47:50+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 39,
-      "repo": "AndyRBrett/coachvision",
-      "state": "open",
-      "status": "open",
-      "title": "Add drift-alerting on top of the scheduled self-test canary: flag when frames_processed/segment_count deviate from historical baseline",
-      "url": "https://github.com/AndyRBrett/coachvision/issues/39"
-    },
-    {
-      "closed_at": null,
       "created_at": "2026-08-31T19:08:20+00:00",
       "delivered_by": "hand",
       "effort": "medium",
@@ -631,25 +662,6 @@
       "status": "open",
       "title": "Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant",
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/93"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-31T19:08:17+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 38,
-      "repo": "AndyRBrett/coachvision",
-      "state": "open",
-      "status": "open",
-      "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
-      "url": "https://github.com/AndyRBrett/coachvision/issues/38"
     },
     {
       "closed_at": "2026-08-24T16:49:41+00:00",
@@ -709,6 +721,8 @@
       "created_at": "2026-08-24T14:35:18+00:00",
       "delivered_by": "hand",
       "effort": "medium",
+      "fix_ref": "PR #44",
+      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -719,7 +733,7 @@
       "number": 34,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion",
       "url": "https://github.com/AndyRBrett/coachvision/issues/34"
     },
@@ -770,6 +784,8 @@
       "created_at": "2026-08-15T10:35:32+00:00",
       "delivered_by": "hand",
       "effort": "medium",
+      "fix_ref": "PR #44",
+      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -780,7 +796,7 @@
       "number": 25,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
-      "status": "open",
+      "status": "in_flight",
       "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
       "url": "https://github.com/AndyRBrett/coachvision/issues/25"
     },
@@ -1439,63 +1455,6 @@
       "url": "https://github.com/AndyRBrett/overseer/issues/6"
     },
     {
-      "closed_at": "2026-07-02T15:22:09+00:00",
-      "created_at": "2026-06-22T18:11:13+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 20,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Add retry-with-backoff and a stale/empty-payload flag for events that parse zero bouts",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/20"
-    },
-    {
-      "closed_at": "2026-07-02T15:22:05+00:00",
-      "created_at": "2026-06-22T18:11:09+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 19,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Track closing-line-value and persist a per-fighter odds time-series for movement charts",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/19"
-    },
-    {
-      "closed_at": "2026-07-02T15:22:02+00:00",
-      "created_at": "2026-06-21T23:43:55+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 18,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Add secondary odds source with fallback for empty-payload events",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/18"
-    },
-    {
       "closed_at": "2026-07-02T15:20:15+00:00",
       "created_at": "2026-06-22T18:11:05+00:00",
       "delivered_by": "hand",
@@ -1901,38 +1860,38 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-07T16:32:07Z",
+  "generated": "2026-09-07T20:39:04Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
         "duplicate": 2,
-        "in_flight": 0,
-        "not_planned": 1,
-        "open": 7,
+        "in_flight": 3,
+        "not_planned": 3,
+        "open": 2,
         "proposed": 21,
-        "reject_rate": 0.214,
+        "reject_rate": 0.312,
         "sample": "sufficient",
-        "settled": 14,
-        "ship_rate": 0.786,
+        "settled": 16,
+        "ship_rate": 0.688,
         "shipped": 11
       },
       "AndyRBrett/crypto-trading": {
         "duplicate": 3,
         "in_flight": 0,
-        "not_planned": 2,
-        "open": 4,
+        "not_planned": 3,
+        "open": 3,
         "proposed": 27,
-        "reject_rate": 0.217,
+        "reject_rate": 0.25,
         "sample": "sufficient",
-        "settled": 23,
-        "ship_rate": 0.783,
+        "settled": 24,
+        "ship_rate": 0.75,
         "shipped": 18
       },
       "AndyRBrett/overseer": {
         "duplicate": 5,
-        "in_flight": 0,
+        "in_flight": 2,
         "not_planned": 0,
-        "open": 2,
+        "open": 0,
         "proposed": 26,
         "reject_rate": 0.208,
         "sample": "sufficient",
@@ -1945,26 +1904,26 @@
         "in_flight": 0,
         "not_planned": 1,
         "open": 6,
-        "proposed": 18,
-        "reject_rate": 0.167,
+        "proposed": 15,
+        "reject_rate": 0.222,
         "sample": "sufficient",
-        "settled": 12,
-        "ship_rate": 0.833,
-        "shipped": 10
+        "settled": 9,
+        "ship_rate": 0.778,
+        "shipped": 7
       }
     },
     "min_settled": 4,
     "overall": {
       "duplicate": 11,
-      "in_flight": 0,
-      "not_planned": 4,
-      "open": 19,
-      "proposed": 92,
-      "reject_rate": 0.205,
+      "in_flight": 5,
+      "not_planned": 7,
+      "open": 11,
+      "proposed": 89,
+      "reject_rate": 0.247,
       "sample": "sufficient",
       "settled": 73,
-      "ship_rate": 0.795,
-      "shipped": 58
+      "ship_rate": 0.753,
+      "shipped": 55
     }
   },
   "queue": {
@@ -1974,25 +1933,35 @@
     "efforts": [
       "low"
     ],
-    "eligible": 6,
+    "eligible": 0,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [],
-    "last_dispatch": {
-      "at": "2026-08-31T22:53:01Z",
-      "conclusion": "success"
-    },
-    "next": [
+    "in_flight": [
       {
         "effort": "low",
+        "fix_ref": "PR #82",
+        "fix_url": "https://github.com/AndyRBrett/overseer/pull/82",
         "impact": "medium",
         "kind": "enhancement",
-        "number": 38,
-        "repo": "AndyRBrett/coachvision",
-        "title": "Push proactive idle-escalation notifications (SMS/push) as days_since_last_footage climbs, instead of only a static status-field nudge",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/38"
+        "number": 77,
+        "repo": "AndyRBrett/overseer",
+        "title": "Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard",
+        "url": "https://github.com/AndyRBrett/overseer/issues/77"
       },
       {
         "effort": "low",
+        "fix_ref": "PR #44",
+        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 43,
+        "repo": "AndyRBrett/coachvision",
+        "title": "Add automated clip quality/completeness gate before frame processing",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/43"
+      },
+      {
+        "effort": "low",
+        "fix_ref": "PR #78",
+        "fix_url": "https://github.com/AndyRBrett/overseer/pull/78",
         "impact": "medium",
         "kind": "enhancement",
         "number": 72,
@@ -2001,28 +1970,46 @@
         "url": "https://github.com/AndyRBrett/overseer/issues/72"
       },
       {
-        "effort": "low",
-        "impact": "medium",
+        "effort": "medium",
+        "fix_ref": "PR #44",
+        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
+        "impact": "high",
         "kind": "enhancement",
-        "number": 71,
-        "repo": "AndyRBrett/crypto-trading",
-        "title": "Expand exit_reasons taxonomy to cover take-profit, signal-flip, and rotation-cap exits",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/71"
+        "number": 34,
+        "repo": "AndyRBrett/coachvision",
+        "title": "Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/34"
+      },
+      {
+        "effort": "medium",
+        "fix_ref": "PR #44",
+        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 25,
+        "repo": "AndyRBrett/coachvision",
+        "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
+        "url": "https://github.com/AndyRBrett/coachvision/issues/25"
       }
     ],
+    "last_dispatch": {
+      "at": "2026-09-07T20:21:07Z",
+      "conclusion": "success"
+    },
+    "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.702,
+    "delivery_rate": 0.691,
     "duplicate": 11,
-    "duplicate_rate": 0.116,
+    "duplicate_rate": 0.12,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 0,
-    "not_planned": 6,
-    "open": 19,
-    "proposed": 95,
-    "shipped": 59,
-    "shipped_before_implementer": 40,
+    "in_flight": 5,
+    "not_planned": 9,
+    "open": 11,
+    "proposed": 92,
+    "shipped": 56,
+    "shipped_before_implementer": 37,
     "shipped_by_hand": 18,
     "shipped_by_implementer": 1
   }

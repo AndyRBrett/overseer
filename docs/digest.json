@@ -29,37 +29,37 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-07T16:32:18Z",
+      "last_ok": "2026-09-07T20:39:15Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-07T16:32:18Z",
+      "last_ok": "2026-09-07T20:39:15Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-07T16:32:18Z",
+      "last_ok": "2026-09-07T20:39:15Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-07T16:32:18Z",
+      "last_ok": "2026-09-07T20:39:15Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.465,
+      "score": 0.39,
       "signals": {
         "staleness": 0.9,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.7
+        "backlog": 0.2
       },
-      "why": "no activity for 6 cycle(s); 7 open ideas",
+      "why": "no activity for 6 cycle(s); 2 open ideas",
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
@@ -69,14 +69,14 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.186,
+      "score": 0.171,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.63,
-        "backlog": 0.4
+        "backlog": 0.3
       },
-      "why": "win_rate is 33%; 4 open ideas",
+      "why": "win_rate is 33%; 3 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
@@ -103,19 +103,19 @@
       "repo": "AndyRBrett/ufc-dashboard"
     },
     {
-      "score": 0.03,
+      "score": 0.0,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.2
+        "backlog": 0.0
       },
-      "why": "2 open ideas",
+      "why": "healthy \u2014 nothing is asking for attention",
       "name": "Overseer",
       "status": "ok",
-      "plain": "Overseer has 2 ideas waiting for someone to look at",
-      "short": "has 2 ideas waiting for someone to look at",
-      "action": "Some ideas are waiting for you to look at them.",
+      "plain": "Overseer looks fine",
+      "short": "looks fine",
+      "action": "Nothing to do.",
       "notable": false,
       "repo": "AndyRBrett/overseer"
     }
@@ -291,5 +291,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-07T16:32:18Z"
+  "refreshed": "2026-09-07T20:39:15Z"
 }
