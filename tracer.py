@@ -425,6 +425,16 @@ class RunTracer:
         """The digest's ATTENTION RANKING block (see attention.banner)."""
         return attention.banner(self.attention())
 
+    def systemic_risk(self) -> dict:
+        """Whether multiple projects are notable in the same run (overseer #72).
+
+        See `attention.systemic_risk` — concurrent degradation across
+        independently-running projects is itself worth surfacing, computed off
+        the same ranking the per-project list already published rather than a
+        second read of anything.
+        """
+        return attention.systemic_risk(self.attention())
+
     def rollup(self) -> dict:
         """A scannable, top-of-dashboard summary of this run (idle-detection +
         rollup). Reuses the per-project health flags (status / idle_cycles /
@@ -565,6 +575,9 @@ class RunTracer:
             # Ranked here, never in app.js: the dashboard sorts by this list and
             # renders its `why` verbatim rather than forming a second opinion.
             "attention": self.attention(),
+            # Whether the projects above are notable together, not just each on
+            # its own (overseer #72) — same rule, computed once here.
+            "systemic_risk": self.systemic_risk(),
             # The plain-English verdict the page leads with. Same rule, same
             # reason: the sentence a stranger reads first is not one to keep a
             # second copy of in JavaScript.

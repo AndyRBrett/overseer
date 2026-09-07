@@ -828,8 +828,18 @@ async function loadDigest() {
         `<div class="nudge blind"><span class="pbadge blind">SILENT</span>
           <span class="ntext"><b>${escapeHtml(a.agent)}</b> — ${escapeHtml(a.detail)}</span></div>`
       ).join("");
+      // Multiple projects notable in the same run (overseer #72). Rendered
+      // above the individual nudges — the coincidence across projects is the
+      // finding, so it leads rather than getting lost among the per-project
+      // rows that make it up. The message is composed in attention.py and
+      // printed verbatim, same rule as the headline: not a second opinion.
+      const risk = d.systemic_risk || {};
+      const systemic = risk.flagged
+        ? `<div class="nudge risk"><span class="pbadge risk">LINKED?</span>
+            <span class="ntext">${escapeHtml(risk.message)}</span></div>`
+        : "";
       $("rollup").innerHTML = `<div class="rollup-chips">${chips}</div>` +
-        (nudges || silent ? `<div class="nudges">${nudges}${silent}</div>` : "");
+        (systemic || nudges || silent ? `<div class="nudges">${systemic}${nudges}${silent}</div>` : "");
       $("rollup-card").style.display = "";
     }
 

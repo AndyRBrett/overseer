@@ -55,7 +55,18 @@ from tracer import RunTracer  # noqa: E402
 # weekly review and is passed through untouched — listed explicitly so that a
 # new key added by the review is carried forward by default rather than dropped
 # by an omission here.
-REFRESHED_KEYS = ("projects", "rollup", "attention", "headline", "refreshed")
+# Every block this script republishes. A field written by the weekly review and
+# absent here does not stay still — it goes STALE beside neighbours that move
+# every few hours, which is the "two clocks" failure this file exists to end
+# (2026-09-05: delivery panel 0.3h old, project health 117.8h, and the stale half
+# was the half that says whether anything is broken).
+#
+# systemic_risk joined the list on 2026-09-07 for exactly that reason: it is
+# derived from `attention`, which IS refreshed, so leaving it out would let the
+# widget claim two projects are notable together while the ranking directly
+# beneath it — recomputed minutes earlier — showed one.
+REFRESHED_KEYS = ("projects", "rollup", "attention", "systemic_risk", "headline",
+                  "refreshed")
 
 
 def load(path):
@@ -86,6 +97,11 @@ def rebuild(published, ledger, readings):
         "projects": tracer.project_health(),
         "rollup": tracer.rollup(),
         "attention": tracer.attention(),
+        # Off the SAME ranking as the line above, never a second read: invariant
+        # 12 is that the attention score is computed once, and a systemic-risk
+        # flag derived from a different snapshot than the list it summarises is
+        # the same lie one layer up.
+        "systemic_risk": tracer.systemic_risk(),
         "headline": tracer.headline(),
         "refreshed": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
