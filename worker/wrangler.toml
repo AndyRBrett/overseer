@@ -67,6 +67,24 @@ DISPATCH_REPO = "AndyRBrett/overseer"
 # a day GitHub also delivers costs a checkout; and a duplicate alert on a day it
 # is genuinely failing is the right way to be wrong.
 #
+# THE IMPLEMENTER RIDES THESE CRONS RATHER THAN ADDING ITS OWN (2026-09-07).
+#
+# On 2026-09-07 GitHub delivered none of this repo's scheduled events again. The
+# review was fine — it has the 14:05 poke above. implement.yml had nothing, so
+# its 15:00 cron and its 17:00 catch-up produced no run at all and the week's
+# implementation stage was skipped until a human fired it by hand. It was the
+# last stage here still trusting one scheduler.
+#
+# No cron was added for it. Cloudflare's own docs disagree about the cap — the
+# Cron Triggers page says the limit is per Worker, the Limits page says 5 per
+# ACCOUNT on the free plan, and third-party references claim 3 per Worker — and
+# three are already declared below. Two more sits exactly on the cap under the
+# generous reading and over it under the strict one; a deploy that starts
+# failing on a limit is not something to find out during an outage. So the 15:20
+# daily and the 17:05 Monday crons each carry `implement` as a second event, both
+# still landing AFTER GitHub's own 15:00 and 17:00, and overseer-ask.js checks
+# getUTCDay() so the daily one only asks for it on Monday.
+#
 # Cron is UTC here too. Keep DISPATCH_EVENTS in overseer-ask.js in step with
 # these, and with the repository_dispatch `types:` in each workflow.
 #

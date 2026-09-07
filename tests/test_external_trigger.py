@@ -64,10 +64,29 @@ def workflow(name="weekly-review.yml"):
 
 
 def dispatch_map():
-    """The worker's cron -> repository_dispatch type table, parsed out of the JS."""
-    block = re.search(r"const DISPATCH_EVENTS = \{(.*?)\};", worker_source(), re.S)
+    """The worker's cron -> repository_dispatch types table, parsed out of the JS.
+
+    The values are LISTS since 2026-09-07: the implementer's backup rides the
+    crons that already exist rather than adding two more, because Cloudflare's
+    free-plan cron cap is documented two different ways and three are already
+    declared.
+    """
+    block = re.search(r"const DISPATCH_EVENTS = \{(.*?)\n\};", worker_source(), re.S)
     assert block, "the worker no longer declares a cron -> event map"
-    return dict(re.findall(r'"([^"]+)"\s*:\s*"([^"]+)"', block.group(1)))
+    pairs = re.findall(r'"([^"]+)"\s*:\s*\[([^\]]*)\]', block.group(1))
+    assert pairs, "DISPATCH_EVENTS no longer maps each cron to a list of events"
+    return {cron: re.findall(r'"([^"]+)"', events) for cron, events in pairs}
+
+
+def crons_firing(event_type):
+    return [cron for cron, events in dispatch_map().items() if event_type in events]
+
+
+def monday_events():
+    """The event types the worker will only ask for on a Monday."""
+    block = re.search(r"const MONDAY_EVENTS = new Set\(\[(.*?)\]\);", worker_source(), re.S)
+    assert block, "the worker no longer declares which events are Monday-only"
+    return set(re.findall(r'"([^"]+)"', block.group(1)))
 
 
 def listeners():
@@ -101,24 +120,49 @@ def test_the_workflows_listen_for_what_the_worker_sends():
     # read as healthy right up until someone noticed a stale digest — which is
     # exactly how the original incident was found.
     heard = listeners()
-    for cron, event_type in dispatch_map().items():
-        assert event_type in heard, f"{cron} fires {event_type!r} and nothing listens"
+    for cron, event_types in dispatch_map().items():
+        for event_type in event_types:
+            assert event_type in heard, f"{cron} fires {event_type!r} and nothing listens"
 
 
-def test_both_jobs_are_covered():
-    # The review and the alarm that watches it. An alarm on the scheduler it
-    # watches shares a failure mode with it, which is what happened on 08-31 —
-    # the review never ran and the heartbeat never ran to say so.
-    assert set(dispatch_map().values()) == {"weekly-review", "heartbeat"}
+def test_every_scheduled_stage_is_covered():
+    # The review, the alarm that watches it, and the dispatcher. An alarm on the
+    # scheduler it watches shares a failure mode with it, which is what happened
+    # on 08-31 — the review never ran and the heartbeat never ran to say so.
+    #
+    # implement joined them on 2026-09-07, when GitHub created no run for either
+    # its 15:00 cron or its 17:00 catch-up and the week's implementation stage
+    # was skipped until a human fired it by hand. It was the last stage here
+    # still trusting a single scheduler; a stage off this list is one outage away
+    # from being skipped with nothing red.
+    fired = {e for events in dispatch_map().values() for e in events}
+    assert fired == {"weekly-review", "heartbeat", "implement"}
     heard = listeners()
     assert heard["weekly-review"] == "weekly-review.yml"
     assert heard["heartbeat"] == "heartbeat.yml"
+    assert heard["implement"] == "implement.yml"
+
+
+def test_the_implementer_backup_adds_no_cron():
+    # Cloudflare's docs disagree with themselves about the free-plan cap — "per
+    # Worker" on one page, 5 per ACCOUNT on the Limits page, 3 per Worker in
+    # third-party references — and three crons were already declared. The backup
+    # therefore rides existing crons; a fourth would sit on the cap under the
+    # generous reading and over it under the strict one, and the deploy would
+    # start failing at the worst possible moment.
+    assert len(wrangler()["triggers"]["crons"]) <= 3
+    assert crons_firing("implement"), "nothing fires the implementer"
+    for cron in crons_firing("implement"):
+        assert len(dispatch_map()[cron]) > 1, (
+            f"{cron} carries only implement — it should be riding an existing cron")
 
 
 def test_every_cron_maps_to_an_event():
     # A cron in wrangler.toml with no entry in DISPATCH_EVENTS fires into
     # nothing, on a schedule, forever.
     assert set(wrangler()["triggers"]["crons"]) == set(dispatch_map())
+    for cron, events in dispatch_map().items():
+        assert events, f"{cron} maps to an empty event list"
 
 
 def test_the_worker_posts_to_the_dispatches_endpoint():
@@ -161,10 +205,9 @@ def test_the_review_cron_fires_on_monday():
     #
     # A trigger that fires on the wrong day is not covering the run it exists
     # for — it is buying an extra one.
-    for cron, event_type in dispatch_map().items():
-        if event_type == "weekly-review":
-            assert cron.split()[4] == CLOUDFLARE_MONDAY, (
-                f"{cron} does not fire on Cloudflare's Monday")
+    for cron in crons_firing("weekly-review"):
+        assert cron.split()[4] == CLOUDFLARE_MONDAY, (
+            f"{cron} does not fire on Cloudflare's Monday")
 
 
 def test_the_two_schedulers_disagree_deliberately():
@@ -174,10 +217,9 @@ def test_the_two_schedulers_disagree_deliberately():
     # should have to come here and read why.
     github = {c.split()[4] for c in github_crons("weekly-review.yml")}
     assert github == {GITHUB_MONDAY}, f"GitHub's review crons moved off Monday: {github}"
-    for cron, event_type in dispatch_map().items():
-        if event_type == "weekly-review":
-            assert cron.split()[4] != GITHUB_MONDAY, (
-                f"{cron} mirrors GitHub's day field, which is Sunday on Cloudflare")
+    for cron in crons_firing("weekly-review"):
+        assert cron.split()[4] != GITHUB_MONDAY, (
+            f"{cron} mirrors GitHub's day field, which is Sunday on Cloudflare")
 
 
 def test_the_worker_checks_the_day_itself():
@@ -186,27 +228,41 @@ def test_the_worker_checks_the_day_itself():
     # — a re-edit, a parser change, a fourth vendor — costs a skipped redundant
     # poke rather than a review nobody asked for.
     src = worker_source()
-    assert "REVIEW_UTC_DAY = 1" in src, "the worker does not know which day Monday is"
+    assert "MONDAY_UTC_DAY = 1" in src, "the worker does not know which day Monday is"
     scheduled = src.split("async scheduled(")[1].split("async fetch(")[0]
     guard = scheduled.split("ctx.waitUntil(fireDispatch(")[0]
     assert "getUTCDay()" in guard, "the day is not checked before the review is asked for"
-    assert "REVIEW_UTC_DAY" in guard
+    assert "MONDAY_UTC_DAY" in guard
+
+
+def test_the_monday_only_jobs_are_day_checked():
+    # Both weekly jobs ride Cloudflare crons now, and the implementer's primary
+    # backup rides the DAILY heartbeat cron — so without this it would ask for a
+    # $4.50 implementation run every morning of the week.
+    assert monday_events() == {"weekly-review", "implement"}
 
 
 def test_the_day_check_does_not_gate_the_heartbeat():
     # The heartbeat is daily and is the dead-man's switch. Gating it on a
     # weekday would silence the alarm six days out of seven, which is the one
     # thing this Worker may never do.
+    assert "heartbeat" not in monday_events(), (
+        "the day check gates the heartbeat, silencing the alarm six days in seven")
     scheduled = worker_source().split("async scheduled(")[1].split("async fetch(")[0]
     guard = scheduled.split("ctx.waitUntil(fireDispatch(")[0]
-    assert '"weekly-review"' in guard, (
-        "the day check is not scoped to the review, so it also gates the heartbeat")
+    assert "MONDAY_EVENTS.has" in guard, (
+        "the day check is not scoped by event type, so it also gates the heartbeat")
+    # `continue`, not `return`: the heartbeat shares its cron with the
+    # implementer's Monday backup, so skipping the wrong-day job must not take
+    # the alarm down with it.
+    skip = guard.split("MONDAY_EVENTS.has")[1]
+    assert "continue;" in skip and "return;" not in skip
 
 
 def test_the_heartbeat_cron_fires_daily():
     # Daily is the point: it is what bounds how long a dropped weekly event can
     # go unnoticed to about a day.
-    daily = [c for c, e in dispatch_map().items() if e == "heartbeat"]
+    daily = crons_firing("heartbeat")
     assert daily, "nothing fires the heartbeat"
     for cron in daily:
         assert cron.split()[4] == "*", f"{cron} does not fire every day"
@@ -214,13 +270,15 @@ def test_the_heartbeat_cron_fires_daily():
 
 
 @pytest.mark.parametrize("event_type,wf", [("weekly-review", "weekly-review.yml"),
-                                           ("heartbeat", "heartbeat.yml")])
+                                           ("heartbeat", "heartbeat.yml"),
+                                           ("implement", "implement.yml")])
 def test_each_cron_lands_after_githubs_own(event_type, wf):
     # 14:05 vs GitHub's 14:00; 15:20 vs GitHub's 15:00. Ordering is what makes a
     # healthy day free: GitHub's on-time cron goes first, the dispatch arrives
-    # second and no-ops. Fire first and every healthy Monday pays twice.
+    # second and no-ops. Fire first and every healthy Monday pays twice — and for
+    # the implementer that is the expensive stage, three attempts at ~$1.50.
     primary = min(cron_minutes(c) for c in github_crons(wf))
-    ours = min(cron_minutes(c) for c, e in dispatch_map().items() if e == event_type)
+    ours = min(cron_minutes(c) for c in crons_firing(event_type))
     assert ours > primary, f"the worker's {event_type} cron beats GitHub's own"
 
 

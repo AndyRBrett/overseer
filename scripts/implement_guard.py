@@ -29,11 +29,27 @@ week — and every other path here (an unreadable run list, a GitHub outage, no
 token) leaves the day's work undone, which is the more expensive mistake. The cap
 inside tools.implementation_queue still bounds whatever a doubtful run does.
 
-Only the catch-up crons are asked. The 15:00 run and any manual dispatch are the
-run, not a second guess at it, so they always proceed — FIRED_BY_SCHEDULE (the
-workflow's `github.event.schedule`, empty for a dispatch) is what tells them
+Only the catch-up crons and the Cloudflare repository_dispatch are asked. The
+15:00 run and any manual dispatch are the run, not a second guess at it, so they
+always proceed — FIRED_BY_SCHEDULE (the workflow's `github.event.schedule`, empty
+for a dispatch) and FIRED_BY_EVENT (`github.event_name`) are what tell them
 apart. Keeping that comparison here rather than in workflow YAML is what makes it
 testable.
+
+WHY THE OFF-GITHUB TRIGGER IS ASKED TOO (2026-09-07). worker/overseer-ask.js
+pokes this workflow from Cloudflare because on 09-07 GitHub created no run for
+either the 15:00 cron or the 17:00 catch-up. That poke is a second automated
+trigger aimed at the same Monday, so per invariant 6b it asks the same question
+every other automated trigger asks — "has today's dispatch already landed?" —
+rather than assuming it is the run.
+
+WHAT A DRY RUN IS NOT (2026-09-07). A `--dry-run` run hands nothing over, so it
+must not count as today's dispatch. The API does not expose a run's
+workflow_dispatch inputs, so implement.yml marks its own run-name instead and
+this module reads the marker back. It matters because dry_run DEFAULTS to true on
+a manual run: looking at the queue before firing — the careful thing to do — would
+otherwise disarm every catch-up left in the day, and would have eaten the last
+one on 09-07.
 
 Writes `should_run=true|false` to $GITHUB_OUTPUT for the workflow's `if:`
 conditions, and prints the reasoning for the run log. Always exits 0 — this is a
@@ -56,6 +72,28 @@ WORKFLOW_FILE = os.getenv("IMPLEMENT_WORKFLOW_FILE", "implement.yml")
 # double-spend this whole module exists to prevent.
 CATCHUP_SCHEDULES = {"0 17 * * 1", "0 19 * * 1"}
 
+# The Cloudflare poke. It is redundancy for a dropped cron, not the dispatch, so
+# it is guarded exactly like a catch-up.
+CATCHUP_EVENTS = {"repository_dispatch"}
+
+# What implement.yml's `run-name` carries when the run was a dry run. A substring
+# match on the run's title is not elegant; it is the only signal GitHub gives back
+# about how a workflow_dispatch was parameterised. Keep in step with the run-name
+# expression in implement.yml.
+DRY_RUN_MARKER = "(dry run)"
+
+
+def _was_dry_run(run):
+    """Did this run hand nothing over because it was a dry run?
+
+    Runs created before the run-name marker existed carry no title of their own
+    and so read as real dispatches. That is the conservative direction for
+    history — it can only make a catch-up skip, never double-spend — and it ages
+    out after one Monday.
+    """
+    title = getattr(run, "display_title", None) or getattr(run, "name", "") or ""
+    return DRY_RUN_MARKER in title
+
 
 def dispatched_today(runs, now=None, exclude_id=None):
     """The first successful run from today (UTC) in `runs`, or None.
@@ -70,6 +108,9 @@ def dispatched_today(runs, now=None, exclude_id=None):
             continue
         if getattr(run, "conclusion", None) != "success":
             continue
+        if _was_dry_run(run):
+            # Green, and it dispatched nothing. See DRY_RUN_MARKER.
+            continue
         created = getattr(run, "created_at", None)
         if created is None:
             continue
@@ -80,9 +121,11 @@ def dispatched_today(runs, now=None, exclude_id=None):
     return None
 
 
-def should_run(schedule, runs, now=None, exclude_id=None):
-    """(run?, reason) for a dispatch fired by `schedule` against `runs`."""
-    if (schedule or "").strip() not in CATCHUP_SCHEDULES:
+def should_run(schedule, runs, now=None, exclude_id=None, event=None):
+    """(run?, reason) for a dispatch fired by `schedule`/`event` against `runs`."""
+    is_catchup = ((schedule or "").strip() in CATCHUP_SCHEDULES
+                  or (event or "").strip() in CATCHUP_EVENTS)
+    if not is_catchup:
         return True, "not a catch-up run — this is the dispatch itself."
     if runs is None:
         return True, "could not read this workflow's own run history; proceeding."
@@ -117,6 +160,7 @@ def main():
         os.getenv("FIRED_BY_SCHEDULE"),
         recent_runs(),
         exclude_id=os.getenv("GITHUB_RUN_ID"),
+        event=os.getenv("FIRED_BY_EVENT"),
     )
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")
 

@@ -1,5 +1,14 @@
 name: Hand filed issues to the implementer
 
+# A dry run has to be visible from the run LIST, not just its logs: the guard
+# reads this workflow's own history to decide whether today's dispatch already
+# happened, and the API does not expose a run's workflow_dispatch inputs. Without
+# the marker a dry run — which hands nothing over, and is the DEFAULT for a
+# manual run — reads as today's dispatch and silently disarms every catch-up left
+# in the day (2026-09-07). Keep in step with DRY_RUN_MARKER in
+# scripts/implement_guard.py.
+run-name: Hand filed issues to the implementer${{ inputs.dry_run && ' (dry run)' || '' }}
+
 # The step the pipeline was missing. The weekly review files issues; this hands a
 # few of them to a coding agent running in each project's OWN repo, which opens a
 # PR. It implements nothing itself — it reads the delivery ledger, applies the
@@ -29,6 +38,19 @@ on:
     # with these two lines.
     - cron: "0 17 * * 1"
     - cron: "0 19 * * 1"
+  # THE OFF-GITHUB BACKUP (2026-09-07). Every cron above is queued through the
+  # scheduler that has now twice delivered nothing at all for a whole day —
+  # 08-31 for the review, 09-07 for this workflow, when neither the 15:00 nor
+  # the 17:00 catch-up created a run and the week's implementation stage only
+  # happened because a human fired it by hand. Catch-ups cannot cover a dropped
+  # event; only a different vendor can. worker/overseer-ask.js fires this from
+  # Cloudflare at 15:20 and 17:05 Monday, both behind GitHub's own.
+  #
+  # It is guarded like the catch-ups, and for the same money: the dispatcher
+  # labels what it hands over, so a second batch picks three DIFFERENT issues
+  # and turns a $4.50 Monday into $9.00.
+  repository_dispatch:
+    types: [implement]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -77,12 +99,13 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # Only the catch-up crons ask this question. The 15:00 run and any manual
-      # dispatch are the dispatch — they always proceed.
+      # The catch-up crons and the Cloudflare dispatch ask this question. The
+      # 15:00 run and any manual dispatch are the dispatch — they always proceed.
       - name: Did today's dispatch already run?
         id: guard
         env:
           FIRED_BY_SCHEDULE: ${{ github.event.schedule }}
+          FIRED_BY_EVENT: ${{ github.event_name }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
         run: python scripts/implement_guard.py
 

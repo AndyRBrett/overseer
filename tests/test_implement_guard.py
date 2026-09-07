@@ -18,14 +18,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 import implement_guard as ig  # noqa: E402
 
+WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
+
 PRIMARY = "0 15 * * 1"
 CATCHUP = "0 17 * * 1"
 NOW = datetime(2026, 8, 31, 19, 0, tzinfo=timezone.utc)
 
 
-def _run(run_id, conclusion="success", at=None):
+def _run(run_id, conclusion="success", at=None, title="Hand filed issues to the implementer"):
     return SimpleNamespace(
-        id=run_id, conclusion=conclusion, created_at=at or (NOW - timedelta(hours=4)))
+        id=run_id, conclusion=conclusion, display_title=title,
+        created_at=at or (NOW - timedelta(hours=4)))
+
+
+def _dry_run(run_id, **kw):
+    kw.setdefault("title", f"Hand filed issues to the implementer {ig.DRY_RUN_MARKER}")
+    return _run(run_id, **kw)
 
 
 def test_the_dispatch_itself_never_asks():
@@ -35,6 +43,69 @@ def test_the_dispatch_itself_never_asks():
         run, reason = ig.should_run(schedule, [_run(1)], NOW)
         assert run is True, schedule
         assert "not a catch-up" in reason
+
+
+# ── the Cloudflare poke (2026-09-07) ─────────────────────────────────────
+
+def test_the_cloudflare_poke_is_guarded_like_a_catchup():
+    # It is redundancy for a cron GitHub dropped, not the dispatch. Unguarded it
+    # would fire a SECOND batch on every healthy Monday — three different issues,
+    # ~$4.50, arriving twenty minutes after the run it was covering for.
+    run, reason = ig.should_run(None, [_run(7)], NOW, event="repository_dispatch")
+    assert run is False
+    assert "already ran" in reason
+
+
+def test_the_cloudflare_poke_covers_a_dropped_cron():
+    # The 2026-09-07 shape: no run created at all for either the 15:00 cron or
+    # the 17:00 catch-up, so the poke is the week's only automatic chance.
+    run, reason = ig.should_run(None, [], NOW, event="repository_dispatch")
+    assert run is True
+    assert "no successful dispatch yet today" in reason
+
+
+def test_the_implement_workflow_listens_for_the_poke():
+    # A dispatch nothing listens for is accepted with 204 and reads as healthy.
+    workflow = (WORKFLOWS / "implement.yml").read_text(encoding="utf-8")
+    assert "repository_dispatch:" in workflow
+    assert "types: [implement]" in workflow
+    assert "FIRED_BY_EVENT: ${{ github.event_name }}" in workflow, (
+        "the guard cannot tell the poke from the dispatch without the event name")
+
+
+# ── a dry run hands nothing over (2026-09-07) ────────────────────────────
+
+def test_a_dry_run_is_not_todays_dispatch():
+    # dry_run DEFAULTS to true on a manual run, so looking at the queue before
+    # firing — the careful thing to do — would otherwise disarm every catch-up
+    # left in the day. On 09-07 that was the last one.
+    run, reason = ig.should_run(CATCHUP, [_dry_run(11)], NOW)
+    assert run is True
+    assert "no successful dispatch yet today" in reason
+
+
+def test_a_real_dispatch_after_a_dry_run_still_counts():
+    # The pair in the order they actually happen: look, then fire. The catch-up
+    # must see the second one.
+    runs = [_dry_run(11), _run(12)]
+    assert ig.should_run(CATCHUP, runs, NOW)[0] is False
+
+
+def test_the_workflow_marks_its_own_dry_runs():
+    # The guard reads the run TITLE because the API does not expose a run's
+    # workflow_dispatch inputs. If the marker in the workflow and the one here
+    # ever drift, dry runs go back to counting as dispatches — silently.
+    workflow = (WORKFLOWS / "implement.yml").read_text(encoding="utf-8")
+    assert "run-name:" in workflow
+    assert ig.DRY_RUN_MARKER in workflow
+    assert "inputs.dry_run &&" in workflow
+
+
+def test_a_run_with_no_title_counts_as_a_dispatch():
+    # Runs from before run-name existed. Conservative in the direction that can
+    # only skip a catch-up, never double-spend.
+    legacy = SimpleNamespace(id=13, conclusion="success", created_at=NOW - timedelta(hours=4))
+    assert ig.should_run(CATCHUP, [legacy], NOW)[0] is False
 
 
 def test_catchup_skips_when_today_already_dispatched():
@@ -114,9 +185,6 @@ def test_guard_never_fails_the_workflow(monkeypatch, tmp_path):
     monkeypatch.setenv("GITHUB_REPOSITORY", "AndyRBrett/overseer")
     assert ig.recent_runs() is None
     assert ig.main() == 0
-
-
-WORKFLOWS = Path(__file__).resolve().parent.parent / ".github" / "workflows"
 
 
 def test_catchup_schedules_match_the_workflow():
