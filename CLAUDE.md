@@ -31,7 +31,7 @@ The projects reviewed are `crypto-trading`, `coachvision`, `ufc-dashboard`, and
 Test deps are `pytest` and `pyyaml` (CI installs both alongside
 `requirements.txt`; neither is a runtime dependency).
 
-521 tests, under a second. There is no JS test runner, so dashboard behaviour is
+530 tests, under a second. There is no JS test runner, so dashboard behaviour is
 pinned from Python instead (see *Testing what has no test runner* below).
 
 `python scripts/pipeline_dryrun.py` runs the WHOLE pipeline end to end against
@@ -87,8 +87,11 @@ Each of these exists because the opposite already happened here.
    the workflow refuses them again. A test pushes
    `"opus --dangerously-skip-permissions"` through the dispatch path.
 6. **A pull request is where the automation stops.** Nothing merges itself.
-6b. **Every automated trigger asks `weekly_guard`; only `workflow_dispatch`
-   doesn't.** Two schedulers now aim at the same Monday (GitHub's crons and the
+6b. **Every automated trigger asks its guard; only `workflow_dispatch`
+   doesn't.** This is `weekly_guard` for the review and `implement_guard` for
+   the dispatcher — the latter only since 2026-09-07, when it asked the question
+   of the catch-up crons but not the primary, GitHub delivered the primary 3h55m
+   late after a manual run, and the day cost ~$9 instead of $4.50. Two schedulers now aim at the same Monday (GitHub's crons and the
    Cloudflare `repository_dispatch`), so "am I the review?" is the wrong
    question and "has today's review already landed?" is the right one. The
    14:00 cron used to run unguarded; against a second trigger that is a
@@ -240,6 +243,31 @@ Each of these exists because the opposite already happened here.
   each — both still landing after GitHub's own 15:00 and 17:00. `DISPATCH_EVENTS`
   maps a cron to a LIST for this reason, and `MONDAY_EVENTS` is what keeps the
   daily cron from asking for a $4.50 implementation run every morning.
+- **"Which trigger am I?" is the wrong question, and it cost $9.** `implement_guard`
+  asked whether today's dispatch had landed only of the crons it had listed as
+  catch-ups; `0 15 * * 1` was exempt because it *is* the dispatch. On 2026-09-07
+  GitHub delivered that primary cron at **18:55Z, 3h55m late**, after a manual
+  run at 17:32 had already handed over the day's three. The guard logged *"not a
+  catch-up run — this is the dispatch itself"* and dispatched three more: six
+  attempts, ~$9, on a Monday designed to cost $4.50 — the exact doubling the
+  module's own docstring exists to prevent, reached without any second scheduler
+  being involved. Note the test that should have caught it *passed*: it asserted
+  `CATCHUP_SCHEDULES` matched the workflow's crons, and it did — the list was
+  complete and its premise was wrong. The guard now asks EVERY automated trigger
+  and holds no list of crons at all, which also makes the check a hard per-day
+  cap rather than a rule that must classify a trigger correctly first. The
+  measured cost of one attempt that day was **$1.77**, not $1.50.
+- **The dispatcher must not run before the review it reads.** Two schedulers now
+  aim at the same Monday, so `implement` can be poked while the weekly review is
+  still filing this week's issues — and a dispatcher that fires early reads last
+  week's ledger and spends the week's budget on a stale queue. The guard checks
+  `docs/digest.json`'s `generated` for today's date (invariant 13 is what keeps
+  that field meaning "the review ran"; `refreshed` moves six times a day and
+  would answer a different question). The cost of the check is a week with no
+  review is also a week with no implementation — deliberate, since there is
+  nothing new to implement, but it is a second way for this stage to go quiet.
+  It is a skipped week of delivery, never a skipped alarm: the heartbeat still
+  trips on the standing-still digest within a day.
 - **A dry run is not a dispatch, and the guard could not tell.**
   `implement_guard.dispatched_today()` counted any green run today, and the API
   does not expose a run's `workflow_dispatch` inputs — so a `--dry-run` run, which
