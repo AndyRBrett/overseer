@@ -471,6 +471,42 @@
         "baseline_usd": 0.5706,
         "saved_usd": 0.1429
       }
+    },
+    {
+      "date": "2026-09-07",
+      "generated": "2026-09-07T14:11:15Z",
+      "status": "completed",
+      "summary": "ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. coachvision (0.45) \u2014 no activity for 6 cycle(s); 6 open ideas\n2. Trading bot (0.16) \u2014 win_rate is 33%; 2 open ideas\n3. UFC dashboard (0.07) \u2014 5 open ideas\n4. Overseer (0.01) \u2014 1 open idea\n\nIssues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) reported healthy/idle-but-functional with no new confirmed bugs; coachvision remains idle (no footage yet) but its self-test passed.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Expand exit_reasons taxonomy beyond \"stop_loss\" to cover take-profit/signal-flip/rotation-cap (effort: low, impact: medium): cheap change that reveals whether losses are forced vs. proactive exits.\n2. overseer \u2014 Add per-run token-usage/cost tracking widget (effort: low, impact: medium): quick win for cost visibility and catching runaway spend.\n3. coachvision \u2014 Add clip quality/completeness gate before frame processing (effort: low, impact: medium): avoids wasted compute as auto-ingest/mobile uploads bring messier footage.\n4. crypto-trading \u2014 Add per-strategy PnL/Sharpe attribution alongside per-asset breakdown (effort: medium, impact: high): isolates which strategy sleeves drive P&L, enabling reallocation.\n5. ufc-dashboard \u2014 Correlate alert magnitude with fight outcomes for predictive-accuracy scorecard (effort: medium, impact: high, extends #68): feeds ongoing threshold-calibration work.\n\nIMPLEMENTED (LAST 7 DAYS)\n- crypto-trading #42 \u2014 Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals (PR #62)\n- crypto-trading #41 \u2014 Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes (PR #61)\n- overseer #60 \u2014 Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation (PR #68)\n- overseer #50 \u2014 Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR (PR #56)\n- overseer #33 \u2014 Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals (PR #68)\n- overseer #25 \u2014 Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable (PR #68)\n- \u2026and 11 more merged.",
+      "counts": {
+        "tools": 16,
+        "errors": 0,
+        "issues": 0,
+        "enhancements": 5,
+        "duplicates_blocked": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.4285,
+        "baseline_usd": 0.5935,
+        "saved_usd": 0.165
+      }
     }
   ]
 }

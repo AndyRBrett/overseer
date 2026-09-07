@@ -1,9 +1,9 @@
 {
-  "generated": "2026-09-06T14:11:19Z",
+  "generated": "2026-09-07T14:11:15Z",
   "status": "completed",
-  "summary": "ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. coachvision (0.40) \u2014 no activity for 5 cycle(s); 5 open ideas\n2. Trading bot (0.13) \u2014 win_rate is 33%\n3. UFC dashboard (0.11) \u2014 4 open ideas; success_rate_7d is 68%\n\nIssues Found\n- None this week. Bug-Hunter reviewed all projects (crypto-trading, coachvision, ufc-dashboard, overseer) \u2014 no confirmed, diagnosable bugs. Crypto bot flagged as healthy despite weak performance, not a bug.\n\nTop Enhancement Ideas (ranked)\n1. overseer \u2014 Cross-project systemic-risk correlation widget (effort: low, impact: medium): Surfaces when multiple projects degrade simultaneously, hinting at shared root cause (infra/API/billing) \u2014 cheap to build, useful signal.\n2. crypto-trading \u2014 Correlated-cluster drawdown circuit breaker (effort: medium, impact: high): Cuts new entries into a specific overheating cluster (e.g. BTC/ETH) using existing correlation/drawdown data, independent of the global Sharpe breaker.\n3. crypto-trading \u2014 Signal-proximity trend tracking (effort: medium, impact: medium): Flags \"signal building\" momentum toward trigger thresholds instead of only point-in-time quiet-market reads.\n4. ufc-dashboard \u2014 Card-announcement ETA heuristic (effort: medium, impact: medium): Uses historical announcement-timing patterns to give an ETA for the 5 awaiting-card events instead of a static flag.\n5. coachvision \u2014 Configurable technique-taxonomy schema (effort: medium, impact: medium): Replaces hardcoded martial_arts taxonomy with a config-driven vocabulary, extending reporting to more disciplines.\n\nIMPLEMENTED (LAST 7 DAYS)\n- crypto-trading #42 \u2014 Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals (PR #62)\n- crypto-trading #41 \u2014 Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes (PR #61)\n- overseer #60 \u2014 Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation (PR #68)\n- overseer #50 \u2014 Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR (PR #56)\n- overseer #33 \u2014 Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals (PR #68)\n- overseer #25 \u2014 Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable (PR #68)\n- \u2026and 11 more merged.",
+  "summary": "ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. coachvision (0.45) \u2014 no activity for 6 cycle(s); 6 open ideas\n2. Trading bot (0.16) \u2014 win_rate is 33%; 2 open ideas\n3. UFC dashboard (0.07) \u2014 5 open ideas\n4. Overseer (0.01) \u2014 1 open idea\n\nIssues Found\n- None this week. All four projects (crypto-trading, coachvision, ufc-dashboard, overseer) reported healthy/idle-but-functional with no new confirmed bugs; coachvision remains idle (no footage yet) but its self-test passed.\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Expand exit_reasons taxonomy beyond \"stop_loss\" to cover take-profit/signal-flip/rotation-cap (effort: low, impact: medium): cheap change that reveals whether losses are forced vs. proactive exits.\n2. overseer \u2014 Add per-run token-usage/cost tracking widget (effort: low, impact: medium): quick win for cost visibility and catching runaway spend.\n3. coachvision \u2014 Add clip quality/completeness gate before frame processing (effort: low, impact: medium): avoids wasted compute as auto-ingest/mobile uploads bring messier footage.\n4. crypto-trading \u2014 Add per-strategy PnL/Sharpe attribution alongside per-asset breakdown (effort: medium, impact: high): isolates which strategy sleeves drive P&L, enabling reallocation.\n5. ufc-dashboard \u2014 Correlate alert magnitude with fight outcomes for predictive-accuracy scorecard (effort: medium, impact: high, extends #68): feeds ongoing threshold-calibration work.\n\nIMPLEMENTED (LAST 7 DAYS)\n- crypto-trading #42 \u2014 Portfolio-level correlation & concentration guard across BTC/ETH/SOL before acting on signals (PR #62)\n- crypto-trading #41 \u2014 Volatility-scaled adaptive breakout/exit thresholds so signals still fire in low-vol regimes (PR #61)\n- overseer #60 \u2014 Track enhancement-proposal outcome rate (shipped vs. closed-not-planned vs. still-open) per project to calibrate future idea generation (PR #68)\n- overseer #50 \u2014 Add a CI end-to-end dry-run job that executes the full weekly pipeline (all four read tools + digest generation) against fixture data on every PR (PR #56)\n- overseer #33 \u2014 Add semantic-similarity dedup check against open/closed GitHub issues before filing new enhancement proposals (PR #68)\n- overseer #25 \u2014 Compute a per-project \"attention score\" and rank projects on the dashboard by where action is most valuable (PR #68)\n- \u2026and 11 more merged.",
   "counts": {
-    "tools": 15,
+    "tools": 16,
     "errors": 0,
     "issues": 0,
     "enhancements": 5,
@@ -13,15 +13,15 @@
     "ok": 3,
     "total": 4,
     "issues": 0,
-    "enhancements": 0,
+    "enhancements": 5,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
       {
         "name": "coachvision",
         "status": "idle",
-        "detail": "no recent activity \u00b7 idle 5 cycles",
-        "cycles": 5,
+        "detail": "no recent activity \u00b7 idle 6 cycles",
+        "cycles": 6,
         "nudge": true
       }
     ]
@@ -29,37 +29,37 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-07T10:27:38Z",
+      "last_ok": "2026-09-07T14:11:15Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-07T10:27:38Z",
+      "last_ok": "2026-09-07T14:11:15Z",
       "blind_cycles": 0,
-      "idle_cycles": 5
+      "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-07T10:27:38Z",
+      "last_ok": "2026-09-07T14:11:15Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-07T10:27:38Z",
+      "last_ok": "2026-09-07T14:11:15Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.41,
+      "score": 0.45,
       "signals": {
-        "staleness": 0.8,
+        "staleness": 0.9,
         "errors": 0.0,
         "kpi": 0.0,
         "backlog": 0.6
       },
-      "why": "no activity for 5 cycle(s); 6 open ideas",
+      "why": "no activity for 6 cycle(s); 6 open ideas",
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
@@ -130,21 +130,21 @@
         "tier": "heavy",
         "calls": 1,
         "input": 2,
-        "output": 4096,
-        "cache_write": 17759,
+        "output": 3423,
+        "cache_write": 15270,
         "cache_read": 0,
-        "usd": 0.2134
+        "usd": 0.181
       },
       {
         "agent": "Idea-Agent",
         "model": "claude-sonnet-5",
         "tier": "light",
-        "calls": 3,
-        "input": 6,
-        "output": 5567,
-        "cache_write": 23976,
-        "cache_read": 40014,
-        "usd": 0.1854
+        "calls": 4,
+        "input": 8,
+        "output": 6985,
+        "cache_write": 23263,
+        "cache_read": 55219,
+        "usd": 0.2086
       },
       {
         "agent": "Reviewer",
@@ -152,131 +152,143 @@
         "tier": "light",
         "calls": 2,
         "input": 3,
-        "output": 996,
-        "cache_write": 3547,
-        "cache_read": 2137,
-        "usd": 0.0289
+        "output": 1370,
+        "cache_write": 4631,
+        "cache_read": 3163,
+        "usd": 0.0389
       }
     ],
     "priced": true,
     "heavy_model": "claude-opus-4-8",
-    "total_usd": 0.4277,
-    "baseline_usd": 0.5706,
-    "saved_usd": 0.1429,
-    "saved_pct": 25.0
+    "total_usd": 0.4285,
+    "baseline_usd": 0.5935,
+    "saved_usd": 0.165,
+    "saved_pct": 27.8
   },
   "timeline": [
     {
-      "ts": "14:08:52",
+      "ts": "14:08:42",
       "agent": "Telemetry",
       "label": "read_trading_bot_log (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:08:52",
+      "ts": "14:08:42",
       "agent": "Telemetry",
       "label": "read_volleyball_results (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:08:52",
+      "ts": "14:08:42",
       "agent": "Telemetry",
       "label": "read_ufc_scraper_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:08:52",
+      "ts": "14:08:42",
       "agent": "Telemetry",
       "label": "read_overseer_status (investigate)",
       "text": "ok"
     },
     {
-      "ts": "14:09:56",
+      "ts": "14:09:31",
       "agent": "Bug-Hunter",
       "label": "reasoning",
-      "text": "The trading bot looks healthy overall\u2014status is ok, well within SLA, no errors, and while pnl_90d is negative, that's a performance issue rather than a bug; zero signals acted on is explained by a quiet-market verdict. Now I'm checking coa\u2026",
-      "text_full": "The trading bot looks healthy overall\u2014status is ok, well within SLA, no errors, and while pnl_90d is negative, that's a performance issue rather than a bug; zero signals acted on is explained by a quiet-market verdict. Now I'm checking coachvision, which shows status ok but is flagged idle, suggesting it hasn't ingested any data yet. Checking coachvision further, it's within its 192-hour SLA at 145 hours, self-test passes with frames processed, no errors \u2014 this is expected idle behavior already tracked in existing issues, not a new bug. Now looking at the UFC dashboard, its 7-day success rate is 0.68 across 50 runs, meaning roughly a third are failing, yet last_error is null and the data is fresh with a recent run. I'm weighing whether this failure rate is anomalous or just normal variance from things like API retries, since there's no prior issue tracking this and no explicit error to point to. Digging into the event breakdown, everything looks healthy \u2014 no stale events, parse failures, or odds unavailable issues \u2014 which makes me lean toward the low success rate being expected scraper flakiness rather than a true regression, especially since there's no baseline to confirm it's dropped from a prior period. The overseer itself looks perfectly healthy: 4 runs, 100% success, no errors, last run 136 hours ago. Since it's a weekly runner and 168h is the full cadence, being 136h out is still within schedule \u2014 no staleness flag here. Going through the rest of the week's tools, nothing else stands out as a confirmed bug either \u2014 trading is underperforming but error-free, coachvision is idle but passing self-tests, and overseer is clean. The only real question mark left is UFC's 68% success rate over 50 runs, which I want to scrutinize more closely before deciding whether it warrants a filing. The guidance leans toward confirmed bugs only, and 0.68 without a last_error plus fresh recent data doesn't meet that bar. A 32% failure rate is real waste, but without knowing the ac\u2026"
+      "text": "Looking at the trading bot's telemetry, everything checks out fine \u2014 no errors, healthy status, and the negative PnL and low win rate reflect performance rather than a bug, with rejected signals being normal expected behavior. Now I'm movi\u2026",
+      "text_full": "Looking at the trading bot's telemetry, everything checks out fine \u2014 no errors, healthy status, and the negative PnL and low win rate reflect performance rather than a bug, with rejected signals being normal expected behavior. Now I'm moving on to check the next project's telemetry data. For the vision pipeline: idle status with no footage ingested, but the self-test passed fine, so this is just an idle state, not a broken one, and I already have this documented. For the UFC dashboard: success rate and data freshness all look healthy with no errors. I'm scanning through the alert data for anything that looks clearly wrong \u2014 checking the movement percentages and probability shifts on specific fight alerts, but the large swings seem plausible given big line moves rather than indicating a bug. I'm also looking at whether any events reference stale or past dates incorrectly. For the movement alert thresholds, I'm checking tier-specific thresholds against actual alert magnitudes \u2014 the numbers line up correctly, so no issue there. The overseer job also looks healthy: consistent success rate, recent run, no errors logged. Stepping back, I'm asking myself whether there are any confirmed bugs this week at all, since everything I've checked so far seems fine. Looking at the trading bot's 90-day P&L, it's negative, but that's already a known performance concern covered by an existing circuit breaker ticket, not a new bug. Checking the coachvision self-test, the frame counts of zero make sense since there's no real footage being processed. Then I'm scrutinizing the trading benchmark numbers \u2014 the notional and cost basis figures reconcile correctly across BTC and ETH, though I notice the position count of 7 doesn't match the asset breakdown of just 2, so I'm digging into whether that's explained by the account-level breakdown instead. After tracing through, it turns out the 7 positions are simply spread across multiple accounts but concentrated in only two assets, so nothing is\u2026"
     },
     {
-      "ts": "14:10:31",
+      "ts": "14:09:58",
       "agent": "Idea-Agent",
       "label": "reasoning",
-      "text": "I'm brainstorming project ideas while checking for duplicates against existing work. For the trading bot, I'm considering a trend chart for signal proximity over time versus just a snapshot, and thinking about per-cluster stop-loss mechani\u2026",
-      "text_full": "I'm brainstorming project ideas while checking for duplicates against existing work. For the trading bot, I'm considering a trend chart for signal proximity over time versus just a snapshot, and thinking about per-cluster stop-loss mechanisms since correlated cluster exposure already shipped. For coachvision, since idle escalation is already covered, I'm exploring a custom technique-tagging taxonomy or multi-camera angle merging as fresh directions. For the UFC dashboard, I'm weighing a card confidence score estimating announcement likelihood versus automatic archival of stale event data, since fighter record scraping is already an open item. Then for oversight itself, since proposal quality feedback is already shipped, I'm considering dashboard staleness detection with cache-busting, API cost tracking across projects, or recording implementation diffs in the tracer. Now I'm narrowing toward four or five concrete ideas spanning all repos, starting with a crypto-trading proposal to visualize signal-proximity metric trends over time so regime shifts can be caught before they trigger, and a second one adding a correlated-cluster drawdown circuit breaker that reduces position sizing when groups like BTC/ETH move together past a threshold. I need to differentiate this cluster breaker from the existing correlation guard and rolling risk circuit breaker so it doesn't get flagged as duplicate \u2014 the key distinction is a cluster-specific dynamic stop versus the overall Sharpe-based breaker. For coachvision, I'm proposing a configurable technique taxonomy so coaches can tag techniques beyond the default set for multi-discipline support. For the UFC dashboard, I'm considering a heuristic that predicts card-announcement timing based on historical patterns, which is distinct from the existing time-to-event budget allocator since it specifically targets awaiting-card events. And for overseer, I'm thinking about feeding proposal outcomes back into the effort/impact calculation. Fo\u2026"
+      "text": "I'm brainstorming improvement ideas across the four projects, starting with the crypto trading bot: tracking actual slippage instead of leaving it null, and expanding exit reason categories beyond just stop_loss for richer analytics. For c\u2026",
+      "text_full": "I'm brainstorming improvement ideas across the four projects, starting with the crypto trading bot: tracking actual slippage instead of leaving it null, and expanding exit reason categories beyond just stop_loss for richer analytics. For coachvision, I'm weighing footage generation and idle-alerting ideas but finding they overlap with existing closed issues, so I'm considering something more distinct like scheduled calendar reminders for training sessions to reduce idle periods. For the UFC dashboard, I'm thinking about tracking closing line value against past movement alerts to see how well they predicted actual outcomes. I'm also considering cost/budget tracking for LLM API usage in the Overseer pipeline itself, and a time-to-ship metric distinct from the existing attention score. Now I'm narrowing down to a shortlist across projects, starting with slippage tracking for the crypto bot to measure execution quality by comparing actual fills to signal prices, and expanding exit-reason categorization since the current taxonomy doesn't yet distinguish trailing stops from time-based exits. For coachvision, I'm considering an automatic footage quality/completeness check before processing, rejecting bad clips early on resolution, duration, or lighting issues, since a proactive calendar-reminder idea felt too similar to the existing idle-escalation feature. For the UFC dashboard, I'm exploring closing-line-value backtest tracking that correlates line-movement alerts with actual fight outcomes to validate whether the alerts are useful signals. For Overseer, I'm weighing an LLM/API token-usage and cost-tracking widget per run to monitor pipeline operating costs, distinct from the attention score idea, versus adding retry/backoff logic for individual read-tool failures so partial data doesn't block the weekly digest. I'm settling on five ideas total spanning the projects\u2014two crypto, one coachvision, one UFC, one Overseer\u2014and now need to run duplicate checks on each before fi\u2026"
     },
     {
-      "ts": "14:10:31",
+      "ts": "14:09:58",
+      "agent": "Idea-Agent",
+      "label": "check_duplicate (tool)",
+      "text": "{\"status\": \"ok\", \"verdict\": \"similar\", \"top_score\": 0.45, \"threshold\": 0.75, \"matches\": [{\"repo\": \"AndyRBrett/crypto-trading\", \"number\": 23, \"title\": \"Log per-\u2026"
+    },
+    {
+      "ts": "14:09:58",
       "agent": "Idea-Agent",
       "label": "check_duplicate (tool)",
       "text": "{\"status\": \"ok\", \"verdict\": \"clear\", \"top_score\": null, \"threshold\": 0.75, \"matches\": []}"
     },
     {
-      "ts": "14:10:31",
+      "ts": "14:09:58",
       "agent": "Idea-Agent",
       "label": "check_duplicate (tool)",
       "text": "{\"status\": \"ok\", \"verdict\": \"clear\", \"top_score\": null, \"threshold\": 0.75, \"matches\": []}"
     },
     {
-      "ts": "14:10:31",
+      "ts": "14:09:58",
+      "agent": "Idea-Agent",
+      "label": "check_duplicate (tool)",
+      "text": "{\"status\": \"ok\", \"verdict\": \"similar\", \"top_score\": 0.461, \"threshold\": 0.75, \"matches\": [{\"repo\": \"AndyRBrett/ufc-dashboard\", \"number\": 68, \"title\": \"Track cl\u2026"
+    },
+    {
+      "ts": "14:09:58",
       "agent": "Idea-Agent",
       "label": "check_duplicate (tool)",
       "text": "{\"status\": \"ok\", \"verdict\": \"clear\", \"top_score\": null, \"threshold\": 0.75, \"matches\": []}"
     },
     {
-      "ts": "14:10:31",
+      "ts": "14:10:15",
+      "agent": "Idea-Agent",
+      "label": "reasoning",
+      "text": "The CLV idea, though scoring below the duplicate threshold, is essentially the same core concept as #68's already-shipped CLV tracking with sharp/square flagging\u2014I should either meaningfully differentiate it by focusing on correlating CLV \u2026",
+      "text_full": "The CLV idea, though scoring below the duplicate threshold, is essentially the same core concept as #68's already-shipped CLV tracking with sharp/square flagging\u2014I should either meaningfully differentiate it by focusing on correlating CLV with actual fight outcomes to measure predictive accuracy, or drop it entirely. Since the verdict was \"similar\" not \"duplicate,\" propose_enhancement won't require an extends field, but I'll include extends: 68 anyway to be transparent that this builds on the existing feature, framing my contribution as outcome-validation rather than just pattern-flagging. I need to check the slippage idea too, since it seems similar to already-shipped #23 which logs per-signal rejection reasons and fill slippage. Actually, the null slippage_bps in telemetry is probably just because recent decisions are all holds with no actual trades, not a gap in the #23 implementation. That means the slippage idea is essentially a duplicate, so I should drop it and think of a different crypto-related feature not already covered by open issues like #65 or basic optimization scheduling. I notice there's per-asset PnL attribution already shipped (#51), but no equivalent breakdown by strategy/account sleeve (breakout, long_short, regime, trend) even though by_account unrealized PnL data exists. That seems like a solid new idea worth checking for duplicates, while exit_reasons taxonomy, coachvision quality gate, and overseer token cost all look clear to keep as-is."
+    },
+    {
+      "ts": "14:10:15",
       "agent": "Idea-Agent",
       "label": "check_duplicate (tool)",
       "text": "{\"status\": \"ok\", \"verdict\": \"clear\", \"top_score\": null, \"threshold\": 0.75, \"matches\": []}"
     },
     {
-      "ts": "14:10:31",
-      "agent": "Idea-Agent",
-      "label": "check_duplicate (tool)",
-      "text": "{\"status\": \"ok\", \"verdict\": \"clear\", \"top_score\": null, \"threshold\": 0.75, \"matches\": []}"
-    },
-    {
-      "ts": "14:10:49",
+      "ts": "14:10:40",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Track signal-proximity metric trends over time and alert on convergence toward trigger thresholds (effort medium, impact medium)"
+      "text": "AndyRBrett/crypto-trading \u2014 Add per-strategy-account PnL/Sharpe attribution (breakout/long_short/regime/trend) alongside existing per-asset breakdown (effort medium, impact high)"
     },
     {
-      "ts": "14:10:52",
+      "ts": "14:10:44",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/crypto-trading \u2014 Add correlated-cluster drawdown circuit breaker distinct from portfolio Sharpe-based sizing cut (effort medium, impact high)"
+      "text": "AndyRBrett/crypto-trading \u2014 Expand exit_reasons taxonomy to cover take-profit, signal-flip, and rotation-cap exits (effort low, impact medium)"
     },
     {
-      "ts": "14:10:56",
+      "ts": "14:10:48",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/coachvision \u2014 Add configurable technique-taxonomy schema for multi-discipline tagging (effort medium, impact medium)"
+      "text": "AndyRBrett/coachvision \u2014 Add automated clip quality/completeness gate before frame processing (effort low, impact medium)"
     },
     {
-      "ts": "14:10:59",
+      "ts": "14:10:51",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/ufc-dashboard \u2014 Add card-announcement ETA heuristic for awaiting-card events (effort medium, impact medium)"
+      "text": "AndyRBrett/ufc-dashboard \u2014 Correlate movement-alert magnitude with actual fight outcomes to score alert predictive accuracy (effort medium, impact high)"
     },
     {
-      "ts": "14:11:02",
+      "ts": "14:10:55",
       "agent": "Idea-Agent",
       "label": "propose_enhancement (idea)",
-      "text": "AndyRBrett/overseer \u2014 Add cross-project systemic-risk correlation widget to overseer dashboard (effort low, impact medium)"
+      "text": "AndyRBrett/overseer \u2014 Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard (effort low, impact medium)"
     },
     {
-      "ts": "14:11:17",
+      "ts": "14:11:10",
       "agent": "Reviewer",
       "label": "reasoning",
-      "text": "No bugs reported this week, so I'll note that in the digest. For enhancement ideas, I'm ranking them by effort and impact\u2014starting with the overseer improvement since it's low effort with medium impact, then ordering the remaining medium-e\u2026",
-      "text_full": "No bugs reported this week, so I'll note that in the digest. For enhancement ideas, I'm ranking them by effort and impact\u2014starting with the overseer improvement since it's low effort with medium impact, then ordering the remaining medium-effort items by impact level, putting the crypto-trading drawdown breaker first since it has high impact, followed by the signal-proximity trend work and the coachvision taxonomy item. I'll keep all five ideas since none feel like noise, just make sure each gets a tight one-liner in the final ranking."
+      "text": "No bugs found here, so I'm shifting to ranking improvement ideas by effort versus impact\u2014things like PnL attribution, expanding exit reasons, clip quality gating, alert accuracy correlation, and token usage tracking. Since none are pure lo\u2026",
+      "text_full": "No bugs found here, so I'm shifting to ranking improvement ideas by effort versus impact\u2014things like PnL attribution, expanding exit reasons, clip quality gating, alert accuracy correlation, and token usage tracking. Since none are pure low-effort/high-impact, I'm prioritizing the low-effort, medium-impact options first."
     },
     {
-      "ts": "14:11:17",
+      "ts": "14:11:10",
       "agent": "Reviewer",
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
     }
-  ],
-  "refreshed": "2026-09-07T10:27:38Z"
+  ]
 }
