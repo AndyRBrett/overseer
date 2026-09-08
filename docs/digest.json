@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-08T09:49:04Z",
+      "last_ok": "2026-09-08T14:38:37Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-08T09:49:04Z",
+      "last_ok": "2026-09-08T14:38:37Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-08T09:49:04Z",
+      "last_ok": "2026-09-08T14:38:37Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-08T09:49:04Z",
+      "last_ok": "2026-09-08T14:38:37Z",
       "blind_cycles": 0
     }
   },
@@ -291,7 +291,7 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-08T09:49:04Z",
+  "refreshed": "2026-09-08T14:38:37Z",
   "systemic_risk": {
     "flagged": true,
     "projects": [
