@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-08T21:55:42Z",
+      "last_ok": "2026-09-09T00:20:45Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-08T21:55:42Z",
+      "last_ok": "2026-09-09T00:20:45Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-08T21:55:42Z",
+      "last_ok": "2026-09-09T00:20:45Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-08T21:55:42Z",
+      "last_ok": "2026-09-09T00:20:45Z",
       "blind_cycles": 0
     }
   },
@@ -69,14 +69,14 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.171,
+      "score": 0.245,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.63,
+        "kpi": 1.0,
         "backlog": 0.3
       },
-      "why": "win_rate is 33%; 3 open ideas",
+      "why": "pnl is -67.5; 3 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
@@ -291,7 +291,7 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-08T21:55:42Z",
+  "refreshed": "2026-09-09T00:20:45Z",
   "systemic_risk": {
     "flagged": true,
     "projects": [
@@ -309,7 +309,7 @@
     "last_30d": {
       "total_usd": 2.1913,
       "runs": 6,
-      "unpriced_runs": 2
+      "unpriced_runs": 1
     }
   }
 }
