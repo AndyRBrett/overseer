@@ -23,7 +23,8 @@
 #   1. Add secret ANTHROPIC_API_KEY.
 #   2. Give the agent a token that makes its pull requests get CI — see the
 #      note below. Without one everything still runs; the PRs just arrive
-#      unchecked, and the workflow says so in its log.
+#      unchecked, and the workflow says so in its log. This is the step people
+#      skip, and skipping it is invisible until a P1 reaches main.
 #   3. Fill in the toolchain + test command below.
 #   4. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
 #      Actions: write and Issues: write on this repo — otherwise the dispatch
@@ -37,6 +38,22 @@
 # suite did not catch. Give it a token of its own and your normal checks run on
 # its PRs like any other contributor's.
 #
+# HOW COMPLETELY THIS SILENCES THINGS, measured in the overseer repo: 72 commits
+# pushed to main by ledger-refresh with the built-in token produced ZERO runs of
+# a Tests workflow that triggers `on: push: branches: [main]`. Not a red run, not
+# a skipped one — no run. That is the same suppression the agent's PRs get, on a
+# branch someone would have noticed.
+#
+# TWO THINGS ARE MISSING, and they are not the same thing. Your CI needs a
+# WORKFLOW RUN, which only a non-GITHUB_TOKEN credential creates — there is no
+# way around that. Codex is a separate vendor's App, and it auto-reviews pull
+# requests opened by a person: in the overseer repo #81 and #83 got a review
+# unasked, and #78 and #82, opened by the built-in token, got none until a human
+# typed `@codex review` by hand. A token fixes both at once, because a PR opened
+# with one is an ordinary PR. The implementer's prompt also asks for the Codex
+# review itself now, which needs no credential — treat that as insurance for a
+# repo you have not given a token to yet, not as the fix.
+#
 # TWO WAYS, and they are not interchangeable:
 #
 #   PREFERRED — a GitHub App. Create one, install it on this repo, and add its
@@ -49,10 +66,26 @@
 #   fallback would not engage and every run after the first hour would fail
 #   authentication, an hour after you last saw it work.
 #
-#   OTHERWISE — a personal access token as OVERSEER_PR_TOKEN. It works and it
-#   never expires, which is also the problem: it carries your whole account for
-#   as long as it exists, and it is being handed to an agent running Bash. Scope
-#   it to this repo alone.
+#   OTHERWISE — a FINE-GRAINED personal access token as OVERSEER_PR_TOKEN.
+#
+#   Create it while signed in as a MACHINE USER, not as yourself. This repo's
+#   pipeline already commits as `overseer-bot`; a token belonging to that
+#   account puts a machine account in the agent's Bash session instead of your
+#   own, and — the part that is not just hygiene — the pull requests then arrive
+#   authored by `overseer-bot` rather than by you. A PR that looks human-written
+#   in your own list is a real cost here: the whole reason this file exists is
+#   that the change with the least human authorship was getting the least
+#   scrutiny, and an author line that hides which ones those are makes that
+#   worse.
+#
+#   Set an EXPIRY — 90 days is a reasonable default. A fine-grained token can be
+#   given one (7/30/60/90 days, or custom up to 366); "no expiration" is a choice
+#   you have to make, not a property of the thing. Unlike an App token, expiry
+#   here is safe: the run fails loudly on a 401 rather than silently falling back.
+#
+#   Scope it to THIS REPO ALONE. One token per repo, never one token spanning
+#   all four — the agent runs Bash, and a token scoped to four repos is write
+#   access to four repos in every single run.
 #
 # EITHER WAY IT NEEDS THREE PERMISSIONS: contents:write, pull-requests:write and
 # issues:write. Not two. This token is the credential for every `gh` command the

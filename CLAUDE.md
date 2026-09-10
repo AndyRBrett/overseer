@@ -178,6 +178,22 @@ Each of these exists because the opposite already happened here.
   `gh issue view` and closes obsolete issues with `gh issue close`. Contents +
   Pull requests looks like least privilege and breaks the close path, which
   quietly re-buys the same investigation every week.
+  **How total the suppression is, measured here:** 72 commits pushed to `main`
+  by `ledger-refresh` with the built-in token produced **zero** runs of
+  `tests.yml`, which triggers on `push` to `main`. Not a red run, not a skipped
+  one — no run at all. That is the same silence the agent's PRs get, sitting on
+  the default branch where it was easier to miss.
+  And it is really TWO gaps with one cause. CI needs a **workflow run**, which
+  only a non-`GITHUB_TOKEN` credential creates. Codex is a separate vendor's App
+  that auto-reviews a PR opened by a **person**: #81 and #83 got a review
+  unasked; #78 and #82 got none, and #78 sat from 17:38Z until a human typed
+  `@codex review` at 20:53Z — the review that found its P1 landed at 20:56Z. One
+  credential fixes both, because a PR opened with one is an ordinary PR. The
+  implementer's prompt now also asks Codex itself, which costs nothing and needs
+  no credential — but whether Codex honours a mention from `github-actions[bot]`
+  is **unverified**, and #78 is mild evidence against it, since auto-review
+  skipped that PR for being bot-opened. Insurance for a repo with no token yet;
+  not the fix.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.
