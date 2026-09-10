@@ -466,7 +466,12 @@ next person doesn't undo it.
 OpenAI Codex auto-reviews PRs in this repo. It triggers when a PR
 is opened for review, when a draft is marked ready, or on a
 `@codex review` comment. Findings come back as comments from
-chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction.
+chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction —
+but on PR #84 that pass ALSO arrived as an issue comment ("Codex
+Review: Didn't find any major issues"), and `GET
+/repos/{owner}/{repo}/pulls/{n}/reviews` stayed empty throughout.
+Anything checking for a verdict must read `/issues/{n}/comments`
+and `/issues/{n}/reactions`, not the pull-request reviews endpoint.
 
 - Default: do not merge right after opening a PR — open it, then
   stop. If I say to merge, merge.
