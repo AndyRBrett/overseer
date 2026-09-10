@@ -178,6 +178,22 @@ Each of these exists because the opposite already happened here.
   `gh issue view` and closes obsolete issues with `gh issue close`. Contents +
   Pull requests looks like least privilege and breaks the close path, which
   quietly re-buys the same investigation every week.
+  **How total the suppression is, measured here:** 72 commits pushed to `main`
+  by `ledger-refresh` with the built-in token produced **zero** runs of
+  `tests.yml`, which triggers on `push` to `main`. Not a red run, not a skipped
+  one — no run at all. That is the same silence the agent's PRs get, sitting on
+  the default branch where it was easier to miss.
+  And it is really TWO gaps with one cause. CI needs a **workflow run**, which
+  only a non-`GITHUB_TOKEN` credential creates. Codex is a separate vendor's App
+  that auto-reviews a PR opened by a **person**: #81 and #83 got a review
+  unasked; #78 and #82 got none, and #78 sat from 17:38Z until a human typed
+  `@codex review` at 20:53Z — the review that found its P1 landed at 20:56Z. One
+  credential fixes both, because a PR opened with one is an ordinary PR. The
+  implementer's prompt now also asks Codex itself, which costs nothing and needs
+  no credential — but whether Codex honours a mention from `github-actions[bot]`
+  is **unverified**, and #78 is mild evidence against it, since auto-review
+  skipped that PR for being bot-opened. Insurance for a repo with no token yet;
+  not the fix.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.
@@ -459,6 +475,23 @@ chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction.
   call and reasoning before changing code.
 - `@codex address that feedback` makes Codex push the fix itself.
   Only do that if I ask.
+
+**Codex needs an environment for the repo, and without one it does nothing.**
+On 2026-09-10 PR #84 opened, Codex fired unasked within three minutes — and
+said only *"To use Codex here, create an environment for this repo"*. Not a
+review, not the 👍 of a clean pass: a prerequisite nobody had written down,
+configured per repo at `chatgpt.com/codex/cloud/settings/environments`. The
+implementer cannot warn about this. Its warning is about the TOKEN, and with a
+token present everything on GitHub's side is correct while the reviews simply
+never come — so installing the token that morning would have bought CI, no
+review, and nothing anywhere saying so.
+
+**Give a `@codex review` three minutes before deciding it was ignored.** The
+same day, a mention at 14:07:00Z was answered at 14:10:10Z. A poll that gave up
+at 14:10:00Z reported the mention path dead, and a design change was argued on
+top of that for a full message before the review landed ten seconds later. The
+auto-review on PR-open is the one that answers fastest; the mention is not
+slower than a human's patience by much, but it is slower than a 150-second poll.
 
 In remote/web sessions there is no `gh` CLI — use the GitHub MCP tools
 (`pull_request_read`, `add_issue_comment`) for the same steps.

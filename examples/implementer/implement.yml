@@ -23,7 +23,8 @@
 #   1. Add secret ANTHROPIC_API_KEY.
 #   2. Give the agent a token that makes its pull requests get CI — see the
 #      note below. Without one everything still runs; the PRs just arrive
-#      unchecked, and the workflow says so in its log.
+#      unchecked, and the workflow says so in its log. This is the step people
+#      skip, and skipping it is invisible until a P1 reaches main.
 #   3. Fill in the toolchain + test command below.
 #   4. In the OVERSEER repo, make sure OVERSEER_GITHUB_TOKEN has
 #      Actions: write and Issues: write on this repo — otherwise the dispatch
@@ -37,6 +38,27 @@
 # suite did not catch. Give it a token of its own and your normal checks run on
 # its PRs like any other contributor's.
 #
+# HOW COMPLETELY THIS SILENCES THINGS, measured in the overseer repo: 72 commits
+# pushed to main by ledger-refresh with the built-in token produced ZERO runs of
+# a Tests workflow that triggers `on: push: branches: [main]`. Not a red run, not
+# a skipped one — no run. That is the same suppression the agent's PRs get, on a
+# branch someone would have noticed.
+#
+# TWO THINGS ARE MISSING, and they are not the same thing. Your CI needs a
+# WORKFLOW RUN, which only a non-GITHUB_TOKEN credential creates — there is no
+# way around that. Codex is a separate vendor's App, and it auto-reviews pull
+# requests opened by a person: in the overseer repo #81 and #83 got a review
+# unasked, and #78 and #82, opened by the built-in token, got none until a human
+# typed `@codex review` by hand. A token fixes both at once, because a PR opened
+# with one is an ordinary PR. The implementer's prompt also asks for the Codex
+# review itself now, which needs no credential — treat that as insurance for a
+# repo you have not given a token to yet, not as the fix.
+#
+# AND CODEX NEEDS AN ENVIRONMENT FOR THE REPO before it will review anything.
+# Nothing in this workflow can detect that: it warns about the TOKEN, and with a
+# token present everything on this side is correct while reviews silently never
+# arrive. One per repo, at chatgpt.com/codex/cloud/settings/environments.
+#
 # TWO WAYS, and they are not interchangeable:
 #
 #   PREFERRED — a GitHub App. Create one, install it on this repo, and add its
@@ -49,10 +71,39 @@
 #   fallback would not engage and every run after the first hour would fail
 #   authentication, an hour after you last saw it work.
 #
-#   OTHERWISE — a personal access token as OVERSEER_PR_TOKEN. It works and it
-#   never expires, which is also the problem: it carries your whole account for
-#   as long as it exists, and it is being handed to an agent running Bash. Scope
-#   it to this repo alone.
+#   OTHERWISE — a FINE-GRAINED personal access token as OVERSEER_PR_TOKEN,
+#   created by the account that OWNS this repo.
+#
+#   It has to be the owner, and this is the trap. A fine-grained token is scoped
+#   to a SINGLE resource owner and reaches only repositories under it; being an
+#   outside collaborator on another person's repo does not bridge that gap. So a
+#   separate machine user CANNOT create one for a repo owned by a person. The
+#   token it produces authenticates perfectly and then 404s on the agent's first
+#   `gh issue view`, which reads like a permissions typo rather than a
+#   credential that was never capable of the job. This file recommended exactly
+#   that setup until Codex flagged it on PR #84, before anyone had followed it.
+#
+#   What owner-creating it costs: the pull requests arrive authored by YOU, so
+#   the author column no longer says which changes were machine-written — and
+#   the whole reason this file exists is that the least human-authored change
+#   was getting the least scrutiny. Live with it anyway. The branch is
+#   `overseer/issue-<n>`, the body ends `Closes #<n>`, and the issue carries
+#   `overseer:implementing`; the provenance is legible three other ways.
+#
+#   IF YOU WANT THE BOT AUTHOR LINE, the machine user needs a CLASSIC token,
+#   which does work as a collaborator. Know what you are buying: classic scopes
+#   are not per-repo, so `repo` hands that account's full write access to EVERY
+#   repo it can reach, on every run, to an agent running Bash. The owner's
+#   fine-grained token is one repo and three permissions. Prefer it.
+#
+#   Set an EXPIRY — 90 days is a reasonable default. A fine-grained token can be
+#   given one (7/30/60/90 days, or custom up to 366); "no expiration" is a choice
+#   you have to make, not a property of the thing. Unlike an App token, expiry
+#   here is safe: the run fails loudly on a 401 rather than silently falling back.
+#
+#   Scope it to THIS REPO ALONE. One token per repo, never one token spanning
+#   all four — the agent runs Bash, and a token scoped to four repos is write
+#   access to four repos in every single run.
 #
 # EITHER WAY IT NEEDS THREE PERMISSIONS: contents:write, pull-requests:write and
 # issues:write. Not two. This token is the credential for every `gh` command the
