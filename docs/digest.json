@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-10T15:46:48Z",
+      "last_ok": "2026-09-10T18:33:13Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-10T15:46:48Z",
+      "last_ok": "2026-09-10T18:33:13Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-10T15:46:48Z",
+      "last_ok": "2026-09-10T18:33:13Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-10T15:46:48Z",
+      "last_ok": "2026-09-10T18:33:13Z",
       "blind_cycles": 0
     }
   },
@@ -69,6 +69,23 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
+      "score": 0.245,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 1.0,
+        "backlog": 0.3
+      },
+      "why": "pnl is -39.3; 3 open ideas",
+      "name": "Trading bot",
+      "status": "ok",
+      "plain": "Trading bot is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
+      "action": "Have a look at its numbers.",
+      "notable": true,
+      "repo": "AndyRBrett/crypto-trading"
+    },
+    {
       "score": 0.09,
       "signals": {
         "staleness": 0.0,
@@ -84,23 +101,6 @@
       "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
-    },
-    {
-      "score": 0.045,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.0,
-        "backlog": 0.3
-      },
-      "why": "3 open ideas",
-      "name": "Trading bot",
-      "status": "ok",
-      "plain": "Trading bot has 3 ideas waiting for someone to look at",
-      "short": "has 3 ideas waiting for someone to look at",
-      "action": "Some ideas are waiting for you to look at them.",
-      "notable": false,
-      "repo": "AndyRBrett/crypto-trading"
     },
     {
       "score": 0.0,
@@ -120,7 +120,7 @@
       "repo": "AndyRBrett/overseer"
     }
   ],
-  "headline": "coachvision is running, but nothing has happened there lately.",
+  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -291,10 +291,14 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-10T15:46:48Z",
+  "refreshed": "2026-09-10T18:33:13Z",
   "systemic_risk": {
-    "flagged": false,
-    "projects": []
+    "flagged": true,
+    "projects": [
+      "coachvision",
+      "Trading bot"
+    ],
+    "message": "coachvision, Trading bot are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
   "cost_trend": {
     "last_7d": {
