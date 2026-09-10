@@ -974,6 +974,107 @@
       "url": "https://github.com/AndyRBrett/coachvision/issues/21"
     },
     {
+      "closed_at": "2026-08-13T21:58:43+00:00",
+      "created_at": "2026-07-13T16:21:59+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 51,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Detect bout-replacement/fighter-swap events to suppress phantom line-movement alerts",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/51"
+    },
+    {
+      "closed_at": "2026-08-13T21:58:30+00:00",
+      "created_at": "2026-07-02T15:29:46+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 22,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Persist per-bout odds time series and render a sparkline of line movement to fight night",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/22"
+    },
+    {
+      "closed_at": "2026-08-13T21:58:20+00:00",
+      "created_at": "2026-07-06T16:49:34+00:00",
+      "delivered_by": "hand",
+      "effort": "low",
+      "fix_ref": "PR #69",
+      "fix_sha": "1150643",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 26,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Surface main-event line moves in a pinned section and convert odds to implied win probability",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/26"
+    },
+    {
+      "closed_at": "2026-08-13T21:58:09+00:00",
+      "created_at": "2026-07-13T16:22:02+00:00",
+      "delivered_by": "hand",
+      "effort": "low",
+      "fix_ref": "PR #69",
+      "fix_sha": "1150643",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 52,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Rank and badge line-movement alerts by main-event weighting and time-to-event",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/52"
+    },
+    {
+      "closed_at": "2026-08-13T21:57:57+00:00",
+      "created_at": "2026-07-02T15:29:43+00:00",
+      "delivered_by": "hand",
+      "effort": "low",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 21,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "duplicate",
+      "title": "Push notifications for main-event line moves above the movement_alert_threshold",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/21"
+    },
+    {
       "closed_at": "2026-08-13T21:57:48+00:00",
       "created_at": "2026-08-13T20:52:36+00:00",
       "delivered_by": "hand",
@@ -1758,7 +1859,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-10T14:30:57Z",
+  "generated": "2026-09-10T15:46:36Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1798,30 +1899,30 @@
         "shipped": 21
       },
       "AndyRBrett/ufc-dashboard": {
-        "duplicate": 0,
+        "duplicate": 1,
         "in_flight": 0,
-        "not_planned": 0,
+        "not_planned": 1,
         "open": 6,
-        "proposed": 10,
-        "reject_rate": 0.0,
+        "proposed": 15,
+        "reject_rate": 0.222,
         "sample": "sufficient",
-        "settled": 4,
-        "ship_rate": 1.0,
-        "shipped": 4
+        "settled": 9,
+        "ship_rate": 0.778,
+        "shipped": 7
       }
     },
     "min_settled": 4,
     "overall": {
-      "duplicate": 10,
+      "duplicate": 11,
       "in_flight": 0,
-      "not_planned": 6,
+      "not_planned": 7,
       "open": 13,
-      "proposed": 84,
-      "reject_rate": 0.225,
+      "proposed": 89,
+      "reject_rate": 0.237,
       "sample": "sufficient",
-      "settled": 71,
-      "ship_rate": 0.775,
-      "shipped": 55
+      "settled": 76,
+      "ship_rate": 0.763,
+      "shipped": 58
     }
   },
   "queue": {
@@ -1842,16 +1943,16 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.727,
-    "duplicate": 10,
-    "duplicate_rate": 0.115,
+    "delivery_rate": 0.728,
+    "duplicate": 11,
+    "duplicate_rate": 0.12,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
-    "not_planned": 8,
+    "not_planned": 9,
     "open": 13,
-    "proposed": 87,
-    "shipped": 56,
-    "shipped_before_implementer": 34,
+    "proposed": 92,
+    "shipped": 59,
+    "shipped_before_implementer": 37,
     "shipped_by_hand": 18,
     "shipped_by_implementer": 4
   }
