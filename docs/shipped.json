@@ -1,6 +1,29 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-10T02:12:00+00:00",
+      "created_at": "2026-09-07T14:10:46+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "fix_ref": "PR #44",
+      "fix_sha": "47605d5",
+      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 43,
+      "repo": "AndyRBrett/coachvision",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add automated clip quality/completeness gate before frame processing",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/43"
+    },
+    {
       "closed_at": "2026-09-07T21:41:32+00:00",
       "created_at": "2026-09-07T14:10:53+00:00",
       "delivered_by": "implementer",
@@ -124,28 +147,6 @@
       "status": "open",
       "title": "Correlate movement-alert magnitude with actual fight outcomes to score alert predictive accuracy",
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/117"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-09-07T14:10:46+00:00",
-      "delivered_by": "implementer",
-      "effort": "low",
-      "fix_ref": "PR #44",
-      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium",
-        "overseer:implementing"
-      ],
-      "number": 43,
-      "repo": "AndyRBrett/coachvision",
-      "state": "open",
-      "status": "in_flight",
-      "title": "Add automated clip quality/completeness gate before frame processing",
-      "url": "https://github.com/AndyRBrett/coachvision/issues/43"
     },
     {
       "closed_at": null,
@@ -723,8 +724,6 @@
       "created_at": "2026-08-24T14:35:18+00:00",
       "delivered_by": "hand",
       "effort": "medium",
-      "fix_ref": "PR #44",
-      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -735,7 +734,7 @@
       "number": 34,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
-      "status": "in_flight",
+      "status": "open",
       "title": "Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion",
       "url": "https://github.com/AndyRBrett/coachvision/issues/34"
     },
@@ -786,8 +785,6 @@
       "created_at": "2026-08-15T10:35:32+00:00",
       "delivered_by": "hand",
       "effort": "medium",
-      "fix_ref": "PR #44",
-      "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -798,7 +795,7 @@
       "number": 25,
       "repo": "AndyRBrett/coachvision",
       "state": "open",
-      "status": "in_flight",
+      "status": "open",
       "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
       "url": "https://github.com/AndyRBrett/coachvision/issues/25"
     },
@@ -1862,20 +1859,20 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-10T00:19:02Z",
+  "generated": "2026-09-10T04:55:24Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
         "duplicate": 2,
-        "in_flight": 3,
+        "in_flight": 0,
         "not_planned": 3,
-        "open": 2,
+        "open": 4,
         "proposed": 21,
-        "reject_rate": 0.312,
+        "reject_rate": 0.294,
         "sample": "sufficient",
-        "settled": 16,
-        "ship_rate": 0.688,
-        "shipped": 11
+        "settled": 17,
+        "ship_rate": 0.706,
+        "shipped": 12
       },
       "AndyRBrett/crypto-trading": {
         "duplicate": 3,
@@ -1917,15 +1914,15 @@
     "min_settled": 4,
     "overall": {
       "duplicate": 11,
-      "in_flight": 3,
+      "in_flight": 0,
       "not_planned": 7,
-      "open": 11,
+      "open": 13,
       "proposed": 89,
-      "reject_rate": 0.24,
+      "reject_rate": 0.237,
       "sample": "sufficient",
-      "settled": 75,
-      "ship_rate": 0.76,
-      "shipped": 57
+      "settled": 76,
+      "ship_rate": 0.763,
+      "shipped": 58
     }
   },
   "queue": {
@@ -1937,41 +1934,7 @@
     ],
     "eligible": 0,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [
-      {
-        "effort": "low",
-        "fix_ref": "PR #44",
-        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
-        "impact": "medium",
-        "kind": "enhancement",
-        "number": 43,
-        "repo": "AndyRBrett/coachvision",
-        "title": "Add automated clip quality/completeness gate before frame processing",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/43"
-      },
-      {
-        "effort": "medium",
-        "fix_ref": "PR #44",
-        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 34,
-        "repo": "AndyRBrett/coachvision",
-        "title": "Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/34"
-      },
-      {
-        "effort": "medium",
-        "fix_ref": "PR #44",
-        "fix_url": "https://github.com/AndyRBrett/coachvision/pull/44",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 25,
-        "repo": "AndyRBrett/coachvision",
-        "title": "Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher",
-        "url": "https://github.com/AndyRBrett/coachvision/issues/25"
-      }
-    ],
+    "in_flight": [],
     "last_dispatch": {
       "at": "2026-09-07T21:48:47Z",
       "conclusion": "success"
@@ -1980,17 +1943,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.716,
+    "delivery_rate": 0.728,
     "duplicate": 11,
     "duplicate_rate": 0.12,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 3,
+    "in_flight": 0,
     "not_planned": 9,
-    "open": 11,
+    "open": 13,
     "proposed": 92,
-    "shipped": 58,
+    "shipped": 59,
     "shipped_before_implementer": 37,
     "shipped_by_hand": 18,
-    "shipped_by_implementer": 3
+    "shipped_by_implementer": 4
   }
 }

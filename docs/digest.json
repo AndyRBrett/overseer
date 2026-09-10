@@ -29,37 +29,37 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-10T00:19:14Z",
+      "last_ok": "2026-09-10T04:55:36Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-10T00:19:14Z",
+      "last_ok": "2026-09-10T04:55:36Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-10T00:19:14Z",
+      "last_ok": "2026-09-10T04:55:36Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-10T00:19:14Z",
+      "last_ok": "2026-09-10T04:55:36Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.39,
+      "score": 0.42,
       "signals": {
         "staleness": 0.9,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.2
+        "backlog": 0.4
       },
-      "why": "no activity for 6 cycle(s); 2 open ideas",
+      "why": "no activity for 6 cycle(s); 4 open ideas",
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
@@ -291,7 +291,7 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-10T00:19:14Z",
+  "refreshed": "2026-09-10T04:55:36Z",
   "systemic_risk": {
     "flagged": false,
     "projects": []
