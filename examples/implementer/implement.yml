@@ -54,6 +54,11 @@
 # review itself now, which needs no credential — treat that as insurance for a
 # repo you have not given a token to yet, not as the fix.
 #
+# AND CODEX NEEDS AN ENVIRONMENT FOR THE REPO before it will review anything.
+# Nothing in this workflow can detect that: it warns about the TOKEN, and with a
+# token present everything on this side is correct while reviews silently never
+# arrive. One per repo, at chatgpt.com/codex/cloud/settings/environments.
+#
 # TWO WAYS, and they are not interchangeable:
 #
 #   PREFERRED — a GitHub App. Create one, install it on this repo, and add its
@@ -66,17 +71,30 @@
 #   fallback would not engage and every run after the first hour would fail
 #   authentication, an hour after you last saw it work.
 #
-#   OTHERWISE — a FINE-GRAINED personal access token as OVERSEER_PR_TOKEN.
+#   OTHERWISE — a FINE-GRAINED personal access token as OVERSEER_PR_TOKEN,
+#   created by the account that OWNS this repo.
 #
-#   Create it while signed in as a MACHINE USER, not as yourself. This repo's
-#   pipeline already commits as `overseer-bot`; a token belonging to that
-#   account puts a machine account in the agent's Bash session instead of your
-#   own, and — the part that is not just hygiene — the pull requests then arrive
-#   authored by `overseer-bot` rather than by you. A PR that looks human-written
-#   in your own list is a real cost here: the whole reason this file exists is
-#   that the change with the least human authorship was getting the least
-#   scrutiny, and an author line that hides which ones those are makes that
-#   worse.
+#   It has to be the owner, and this is the trap. A fine-grained token is scoped
+#   to a SINGLE resource owner and reaches only repositories under it; being an
+#   outside collaborator on another person's repo does not bridge that gap. So a
+#   separate machine user CANNOT create one for a repo owned by a person. The
+#   token it produces authenticates perfectly and then 404s on the agent's first
+#   `gh issue view`, which reads like a permissions typo rather than a
+#   credential that was never capable of the job. This file recommended exactly
+#   that setup until Codex flagged it on PR #84, before anyone had followed it.
+#
+#   What owner-creating it costs: the pull requests arrive authored by YOU, so
+#   the author column no longer says which changes were machine-written — and
+#   the whole reason this file exists is that the least human-authored change
+#   was getting the least scrutiny. Live with it anyway. The branch is
+#   `overseer/issue-<n>`, the body ends `Closes #<n>`, and the issue carries
+#   `overseer:implementing`; the provenance is legible three other ways.
+#
+#   IF YOU WANT THE BOT AUTHOR LINE, the machine user needs a CLASSIC token,
+#   which does work as a collaborator. Know what you are buying: classic scopes
+#   are not per-repo, so `repo` hands that account's full write access to EVERY
+#   repo it can reach, on every run, to an agent running Bash. The owner's
+#   fine-grained token is one repo and three permissions. Prefer it.
 #
 #   Set an EXPIRY — 90 days is a reasonable default. A fine-grained token can be
 #   given one (7/30/60/90 days, or custom up to 366); "no expiration" is a choice

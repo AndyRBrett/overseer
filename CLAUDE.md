@@ -476,5 +476,22 @@ chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction.
 - `@codex address that feedback` makes Codex push the fix itself.
   Only do that if I ask.
 
+**Codex needs an environment for the repo, and without one it does nothing.**
+On 2026-09-10 PR #84 opened, Codex fired unasked within three minutes — and
+said only *"To use Codex here, create an environment for this repo"*. Not a
+review, not the 👍 of a clean pass: a prerequisite nobody had written down,
+configured per repo at `chatgpt.com/codex/cloud/settings/environments`. The
+implementer cannot warn about this. Its warning is about the TOKEN, and with a
+token present everything on GitHub's side is correct while the reviews simply
+never come — so installing the token that morning would have bought CI, no
+review, and nothing anywhere saying so.
+
+**Give a `@codex review` three minutes before deciding it was ignored.** The
+same day, a mention at 14:07:00Z was answered at 14:10:10Z. A poll that gave up
+at 14:10:00Z reported the mention path dead, and a design change was argued on
+top of that for a full message before the review landed ten seconds later. The
+auto-review on PR-open is the one that answers fastest; the mention is not
+slower than a human's patience by much, but it is slower than a 150-second poll.
+
 In remote/web sessions there is no `gh` CLI — use the GitHub MCP tools
 (`pull_request_read`, `add_issue_comment`) for the same steps.
