@@ -993,25 +993,6 @@
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/51"
     },
     {
-      "closed_at": "2026-08-13T21:58:30+00:00",
-      "created_at": "2026-07-02T15:29:46+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 22,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Persist per-bout odds time series and render a sparkline of line movement to fight night",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/22"
-    },
-    {
       "closed_at": "2026-08-13T21:58:20+00:00",
       "created_at": "2026-07-06T16:49:34+00:00",
       "delivered_by": "hand",
@@ -1840,7 +1821,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-11T00:15:11Z",
+  "generated": "2026-09-11T04:49:13Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1884,12 +1865,12 @@
         "in_flight": 0,
         "not_planned": 1,
         "open": 6,
-        "proposed": 14,
-        "reject_rate": 0.125,
+        "proposed": 13,
+        "reject_rate": 0.143,
         "sample": "sufficient",
-        "settled": 8,
-        "ship_rate": 0.875,
-        "shipped": 7
+        "settled": 7,
+        "ship_rate": 0.857,
+        "shipped": 6
       }
     },
     "min_settled": 4,
@@ -1898,12 +1879,12 @@
       "in_flight": 0,
       "not_planned": 7,
       "open": 13,
-      "proposed": 88,
-      "reject_rate": 0.227,
+      "proposed": 87,
+      "reject_rate": 0.23,
       "sample": "sufficient",
-      "settled": 75,
-      "ship_rate": 0.773,
-      "shipped": 58
+      "settled": 74,
+      "ship_rate": 0.77,
+      "shipped": 57
     }
   },
   "queue": {
@@ -1924,16 +1905,16 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.728,
+    "delivery_rate": 0.725,
     "duplicate": 10,
-    "duplicate_rate": 0.11,
+    "duplicate_rate": 0.111,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
     "open": 13,
-    "proposed": 91,
-    "shipped": 59,
-    "shipped_before_implementer": 37,
+    "proposed": 90,
+    "shipped": 58,
+    "shipped_before_implementer": 36,
     "shipped_by_hand": 18,
     "shipped_by_implementer": 4
   }
