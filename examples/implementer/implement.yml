@@ -66,6 +66,16 @@
 #   The workflow mints an installation token per run: scoped to this repo and
 #   expiring within the hour.
 #
+#   OVERSEER_PR_APP_ID and OVERSEER_PR_APP_PRIVATE_KEY are the secret NAMEs —
+#   type them into GitHub's Name box exactly as written. The App id (a number)
+#   and the private key (the whole PEM) are the VALUEs that go in the Value box
+#   below each one. Putting the App id into the Name box instead fails with
+#   "Secret names can only contain alphanumeric characters... Spaces are not
+#   allowed", which reads like a naming-policy problem and not like the two
+#   fields being swapped. Both secrets are required together — set only one
+#   and the workflow logs a warning and falls back to OVERSEER_PR_TOKEN or the
+#   built-in token.
+#
 #   An App installation token is NOT something you paste into a secret. It dies
 #   in about an hour, and an expired secret is still non-empty — so the
 #   fallback would not engage and every run after the first hour would fail
