@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-12T14:13:51Z",
+      "last_ok": "2026-09-12T17:16:16Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-12T14:13:51Z",
+      "last_ok": "2026-09-12T17:16:16Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-12T14:13:51Z",
+      "last_ok": "2026-09-12T17:16:16Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-12T14:13:51Z",
+      "last_ok": "2026-09-12T17:16:16Z",
       "blind_cycles": 0
     }
   },
@@ -86,14 +86,14 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.09,
+      "score": 0.095,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.002,
+        "kpi": 0.024,
         "backlog": 0.6
       },
-      "why": "6 open ideas; success_rate_7d is 90%",
+      "why": "6 open ideas; success_rate_7d is 88%",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
@@ -291,7 +291,7 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-12T14:13:51Z",
+  "refreshed": "2026-09-12T17:16:16Z",
   "systemic_risk": {
     "flagged": true,
     "projects": [
