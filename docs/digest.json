@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-13T16:26:09Z",
+      "last_ok": "2026-09-13T19:32:18Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-13T16:26:09Z",
+      "last_ok": "2026-09-13T19:32:18Z",
       "blind_cycles": 0,
       "idle_cycles": 6
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-13T16:26:09Z",
+      "last_ok": "2026-09-13T19:32:18Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-13T16:26:09Z",
+      "last_ok": "2026-09-13T19:32:18Z",
       "blind_cycles": 0
     }
   },
@@ -86,19 +86,19 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.103,
+      "score": 0.09,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.067,
+        "kpi": 0.0,
         "backlog": 0.6
       },
-      "why": "6 open ideas; success_rate_7d is 84%",
+      "why": "6 open ideas",
       "name": "UFC dashboard",
       "status": "ok",
-      "plain": "UFC dashboard is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
+      "plain": "UFC dashboard has 6 ideas waiting for someone to look at",
+      "short": "has 6 ideas waiting for someone to look at",
+      "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
     },
@@ -291,7 +291,7 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-13T16:26:09Z",
+  "refreshed": "2026-09-13T19:32:19Z",
   "systemic_risk": {
     "flagged": true,
     "projects": [
