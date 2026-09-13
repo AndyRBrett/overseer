@@ -993,28 +993,6 @@
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/51"
     },
     {
-      "closed_at": "2026-08-13T21:58:20+00:00",
-      "created_at": "2026-07-06T16:49:34+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "fix_ref": "PR #69",
-      "fix_sha": "1150643",
-      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 26,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Surface main-event line moves in a pinned section and convert odds to implied win probability",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/26"
-    },
-    {
       "closed_at": "2026-08-13T21:58:09+00:00",
       "created_at": "2026-07-13T16:22:02+00:00",
       "delivered_by": "hand",
@@ -1821,7 +1799,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-13T01:07:14Z",
+  "generated": "2026-09-13T06:17:21Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1865,12 +1843,12 @@
         "in_flight": 0,
         "not_planned": 1,
         "open": 6,
-        "proposed": 13,
-        "reject_rate": 0.143,
+        "proposed": 12,
+        "reject_rate": 0.167,
         "sample": "sufficient",
-        "settled": 7,
-        "ship_rate": 0.857,
-        "shipped": 6
+        "settled": 6,
+        "ship_rate": 0.833,
+        "shipped": 5
       }
     },
     "min_settled": 4,
@@ -1879,12 +1857,12 @@
       "in_flight": 0,
       "not_planned": 7,
       "open": 13,
-      "proposed": 87,
-      "reject_rate": 0.23,
+      "proposed": 86,
+      "reject_rate": 0.233,
       "sample": "sufficient",
-      "settled": 74,
-      "ship_rate": 0.77,
-      "shipped": 57
+      "settled": 73,
+      "ship_rate": 0.767,
+      "shipped": 56
     }
   },
   "queue": {
@@ -1905,16 +1883,16 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.725,
+    "delivery_rate": 0.722,
     "duplicate": 10,
-    "duplicate_rate": 0.111,
+    "duplicate_rate": 0.112,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
     "open": 13,
-    "proposed": 90,
-    "shipped": 58,
-    "shipped_before_implementer": 36,
+    "proposed": 89,
+    "shipped": 57,
+    "shipped_before_implementer": 35,
     "shipped_by_hand": 18,
     "shipped_by_implementer": 4
   }
