@@ -701,38 +701,55 @@ function renderPlain(d, ledger) {
   // `short` and `notable` are both published (attention.plain_predicate): the
   // page must not decide for itself which projects are a concern, or it will
   // eventually disagree with the sentence directly above it.
+  // Each row leads with a dot, because four sentences that differ only in their
+  // words read as four identical rows: on 2026-09-14 "is working, but the
+  // numbers it reports look bad" and "looks fine" were the same grey text at
+  // the same weight, and telling them apart meant reading all four. The dot
+  // carries no judgement of its own — `notable` and `status` are both published
+  // by attention.rank, on the same floor the headline above uses.
   if (ranked.length) {
     out.push(section("Your projects", ranked.map((a) => `
       <div class="prow-plain${a.notable ? " flag" : ""}">
+        <span class="dot ${dotState(a)}"></span>
         <span class="pn">${escapeHtml(a.name)}</span>
         <span class="pd">${escapeHtml(a.short || "")}</span>
       </div>`).join("")));
   }
 
-  // WHAT IT FINISHED, with names. "61 jobs so far" is a scoreboard; the titles
-  // are what tells you whether the work was any good.
+  // WHAT IT FINISHED, as a count and a recency — NOT as a list of titles.
+  //
+  // It used to print the four most recent issue titles here, and those are
+  // written by one agent for another: "Add per-run LLM/API token-usage and cost
+  // tracking widget to overseer dashboard" is four lines of a phone screen, in
+  // exactly the vocabulary this half of the page exists to keep out. Four of
+  // them took 40% of the first screen to answer the least urgent question on
+  // it. The titles are still one tap away in the Shipped panel, where they are
+  // links to the issue rather than dead text.
   const entries = (ledger && ledger.entries) || [];
   const shipped = entries
     .filter((e) => e.status === "shipped" && e.closed_at)
     .sort((a, b) => (a.closed_at < b.closed_at ? 1 : -1));
   const t = (ledger && ledger.totals) || {};
   if (shipped.length) {
-    const recent = shipped.slice(0, 4).map((e) => itemRow(e.title, e.repo, relativeTime(e.closed_at)));
+    const last = shipped[0];
+    const line = `${t.shipped || shipped.length} finished so far`
+      + (last ? ` — most recently in ${escapeHtml(repoName(last.repo))}, ${relativeTime(last.closed_at)}` : "");
     const flight = t.in_flight
       ? `<div class="plain-note">${t.in_flight} more finished and waiting to be checked.</div>`
       : "";
-    out.push(section(`Recently finished — ${t.shipped || shipped.length} in total`,
-                     recent.join("") + flight));
+    out.push(section("Recently finished", `<div class="plain-fact">${line}</div>${flight}`));
   }
 
-  // WHAT IS COMING, with titles. These are written by an agent for an engineer
-  // and run long, so they get their own rows rather than being squeezed into a
-  // sentence — one of them filled six lines of a phone screen when it was.
+  // WHAT IS COMING, the same way: how many and where. The titles run long and
+  // technical for the same reason the finished ones do, and the Implementer
+  // panel behind the toggle is where they belong.
   const q = (ledger && ledger.queue) || null;
   if (q) {
     const next = q.next || [];
+    const where = [...new Set(next.map((e) => repoName(e.repo)))];
     const body = next.length
-      ? next.map((e) => itemRow(e.title, e.repo, null)).join("")
+      ? `<div class="plain-fact">${next.length === 1 ? "One thing" : `${next.length} things`} lined up`
+        + (where.length ? ` — in ${escapeHtml(where.join(", "))}` : "") + `</div>`
       : `<div class="plain-note">Nothing is lined up to be built right now.</div>`;
     out.push(section("It will build next", body));
   }
@@ -755,16 +772,23 @@ function section(title, body) {
     <div class="plain-head">${escapeHtml(title)}</div>${body}</div>`;
 }
 
-// One piece of work: what it is, which project, and when. The title is an issue
-// title — long, and written for an engineer — so it wraps onto its own line
-// rather than being truncated into something even less readable.
-function itemRow(title, repo, when) {
-  const where = (repo || "").split("/").pop();
-  const meta = [where, when].filter(Boolean).join(" · ");
-  return `<div class="item-plain">
-    <div class="it">${escapeHtml(title || "")}</div>
-    ${meta ? `<div class="im">${escapeHtml(meta)}</div>` : ""}
-  </div>`;
+// "AndyRBrett/ufc-dashboard" is an address; "ufc-dashboard" is what you call it.
+function repoName(repo) {
+  return (repo || "").split("/").pop();
+}
+
+// Which dot a project gets. Both inputs are published by attention.rank — the
+// page maps state to a colour, it does not decide what the state is.
+//
+// There is deliberately no green. The score publishes "is this asking for your
+// attention", not "is this healthy", and a green dot answers the second
+// question: the first draft of this row put one beside Trading bot, whose own
+// published sentence reads "is working, but the numbers it reports look bad".
+// A dot that contradicts the words next to it is worse than no dot. Grey claims
+// nothing, which is exactly what is known.
+function dotState(a) {
+  if (a.status === "error") return "bad";
+  return a.notable ? "warn" : "quiet";
 }
 
 async function loadDigest() {

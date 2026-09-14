@@ -135,7 +135,40 @@ def test_the_page_does_not_decide_which_projects_are_a_concern():
     assert "0.15" not in APP, "the dashboard is carrying its own notability cutoff"
 
 
-def test_work_items_show_their_title_and_where_they_came_from():
-    assert "function itemRow(" in APP
-    body = APP.split("function itemRow(", 1)[1].split("\n}", 1)[0]
-    assert "repo" in body and "escapeHtml(title" in body
+def test_the_plain_half_prints_no_issue_titles():
+    """The jargon check above greps index.html, and issue titles are not in it.
+
+    They arrived at runtime from shipped.json, so the first screen carried
+    "Add per-run LLM/API token-usage and cost tracking widget to overseer
+    dashboard" — an agent writing for another agent — under a heading promising
+    plain words, and passed every check in this file. Four of those titles took
+    40% of a phone screen to answer the least urgent question on it.
+
+    The rule now: the plain half says how many and where. Titles live behind the
+    toggle, where they are links to the issue.
+    """
+    plain = APP.split("function renderPlain(", 1)[1].split("\nfunction ", 1)[0]
+    assert ".title" not in plain, "an issue title is being rendered on the first screen"
+
+
+def test_the_titles_are_still_there_behind_the_toggle():
+    # Demoted, not deleted — the same counterpart the jargon pair above has.
+    for render in ("renderShipped", "renderImplementer"):
+        body = APP.split(f"function {render}(", 1)[1].split("\nfunction ", 1)[0]
+        assert "e.title" in body, f"{render} stopped naming the work it lists"
+
+
+def test_the_project_dots_never_claim_a_project_is_healthy():
+    """A dot is read before the sentence beside it, so it must not outrun it.
+
+    The first draft gave every project that was not flagged a green dot — which
+    put green next to Trading bot's own published line, "is working, but the
+    numbers it reports look bad". The score publishes "is this asking for your
+    attention", never "is this healthy", so grey is the honest second colour.
+    """
+    body = APP.split("function dotState(", 1)[1].split("\n}", 1)[0]
+    assert '"quiet"' in body and '"warn"' in body
+    assert "34d399" not in APP.split("function dotState(", 1)[1]
+    # And the state still comes from the published fields, not from a threshold
+    # the page carries itself.
+    assert "a.notable" in body and "a.status" in body
