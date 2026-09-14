@@ -233,8 +233,29 @@ def test_both_publishers_retry_a_rejected_push():
     # after the publish, so a lost race costs the notification too.
     for name in ("weekly-review.yml", "ledger-refresh.yml"):
         text = (WORKFLOWS / name).read_text(encoding="utf-8")
-        assert "git pull --rebase" in text, f"{name} publishes without a rebase"
         assert "for i in 1 2 3" in text, f"{name} does not retry a rejected push"
+
+    # The review rebases, because it holds a complete set of freshly written
+    # files and can legitimately replay them over whatever landed (the test
+    # below pins that). The refresh cannot: see the next test.
+    assert "git pull --rebase" in (WORKFLOWS / "weekly-review.yml").read_text(encoding="utf-8")
+
+
+def test_the_refresh_rebuilds_a_lost_race_instead_of_rebasing_it():
+    # 2026-09-14, run #448: the refresh rebased into the review's publish,
+    # conflicted in all three generated files, and its two remaining retries
+    # then died on "you have unmerged files" without attempting a push. A
+    # generated file has no mergeable half, so the retry recomputes on top of
+    # whatever landed instead of replaying a commit over it.
+    text = (WORKFLOWS / "ledger-refresh.yml").read_text(encoding="utf-8")
+    assert "git reset --hard origin/main" in text
+    assert "scripts/rebuild_docs.sh" in text
+
+    # And NOT the review's resolution. `-X theirs` there means "keep the copy
+    # being replayed"; here that copy holds a digest rebuilt from the PREVIOUS
+    # one, so forcing it over the review's would roll `generated` back a week
+    # and tell the dead-man's switch a review had run (invariant 13).
+    assert "-X theirs" not in text, "the refresh must not force its digest over the review's"
 
 
 def test_the_review_wins_a_collision_on_the_files_it_regenerates():

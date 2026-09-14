@@ -225,11 +225,15 @@ def test_the_cron_runs_it_and_publishes_the_digest():
     wf = yaml.safe_load(Path(".github/workflows/ledger-refresh.yml").read_text(encoding="utf-8"))
     steps = wf["jobs"]["refresh"]["steps"]
     runs = " ".join(str(s.get("run", "")) for s in steps)
-    assert "scripts/refresh_status.py" in runs
+    # The builders moved into one script so the publish step can re-run them
+    # after losing a push race (see tests/test_publish_race.py) without a second
+    # copy of the build order.
+    assert "scripts/rebuild_docs.sh" in runs
     # Publishing it too, or the refresh runs and the page never sees it.
     assert "docs/digest.json" in runs
+
+    build = Path("scripts/rebuild_docs.sh").read_text(encoding="utf-8")
+    assert "scripts/refresh_status.py" in build
     # After the ledger: the attention ranking counts open ideas off it.
-    order = [i for i, s in enumerate(steps)
-             if "refresh_ledger.py" in str(s.get("run", ""))
-             or "refresh_status.py" in str(s.get("run", ""))]
-    assert order == sorted(order) and len(order) == 2
+    order = [build.index(f"scripts/{name}.py") for name in ("refresh_ledger", "refresh_status")]
+    assert order == sorted(order)
