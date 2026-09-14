@@ -25,8 +25,6 @@
       "created_at": "2026-09-14T14:11:31+00:00",
       "delivered_by": "hand",
       "effort": "low",
-      "fix_ref": "PR #88",
-      "fix_url": "https://github.com/AndyRBrett/overseer/pull/88",
       "impact": "high",
       "kind": "enhancement",
       "labels": [
@@ -37,7 +35,7 @@
       "number": 129,
       "repo": "AndyRBrett/ufc-dashboard",
       "state": "open",
-      "status": "in_flight",
+      "status": "open",
       "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
     },
@@ -1881,7 +1879,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-14T19:27:53Z",
+  "generated": "2026-09-14T19:52:15Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1922,9 +1920,9 @@
       },
       "AndyRBrett/ufc-dashboard": {
         "duplicate": 0,
-        "in_flight": 1,
+        "in_flight": 0,
         "not_planned": 1,
-        "open": 6,
+        "open": 7,
         "proposed": 13,
         "reject_rate": 0.167,
         "sample": "sufficient",
@@ -1936,9 +1934,9 @@
     "min_settled": 4,
     "overall": {
       "duplicate": 10,
-      "in_flight": 1,
+      "in_flight": 0,
       "not_planned": 8,
-      "open": 15,
+      "open": 16,
       "proposed": 90,
       "reject_rate": 0.243,
       "sample": "sufficient",
@@ -1954,13 +1952,16 @@
     "efforts": [
       "low"
     ],
-    "eligible": 0,
+    "eligible": 1,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [
+    "in_flight": [],
+    "last_dispatch": {
+      "at": "2026-09-14T19:41:10Z",
+      "conclusion": "success"
+    },
+    "next": [
       {
         "effort": "low",
-        "fix_ref": "PR #88",
-        "fix_url": "https://github.com/AndyRBrett/overseer/pull/88",
         "impact": "high",
         "kind": "enhancement",
         "number": 129,
@@ -1969,11 +1970,6 @@
         "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
       }
     ],
-    "last_dispatch": {
-      "at": "2026-09-14T17:06:12Z",
-      "conclusion": "success"
-    },
-    "next": [],
     "tier": "light"
   },
   "totals": {
@@ -1981,9 +1977,9 @@
     "duplicate": 10,
     "duplicate_rate": 0.108,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 1,
+    "in_flight": 0,
     "not_planned": 10,
-    "open": 15,
+    "open": 16,
     "proposed": 93,
     "shipped": 57,
     "shipped_before_implementer": 35,
