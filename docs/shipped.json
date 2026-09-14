@@ -1,6 +1,84 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-14T15:25:01+00:00",
+      "created_at": "2026-09-14T14:11:35+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 87,
+      "repo": "AndyRBrett/overseer",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Add scheduled-run watchdog that auto-retriggers the weekly overseer workflow if it hasn't fired within expected cadence",
+      "url": "https://github.com/AndyRBrett/overseer/issues/87"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-09-14T14:11:31+00:00",
+      "delivered_by": "hand",
+      "effort": "low",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high",
+        "overseer:implement-failed"
+      ],
+      "number": 129,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "open",
+      "status": "open",
+      "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-09-14T14:11:27+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 48,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Add ground-truth labeled-clip accuracy validation to the coachvision self-test canary",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/48"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-09-14T14:11:23+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 74,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "open",
+      "title": "Add trailing-stop / partial-profit-taking exit logic for trend positions with large unrealized gains",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/74"
+    },
+    {
       "closed_at": "2026-09-10T02:12:00+00:00",
       "created_at": "2026-09-07T14:10:46+00:00",
       "delivered_by": "implementer",
@@ -1802,15 +1880,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-14T14:11:56Z",
+  "generated": "2026-09-14T15:26:38Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
         "duplicate": 2,
         "in_flight": 0,
         "not_planned": 3,
-        "open": 4,
-        "proposed": 21,
+        "open": 5,
+        "proposed": 22,
         "reject_rate": 0.294,
         "sample": "sufficient",
         "settled": 17,
@@ -1821,8 +1899,8 @@
         "duplicate": 3,
         "in_flight": 0,
         "not_planned": 3,
-        "open": 3,
-        "proposed": 27,
+        "open": 4,
+        "proposed": 28,
         "reject_rate": 0.25,
         "sample": "sufficient",
         "settled": 24,
@@ -1832,21 +1910,21 @@
       "AndyRBrett/overseer": {
         "duplicate": 5,
         "in_flight": 0,
-        "not_planned": 0,
+        "not_planned": 1,
         "open": 0,
-        "proposed": 26,
-        "reject_rate": 0.192,
+        "proposed": 27,
+        "reject_rate": 0.222,
         "sample": "sufficient",
-        "settled": 26,
-        "ship_rate": 0.808,
+        "settled": 27,
+        "ship_rate": 0.778,
         "shipped": 21
       },
       "AndyRBrett/ufc-dashboard": {
         "duplicate": 0,
         "in_flight": 0,
         "not_planned": 1,
-        "open": 6,
-        "proposed": 12,
+        "open": 7,
+        "proposed": 13,
         "reject_rate": 0.167,
         "sample": "sufficient",
         "settled": 6,
@@ -1858,18 +1936,28 @@
     "overall": {
       "duplicate": 10,
       "in_flight": 0,
-      "not_planned": 7,
-      "open": 13,
-      "proposed": 86,
-      "reject_rate": 0.233,
+      "not_planned": 8,
+      "open": 16,
+      "proposed": 90,
+      "reject_rate": 0.243,
       "sample": "sufficient",
-      "settled": 73,
-      "ship_rate": 0.767,
+      "settled": 74,
+      "ship_rate": 0.757,
       "shipped": 56
     }
   },
   "queue": {
-    "benched": [],
+    "benched": [
+      {
+        "effort": "low",
+        "impact": "high",
+        "kind": "enhancement",
+        "number": 129,
+        "repo": "AndyRBrett/ufc-dashboard",
+        "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
+        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
+      }
+    ],
     "cap": 3,
     "cost_hint": 1.5,
     "efforts": [
@@ -1879,21 +1967,21 @@
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "last_dispatch": {
-      "at": "2026-09-07T21:48:47Z",
+      "at": "2026-09-14T15:21:15Z",
       "conclusion": "success"
     },
     "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.722,
+    "delivery_rate": 0.687,
     "duplicate": 10,
-    "duplicate_rate": 0.112,
+    "duplicate_rate": 0.108,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
-    "not_planned": 9,
-    "open": 13,
-    "proposed": 89,
+    "not_planned": 10,
+    "open": 16,
+    "proposed": 93,
     "shipped": 57,
     "shipped_before_implementer": 35,
     "shipped_by_hand": 18,

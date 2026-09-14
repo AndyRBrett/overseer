@@ -13,7 +13,7 @@
     "ok": 3,
     "total": 4,
     "issues": 0,
-    "enhancements": 4,
+    "enhancements": 0,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
@@ -29,37 +29,37 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-14T14:11:56Z",
+      "last_ok": "2026-09-14T15:26:51Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-14T14:11:56Z",
+      "last_ok": "2026-09-14T15:26:51Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-14T14:11:56Z",
+      "last_ok": "2026-09-14T15:26:51Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-14T14:11:56Z",
+      "last_ok": "2026-09-14T15:26:51Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.46,
+      "score": 0.475,
       "signals": {
         "staleness": 1.0,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.4
+        "backlog": 0.5
       },
-      "why": "no activity for 7 cycle(s); 4 open ideas",
+      "why": "no activity for 7 cycle(s); 5 open ideas",
       "name": "coachvision",
       "status": "idle",
       "plain": "coachvision is running, but nothing has happened there lately",
@@ -69,14 +69,14 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.112,
+      "score": 0.127,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.333,
-        "backlog": 0.3
+        "backlog": 0.4
       },
-      "why": "win_rate is 60%; 3 open ideas",
+      "why": "win_rate is 60%; 4 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
@@ -86,18 +86,18 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.09,
+      "score": 0.105,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
         "kpi": 0.0,
-        "backlog": 0.6
+        "backlog": 0.7
       },
-      "why": "6 open ideas",
+      "why": "7 open ideas",
       "name": "UFC dashboard",
       "status": "ok",
-      "plain": "UFC dashboard has 6 ideas waiting for someone to look at",
-      "short": "has 6 ideas waiting for someone to look at",
+      "plain": "UFC dashboard has 7 ideas waiting for someone to look at",
+      "short": "has 7 ideas waiting for someone to look at",
       "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
@@ -172,13 +172,13 @@
   "cost_alert": null,
   "cost_trend": {
     "last_7d": {
-      "total_usd": 0.0,
-      "runs": 0,
+      "total_usd": 0.3807,
+      "runs": 1,
       "unpriced_runs": 0
     },
     "last_30d": {
-      "total_usd": 1.8844,
-      "runs": 5,
+      "total_usd": 2.2651,
+      "runs": 6,
       "unpriced_runs": 0
     }
   },
@@ -282,5 +282,6 @@
       "label": "send_telegram_summary (digest)",
       "text": "digest not_configured"
     }
-  ]
+  ],
+  "refreshed": "2026-09-14T15:26:51Z"
 }
