@@ -507,6 +507,42 @@
         "baseline_usd": 0.5935,
         "saved_usd": 0.165
       }
+    },
+    {
+      "date": "2026-09-14",
+      "generated": "2026-09-14T14:11:56Z",
+      "status": "completed",
+      "summary": "ATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. coachvision (0.46) \u2014 no activity for 7 cycle(s); 4 open ideas\n2. Trading bot (0.11) \u2014 win_rate is 60%; 3 open ideas\n3. UFC dashboard (0.09) \u2014 6 open ideas\n\nIssues Found\n- None this week. All four projects (trading bot, coachvision, UFC dashboard, overseer) checked healthy \u2014 no crashes, no stale data beyond SLA, no success-rate drops. coachvision is idle awaiting footage but its self-test passed, so not a bug.\n\nTop Enhancement Ideas (ranked)\n1. ufc-dashboard \u2014 Use persistence stats to suppress low-value alerts (effort: low, impact: high): Calibration data (e.g., persistence_at_threshold per tier) is already computed but unused live; applying it would cut noisy alerts using data you already have.\n2. overseer \u2014 Add scheduled-run watchdog / auto-retrigger (effort: low, impact: medium): Cheap self-healing complement to the existing heartbeat \u2014 re-triggers the weekly workflow if overdue, guarded against double-runs.\n3. crypto-trading \u2014 Add trailing-stop / partial profit-taking for trend positions (effort: medium, impact: high): ETH position has +$1012 unrealized gain with only a hard stop; locking in trend gains could meaningfully improve realized P&L.\n4. coachvision \u2014 Extend self-test canary with labeled-clip accuracy check (effort: medium, impact: medium): Current canary only confirms frames/segments ran; adding a small labeled set would give real drift/accuracy signal even with no live footage.\n\nIMPLEMENTED (LAST 7 DAYS)\n- coachvision #43 \u2014 Add automated clip quality/completeness gate before frame processing (PR #44)\n- overseer #77 \u2014 Add per-run LLM/API token-usage and cost tracking widget to overseer dashboard (PR #82)\n- overseer #72 \u2014 Add cross-project systemic-risk correlation widget to overseer dashboard (PR #78)",
+      "counts": {
+        "tools": 13,
+        "errors": 0,
+        "issues": 0,
+        "enhancements": 4,
+        "duplicates_blocked": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.3807,
+        "baseline_usd": 0.5194,
+        "saved_usd": 0.1387
+      }
     }
   ]
 }
