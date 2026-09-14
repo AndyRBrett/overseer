@@ -190,11 +190,15 @@ Each of these exists because the opposite already happened here.
   unasked; #78 and #82 got none, and #78 sat from 17:38Z until a human typed
   `@codex review` at 20:53Z — the review that found its P1 landed at 20:56Z. One
   credential fixes both, because a PR opened with one is an ordinary PR. The
-  implementer's prompt now also asks Codex itself, which costs nothing and needs
-  no credential — but whether Codex honours a mention from `github-actions[bot]`
-  is **unverified**, and #78 is mild evidence against it, since auto-review
-  skipped that PR for being bot-opened. Insurance for a repo with no token yet;
-  not the fix.
+  implementer's prompt now also asks Codex itself — and that half is **verified
+  not to work**, so it is insurance that pays nothing. Codex resolves a
+  `@codex review` to the MENTIONER's Codex account, and a GitHub App has none.
+  Measured on PR #86, the implementer's own PR: `overseer-implementer[bot]`
+  posted the mention at 20:03:26Z and was answered ten seconds later with *"To
+  use Codex here, create a Codex account and connect to github"* — a refusal
+  aimed at the asker, not a review. It is not slow and it is not flaky; a bot
+  cannot ask. The mention does work from the `pr_token` PAT path, because a PAT
+  posts as a person. The token is still the fix, and now for both halves.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.
@@ -498,6 +502,15 @@ is opened for review, when a draft is marked ready, or on a
 `@codex review` comment. Findings come back as comments from
 chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction.
 
+**So a clean auto-review is indistinguishable from no review at all, unless you
+look in the right place.** The 👍 is a reaction on the PR BODY, and neither
+`gh pr view <n> --comments` nor the MCP `pull_request_read` comments call
+returns it — both come back empty. On 2026-09-14 PRs #88 and #89 were each read
+as "the auto-review never fired" on that evidence, and a `@codex review` was
+posted on both asking for a review that had already passed. Before deciding a
+review is missing, read the PR's own `reactions`: MCP `issue_read` on the PR
+number shows them, because a PR is an issue.
+
 - Default: do not merge right after opening a PR — open it, then
   stop. If I say to merge, merge.
 - Once the review lands, run `gh pr view <n> --comments` and triage
@@ -507,8 +520,9 @@ chatgpt-codex-connector[bot]; a clean pass is just a 👍 reaction.
   Only do that if I ask.
 
 **Codex needs an environment for the repo, and without one it does nothing.**
-On 2026-09-10 PR #84 opened, Codex fired unasked within three minutes — and
-said only *"To use Codex here, create an environment for this repo"*. Not a
+On 2026-09-10 PR #84 opened at 13:23:44Z and Codex fired unasked **thirteen
+seconds later** — saying only *"To use Codex here, create an environment for
+this repo"*. Not a
 review, not the 👍 of a clean pass: a prerequisite nobody had written down,
 configured per repo at `chatgpt.com/codex/cloud/settings/environments`. The
 implementer cannot warn about this. Its warning is about the TOKEN, and with a
