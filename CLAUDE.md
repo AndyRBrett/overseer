@@ -190,15 +190,18 @@ Each of these exists because the opposite already happened here.
   unasked; #78 and #82 got none, and #78 sat from 17:38Z until a human typed
   `@codex review` at 20:53Z — the review that found its P1 landed at 20:56Z. One
   credential fixes both, because a PR opened with one is an ordinary PR. The
-  implementer's prompt now also asks Codex itself — and that half is **verified
-  not to work**, so it is insurance that pays nothing. Codex resolves a
+  implementer's prompt used to ask Codex itself, described as insurance for a
+  repo with no token yet — **that step is gone as of 2026-09-14**, because it
+  was verified never to pay. Codex resolves a
   `@codex review` to the MENTIONER's Codex account, and a GitHub App has none.
   Measured on PR #86, the implementer's own PR: `overseer-implementer[bot]`
   posted the mention at 20:03:26Z and was answered ten seconds later with *"To
   use Codex here, create a Codex account and connect to github"* — a refusal
   aimed at the asker, not a review. It is not slow and it is not flaky; a bot
-  cannot ask. The mention does work from the `pr_token` PAT path, because a PAT
-  posts as a person. The token is still the fix, and now for both halves.
+  cannot ask. On the PAT path it would have worked and was redundant anyway —
+  a PR opened with a person's credential is auto-reviewed within seconds of
+  opening (#88, #89, #90 all were). So there is no credential-free fallback and
+  there never was: the token is the whole fix, for CI and for review alike.
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.

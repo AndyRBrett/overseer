@@ -231,22 +231,26 @@ jobs:
       # which leaves the issue eligible and pays for the same investigation again
       # every week. Contents + Pull requests is NOT enough here.
       #
-      # AND THE PROMPT ASKS FOR THE REVIEW OUT LOUD (step 5). Codex auto-reviews
-      # a pull request opened by a person — #81 and #83 each got one unasked —
-      # and did not review either of the two opened by the built-in token. #78
-      # sat from 17:38Z until a human typed `@codex review` at 20:53Z; the
-      # review that found its P1 landed three minutes later. Asking costs one
-      # comment and is the ONLY part of this that works with no credential at
-      # all, which is what makes it worth having in the fallback case.
+      # THE PROMPT USED TO ASK FOR THE REVIEW OUT LOUD, and that step is gone as
+      # of 2026-09-14 because it could never pay. Codex resolves a
+      # `@codex review` to the MENTIONER's Codex account, and no bot has one.
+      # Measured on #86, this repo's own implementer PR: `overseer-implementer
+      # [bot]` posted the mention at 20:03:26Z and was answered ten seconds
+      # later with "To use Codex here, create a Codex account and connect to
+      # github" — a refusal aimed at the asker, not a review. So on the App
+      # token path, which is the default, the ask always fails; and on the PAT
+      # path it is redundant, because Codex already auto-reviewed the PR the
+      # moment it opened (#88, #89 and #90 each within seconds, all three
+      # opened with a person's credential). It bought nothing either way, cost
+      # a turn, and left a log line that read as though a review had been
+      # requested.
       #
-      # UNVERIFIED, deliberately: whether Codex honours a mention posted by
-      # github-actions[bot] is not something this repo has established, and #78
-      # is mild evidence against — auto-review skipped it for being bot-opened,
-      # and a bot-posted mention may be skipped for the same reason. With
-      # pr_token or the App set the comment comes from that account instead and
-      # the question stops mattering. Do not let this line be mistaken for the
-      # fix; the credential is the fix, and this is insurance for repos that
-      # have not got one yet.
+      # What is left is the credential, which was always the fix: a PR opened
+      # with the App token or a PAT is an ordinary PR, and an ordinary PR gets
+      # CI and an auto-review. A PR opened with the built-in token gets neither
+      # — #78 and #82 got no review at all, and #78 sat from 17:38Z until a
+      # human typed `@codex review` at 20:53Z. There is no credential-free
+      # insurance to fall back on; there never was.
       - name: Which token opens the pull request?
         id: creds
         env:
@@ -315,11 +319,6 @@ jobs:
                request with `gh pr create`. The body should say what changed and
                why, note anything you deliberately left out, and end with
                `Closes #${{ steps.issue.outputs.number }}`.
-               Then ask for a review on it, from the branch you just pushed:
-                 `gh pr comment --body "@codex review"`
-               Do this every time, including for a change you think is too
-               small to need one. You have just graded your own homework; this
-               is the step that asks someone else to mark it.
             6. If you cannot get the suite passing, do not open a pull request.
                Comment on the issue with what you tried and what blocked you,
                and leave it open — that one IS worth another attempt.

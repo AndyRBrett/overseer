@@ -50,9 +50,15 @@
 # requests opened by a person: in the overseer repo #81 and #83 got a review
 # unasked, and #78 and #82, opened by the built-in token, got none until a human
 # typed `@codex review` by hand. A token fixes both at once, because a PR opened
-# with one is an ordinary PR. The implementer's prompt also asks for the Codex
-# review itself now, which needs no credential — treat that as insurance for a
-# repo you have not given a token to yet, not as the fix.
+# with one is an ordinary PR.
+#
+# THERE IS NO CREDENTIAL-FREE FALLBACK. The prompt used to ask Codex for the
+# review itself, described here as insurance for a repo with no token yet. It
+# was never insurance: Codex resolves the mention to the ASKER's Codex account,
+# and a bot has none. Measured on overseer #86 — the implementer's own PR — the
+# bot's `@codex review` was answered ten seconds later with "To use Codex here,
+# create a Codex account and connect to github". The step is gone as of
+# 2026-09-14. Give this repo a token, or it gets no review.
 #
 # AND CODEX NEEDS AN ENVIRONMENT FOR THE REPO before it will review anything.
 # Nothing in this workflow can detect that: it warns about the TOKEN, and with a
