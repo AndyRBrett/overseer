@@ -61,57 +61,73 @@ jobs:
       # PyGithub only — the agent dependencies aren't needed for a read.
       - run: pip install "PyGithub>=2.1"
 
-      - name: Rebuild the ledger
+      - name: Rebuild the published files
         env:
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
           TRADING_REPO: ${{ vars.TRADING_REPO }}
           VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
           UFC_REPO: ${{ vars.UFC_REPO }}
-        run: |
-          python scripts/refresh_ledger.py ${{ inputs.full && '--full' || '' }}
-
-      # The top half of the dashboard — per-project health, the freshness
-      # alerts, the attention ranking — was written ONLY by the weekly review,
-      # so the page carried two clocks: a delivery panel current to the hour
-      # above project health that could be five days old (0.3h against 117.8h on
-      # 2026-09-05), and the stale half was the half that says whether anything
-      # is broken. None of it needs a model: it is four GitHub reads and some
-      # arithmetic, which is exactly what this job already is.
-      #
-      # It runs BEFORE the ask-context rebuild so the voice assistant answers
-      # from the same freshly-read health the page shows.
-      - name: Refresh project health and the attention ranking
-        env:
-          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
-          TRADING_REPO: ${{ vars.TRADING_REPO }}
-          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
-          UFC_REPO: ${{ vars.UFC_REPO }}
-        run: python scripts/refresh_status.py
-
-      # The voice assistant answers from this pack, so it has to move with the
-      # ledger — an assistant describing last week's queue out loud is worse
-      # than one that says it doesn't know. Free to rebuild: pure file reads,
-      # no GitHub, no model calls, and it no-ops when nothing changed.
-      - name: Rebuild the voice assistant's context pack
-        run: python scripts/build_ask_context.py
+          FULL: ${{ inputs.full && '--full' || '' }}
+        run: bash scripts/rebuild_docs.sh
 
       - name: Publish if anything moved
+        env:
+          OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          TRADING_REPO: ${{ vars.TRADING_REPO }}
+          VOLLEYBALL_REPO: ${{ vars.VOLLEYBALL_REPO }}
+          UFC_REPO: ${{ vars.UFC_REPO }}
+          FULL: ${{ inputs.full && '--full' || '' }}
         run: |
           FILES="docs/shipped.json docs/ask-context.json docs/digest.json"
-          if git diff --quiet -- $FILES; then
+          git config user.name  "overseer-bot"
+          git config user.email "overseer-bot@users.noreply.github.com"
+
+          commit_if_moved() {
+            if git diff --quiet -- $FILES; then
+              return 1
+            fi
+            git add $FILES
+            git commit -m "Refresh delivery ledger and project health"
+          }
+
+          if ! commit_if_moved; then
             echo "Nothing moved — nothing to publish."
             exit 0
           fi
-          git config user.name  "overseer-bot"
-          git config user.email "overseer-bot@users.noreply.github.com"
-          git add $FILES
-          git commit -m "Refresh delivery ledger and project health"
+
           # The weekly review commits to the same branch, and on a busy repo the
-          # remote can move between checkout and push. Rebase and retry rather
-          # than failing a run whose only job is to publish one small file.
+          # remote can move between checkout and push.
+          #
+          # It must not be resolved by rebasing. These three files are DERIVED
+          # and every line of them is generated, so a textual merge of two
+          # versions is meaningless — and git conflicts on all three every time.
+          # On 2026-09-14 the :20 refresh overlapped the weekly review's own
+          # publish by two minutes: the rebase conflicted in all three files,
+          # and the two remaining retries then died on "Pulling is not possible
+          # because you have unmerged files" without ever attempting a push,
+          # because nothing had cleaned the conflicted tree up. Three retries,
+          # zero pushes, one red run over a file that was republished an hour
+          # later anyway.
+          #
+          # The right resolution for a derived file is to take whatever landed
+          # first and RECOMPUTE on top of it — never to merge, and never to force
+          # our copy over it. Ours would clobber the weekly digest with a digest
+          # rebuilt from the previous one, and `generated` with it, which is the
+          # one field the dead-man's switch reads (invariant 13).
+          #
+          # No backoff between attempts: each one now does a full rebuild
+          # against GitHub first, which is seconds of real work, and a sleep on
+          # top of it only widens the window for the next writer to land.
           for i in 1 2 3; do
-            git pull --rebase --autostash origin main && git push && exit 0
-            echo "push failed (attempt $i) — retrying"
-            sleep $((i * 5))
+            git push && exit 0
+            echo "push failed (attempt $i) — rebuilding onto the new main"
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main
+            git reset --hard origin/main
+            bash scripts/rebuild_docs.sh
+            if ! commit_if_moved; then
+              echo "Whatever landed first is already current — nothing left to publish."
+              exit 0
+            fi
           done
           exit 1

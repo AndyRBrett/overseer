@@ -54,6 +54,7 @@ actually failed.
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
 | `scripts/refresh_ledger.py` | cron every ~2–6h (see below), pure GitHub reads, no model calls |
 | `scripts/refresh_status.py` | same cron: the digest's health + ranking between weekly reviews |
+| `scripts/rebuild_docs.sh` | the three builders above in order; run twice per refresh when a push race sends it round again |
 | `scripts/implement_guard.py` | keeps implement.yml's catch-up crons and its Cloudflare poke from dispatching a second batch |
 | `scripts/heartbeat.py` | daily; stdlib-only and tokenless **by design** |
 | `scripts/verify_worker_triggers.py` | reads the schedule `wrangler deploy` says it installed back against `wrangler.toml`; run by `deploy-worker.yml` |
@@ -353,6 +354,35 @@ Each of these exists because the opposite already happened here.
   # what the token needs` died on `Unknown arguments: #, PAT, with, ...` — the
   annotation that was supposed to prevent a mistake caused one. Put the
   explanation on its own line above.
+- **A generated file has no mergeable half.** `ledger-refresh` used to resolve a
+  lost push race with `git pull --rebase`, copied from `weekly-review.yml`. On
+  2026-09-14 the :20 cron overlapped the review's own publish by two minutes:
+  the rebase conflicted in all three files — every line of them is generated, so
+  there is no side to keep — and the two remaining retries then died on
+  *"Pulling is not possible because you have unmerged files"* without attempting
+  a single push, because nothing had cleaned the conflicted tree up. Three
+  retries, zero pushes, one red run over files republished an hour later anyway.
+  The retry now resets to `origin/main` and re-runs `scripts/rebuild_docs.sh` on
+  top: a derived file is recomputed, never merged. Note what it must NOT copy
+  from the review, which resolves the same collision with `-X theirs`: the
+  review holds a complete digest it just wrote, while the refresh holds one
+  rebuilt from the PREVIOUS digest, so forcing its copy over the review's would
+  roll `generated` back a week and tell the dead-man's switch a review had run.
+- **An attempt that never reached the model was being blamed for the issue.**
+  Invariant 10 hands a dead-key attempt back clean, and the classifier
+  implementing it grepped the SDK report for *"credit balance is too low"*. That
+  string is in the PROVIDER's error text, which `show_full_output: false` keeps
+  out of the saved report by design — so a report with no error text at all fell
+  through to the bench. Measured cost: ufc-dashboard's implementer has never
+  once reached the model (`subtype: "success", is_error: true, num_turns: 1,
+  total_cost_usd: 0, modelUsage: {}`, returned in under 200ms, on both attempts
+  it has ever had), and it benched a different filed issue each time — #73 on
+  2026-08-31 and #129 on 2026-09-14 — with `overseer:implement-failed`, which is
+  exactly the retirement-by-accident the blameless path exists to prevent. The
+  test is now a fact rather than a phrase: **nothing billed means no model call,
+  and a run that never started cannot have failed on the merits.** A benched
+  issue on a repo whose implementer has never produced a PR is a credential
+  question, not an issue-quality one.
 - **Re-running a green `ledger-refresh` goes red, and means nothing.** The
   re-run replays the original checkout, rebuilds against a commit its own first
   attempt already superseded, and races to push over it; the publish step burns
