@@ -1,6 +1,28 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-14T23:39:14+00:00",
+      "created_at": "2026-09-14T14:11:31+00:00",
+      "delivered_by": "hand",
+      "effort": "low",
+      "fix_ref": "PR #88",
+      "fix_sha": "0e7ad03",
+      "fix_url": "https://github.com/AndyRBrett/overseer/pull/88",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 129,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
+    },
+    {
       "closed_at": "2026-09-14T15:25:01+00:00",
       "created_at": "2026-09-14T14:11:35+00:00",
       "delivered_by": "implementer",
@@ -19,25 +41,6 @@
       "status": "not_planned",
       "title": "Add scheduled-run watchdog that auto-retriggers the weekly overseer workflow if it hasn't fired within expected cadence",
       "url": "https://github.com/AndyRBrett/overseer/issues/87"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-09-14T14:11:31+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 129,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
     },
     {
       "closed_at": null,
@@ -1879,7 +1882,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-14T23:12:33Z",
+  "generated": "2026-09-15T01:34:12Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1922,13 +1925,13 @@
         "duplicate": 0,
         "in_flight": 0,
         "not_planned": 1,
-        "open": 7,
+        "open": 6,
         "proposed": 13,
-        "reject_rate": 0.167,
+        "reject_rate": 0.143,
         "sample": "sufficient",
-        "settled": 6,
-        "ship_rate": 0.833,
-        "shipped": 5
+        "settled": 7,
+        "ship_rate": 0.857,
+        "shipped": 6
       }
     },
     "min_settled": 4,
@@ -1936,13 +1939,13 @@
       "duplicate": 10,
       "in_flight": 0,
       "not_planned": 8,
-      "open": 16,
+      "open": 15,
       "proposed": 90,
-      "reject_rate": 0.243,
+      "reject_rate": 0.24,
       "sample": "sufficient",
-      "settled": 74,
-      "ship_rate": 0.757,
-      "shipped": 56
+      "settled": 75,
+      "ship_rate": 0.76,
+      "shipped": 57
     }
   },
   "queue": {
@@ -1952,38 +1955,28 @@
     "efforts": [
       "low"
     ],
-    "eligible": 1,
+    "eligible": 0,
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "last_dispatch": {
       "at": "2026-09-14T22:08:57Z",
       "conclusion": "success"
     },
-    "next": [
-      {
-        "effort": "low",
-        "impact": "high",
-        "kind": "enhancement",
-        "number": 129,
-        "repo": "AndyRBrett/ufc-dashboard",
-        "title": "Suppress/deprioritize movement alerts with low historical persistence using existing calibration stats",
-        "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/129"
-      }
-    ],
+    "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.687,
+    "delivery_rate": 0.699,
     "duplicate": 10,
     "duplicate_rate": 0.108,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 10,
-    "open": 16,
+    "open": 15,
     "proposed": 93,
-    "shipped": 57,
+    "shipped": 58,
     "shipped_before_implementer": 35,
-    "shipped_by_hand": 18,
+    "shipped_by_hand": 19,
     "shipped_by_implementer": 4
   }
 }
