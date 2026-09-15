@@ -390,6 +390,44 @@ Each of these exists because the opposite already happened here.
   and a run that never started cannot have failed on the merits.** A benched
   issue on a repo whose implementer has never produced a PR is a credential
   question, not an issue-quality one.
+- **The Anthropic key lives in SIX places, and the sixth is in no repo.** On
+  2026-09-15, rotating `ufc-dashboard`'s key ended with the old one **disabled**
+  in the console — and the trash-talk feature in that repo's live app died
+  within the hour. The full inventory, because a list that is one short is worse
+  than no list: a repo secret in **each of the four repos**, the **Cloudflare
+  Worker** secret (`wrangler secret put`), and **Supabase edge function
+  secrets**, read at runtime by `Deno.env.get("ANTHROPIC_API_KEY")` in
+  `supabase/functions/ai-breakdown/index.ts`. That last one appears in no
+  workflow file anywhere, so grepping all four repos for `ANTHROPIC_API_KEY`
+  finds five of six and looks exhaustive. It is the one that broke.
+  **Where the symptom is tells you which store**: the first hypothesis was the
+  GitHub Actions secret changed ten minutes earlier, which cannot reach a live
+  web app at all. A browser symptom is a Supabase/Worker credential; a red
+  workflow is a repo secret.
+  **The diagnosis, for next time:** `ai-breakdown` answering 502 with *no* error
+  lines in `function_logs` is not a crash — it is the function's own
+  `if (!claudeRes.ok)` branch, which does not log, and whose response body
+  carries Anthropic's own words in `detail`. `cpu_time_used: 11–46ms` with
+  `reason: EarlyDrop` alongside it means the upstream rejected fast, which is
+  what a 401 does.
+  **And the reason this cost minutes instead of an evening: DISABLE, don't
+  delete.** A disabled key re-enables with the same value, so all six consumers
+  recovered at once with nothing re-pasted. Deleting would have forced a
+  six-place rotation using a key whose value can never be read back — the
+  console shows it once, and that window had already closed. Disable, leave it a
+  day, delete only once nothing has gone quiet.
+  **That is the PLANNED-rotation procedure and nothing else.** A key that might
+  have leaked is revoked, never merely disabled, and never re-enabled to end an
+  outage — the rule above stands (a credential echoed anywhere gets revoked, not
+  reasoned about), and re-enabling hands it back to whoever already has it.
+  When a compromised key breaks six consumers, the fix is a new key propagated
+  to all six, outage and all. Codex caught this paragraph asserting the
+  convenient half on its own (#91): stated unqualified, it contradicted that
+  earlier rule outright, and the reader reaching for it mid-outage is exactly
+  the one who would pick the wrong half.
+  Note the deliberate end state: `ufc-dashboard`'s repo secret now holds a
+  DIFFERENT key from the other five. Per-service keys are fine — better, even —
+  but the next rotation has six doors, not one.
 - **Re-running a green `ledger-refresh` goes red, and means nothing.** The
   re-run replays the original checkout, rebuilds against a commit its own first
   attempt already superseded, and races to push over it; the publish step burns
