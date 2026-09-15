@@ -416,6 +416,15 @@ Each of these exists because the opposite already happened here.
   six-place rotation using a key whose value can never be read back — the
   console shows it once, and that window had already closed. Disable, leave it a
   day, delete only once nothing has gone quiet.
+  **That is the PLANNED-rotation procedure and nothing else.** A key that might
+  have leaked is revoked, never merely disabled, and never re-enabled to end an
+  outage — the rule above stands (a credential echoed anywhere gets revoked, not
+  reasoned about), and re-enabling hands it back to whoever already has it.
+  When a compromised key breaks six consumers, the fix is a new key propagated
+  to all six, outage and all. Codex caught this paragraph asserting the
+  convenient half on its own (#91): stated unqualified, it contradicted that
+  earlier rule outright, and the reader reaching for it mid-outage is exactly
+  the one who would pick the wrong half.
   Note the deliberate end state: `ufc-dashboard`'s repo secret now holds a
   DIFFERENT key from the other five. Per-service keys are fine — better, even —
   but the next rotation has six doors, not one.
