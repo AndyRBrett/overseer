@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-15T21:29:07Z",
+      "last_ok": "2026-09-16T00:28:10Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-15T21:29:07Z",
+      "last_ok": "2026-09-16T00:28:10Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-15T21:29:07Z",
+      "last_ok": "2026-09-16T00:28:10Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-09-15T21:29:07Z",
+      "last_ok": "2026-09-16T00:28:10Z",
       "blind_cycles": 0
     }
   },
@@ -69,20 +69,20 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.127,
+      "score": 0.165,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.333,
+        "kpi": 0.523,
         "backlog": 0.4
       },
-      "why": "win_rate is 60%; 4 open ideas",
+      "why": "win_rate is 43%; 4 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
       "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
-      "notable": false,
+      "notable": true,
       "repo": "AndyRBrett/crypto-trading"
     },
     {
@@ -121,10 +121,14 @@
     }
   ],
   "systemic_risk": {
-    "flagged": false,
-    "projects": []
+    "flagged": true,
+    "projects": [
+      "coachvision",
+      "Trading bot"
+    ],
+    "message": "coachvision, Trading bot are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
-  "headline": "coachvision is running, but nothing has happened there lately.",
+  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -177,8 +181,8 @@
       "unpriced_runs": 0
     },
     "last_30d": {
-      "total_usd": 2.2651,
-      "runs": 6,
+      "total_usd": 1.9269,
+      "runs": 5,
       "unpriced_runs": 0
     }
   },
@@ -283,5 +287,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-15T21:29:07Z"
+  "refreshed": "2026-09-16T00:28:10Z"
 }
