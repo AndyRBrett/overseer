@@ -10,7 +10,7 @@
     "duplicates_blocked": 0
   },
   "rollup": {
-    "ok": 3,
+    "ok": 2,
     "total": 4,
     "issues": 0,
     "enhancements": 0,
@@ -23,31 +23,40 @@
         "detail": "no recent activity \u00b7 idle 7 cycles",
         "cycles": 7,
         "nudge": true
+      },
+      {
+        "name": "Overseer",
+        "status": "idle",
+        "detail": "no recent activity \u00b7 idle 1 cycle",
+        "cycles": 1,
+        "nudge": false
       }
     ]
   },
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-21T19:35:03Z",
+      "last_ok": "2026-09-21T23:22:31Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-21T19:35:03Z",
+      "last_ok": "2026-09-21T23:22:31Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-21T19:35:03Z",
+      "last_ok": "2026-09-21T23:22:31Z",
       "blind_cycles": 0
     },
     "Overseer": {
-      "status": "ok",
-      "last_ok": "2026-09-21T19:35:03Z",
-      "blind_cycles": 0
+      "status": "idle",
+      "reason": "read OK but no recent activity",
+      "last_ok": "2026-09-21T23:22:31Z",
+      "blind_cycles": 0,
+      "idle_cycles": 1
     }
   },
   "attention": [
@@ -86,6 +95,23 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
+      "score": 0.16,
+      "signals": {
+        "staleness": 0.4,
+        "errors": 0.0,
+        "kpi": 0.0,
+        "backlog": 0.0
+      },
+      "why": "no recent activity",
+      "name": "Overseer",
+      "status": "idle",
+      "plain": "Overseer is running, but nothing has happened there lately",
+      "short": "is running, but nothing has happened there lately",
+      "action": "Check whether it has anything to do.",
+      "notable": true,
+      "repo": "AndyRBrett/overseer"
+    },
+    {
       "score": 0.09,
       "signals": {
         "staleness": 0.0,
@@ -101,34 +127,18 @@
       "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
-    },
-    {
-      "score": 0.0,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.0,
-        "backlog": 0.0
-      },
-      "why": "healthy \u2014 nothing is asking for attention",
-      "name": "Overseer",
-      "status": "ok",
-      "plain": "Overseer looks fine",
-      "short": "looks fine",
-      "action": "Nothing to do.",
-      "notable": false,
-      "repo": "AndyRBrett/overseer"
     }
   ],
   "systemic_risk": {
     "flagged": true,
     "projects": [
       "coachvision",
-      "Trading bot"
+      "Trading bot",
+      "Overseer"
     ],
-    "message": "coachvision, Trading bot are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+    "message": "coachvision, Trading bot, Overseer are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
+  "headline": "coachvision is running, but nothing has happened there lately. 2 others could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -287,5 +297,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-21T19:35:03Z"
+  "refreshed": "2026-09-21T23:22:31Z"
 }
