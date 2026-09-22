@@ -85,16 +85,25 @@ def parse_resume_date(raw):
     like `20260929`, and a timestamp with a time on it would silently become a
     date — both are signs the field was filled in by someone guessing at the
     format, which is exactly when refusing to pause is the safe answer.
+
+    THE GATE IS THE ROUND TRIP, not a length check (Codex, PR #92). This first
+    read the value's length and handed the rest to strptime, which was wrong in
+    the one direction this module may not be wrong in: strptime accepts a
+    SPACE-PADDED day, so `2026-09- 9` is ten characters long, parses happily as
+    the 9th, and PAUSED the pipeline on a malformed value the docs never
+    describe — fail-closed, in the file whose entire argument is that it fails
+    open. Requiring the parsed date to render back to exactly the text it came
+    from is the same check for every such near-miss at once, this one and the
+    `2026-9-9` family alike, rather than a list of the ones anybody thought of.
     """
     if raw is None:
         return None
     text = str(raw).strip()
-    if len(text) != 10:
-        return None
     try:
-        return datetime.strptime(text, "%Y-%m-%d").date()
+        parsed = datetime.strptime(text, "%Y-%m-%d").date()
     except ValueError:
         return None
+    return parsed if parsed.isoformat() == text else None
 
 
 def pause_state(raw, now=None):

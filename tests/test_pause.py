@@ -90,6 +90,26 @@ def test_near_miss_date_formats_do_not_pause():
         assert pause.is_paused(near, NOW) is False, f"{near!r} must not pause"
 
 
+def test_a_space_padded_day_does_not_pause():
+    # CODEX, PR #92, and the only finding on it. The first draft gated on
+    # len(text) == 10 and handed the rest to strptime — which accepts a
+    # SPACE-PADDED day, so `2026-09- 9` measured ten characters, parsed as the
+    # 9th, and PAUSED the pipeline. Fail-closed, on an undocumented value, in
+    # the module whose whole argument is that it fails open.
+    for padded in ("2026-09- 9", "2026-09-1 ", " 026-09-19"):
+        assert pause.is_paused(padded, NOW) is False, f"{padded!r} must not pause"
+
+
+def test_only_canonical_iso_round_trips():
+    # The general form of the bug above: the gate is that the parsed date
+    # renders back to exactly the text it came from, so every near-miss is
+    # caught by one rule rather than a list of the ones somebody enumerated.
+    good = _date(7)
+    assert pause.parse_resume_date(good).isoformat() == good
+    for variant in ("2026-9-9", "2026-09- 9", "2026-1-01"):
+        assert pause.parse_resume_date(variant) is None, variant
+
+
 def test_surrounding_whitespace_is_forgiven():
     # A settings field with a stray newline is a typo, not a different intent.
     assert pause.is_paused(f"  {_date(7)}  ", NOW) is True
