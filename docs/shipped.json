@@ -1,6 +1,94 @@
 {
   "entries": [
     {
+      "closed_at": "2026-09-22T19:59:24+00:00",
+      "created_at": "2026-08-24T14:35:21+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #111",
+      "fix_sha": "bdcc11e",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/111",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 90,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/90"
+    },
+    {
+      "closed_at": "2026-09-22T19:59:22+00:00",
+      "created_at": "2026-08-15T10:35:36+00:00",
+      "delivered_by": "hand",
+      "effort": "high",
+      "fix_ref": "PR #111",
+      "fix_sha": "bdcc11e",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/111",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:high",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 74,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongside live odds",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/74"
+    },
+    {
+      "closed_at": "2026-09-22T19:59:21+00:00",
+      "created_at": "2026-08-31T19:08:20+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #111",
+      "fix_sha": "bdcc11e",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/111",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 93,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/93"
+    },
+    {
+      "closed_at": "2026-09-22T19:59:19+00:00",
+      "created_at": "2026-08-31T19:47:53+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "fix_ref": "PR #111",
+      "fix_sha": "bdcc11e",
+      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/111",
+      "impact": "high",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:high"
+      ],
+      "number": 94,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/94"
+    },
+    {
       "closed_at": "2026-09-14T23:39:14+00:00",
       "created_at": "2026-09-14T14:11:31+00:00",
       "delivered_by": "hand",
@@ -709,44 +797,6 @@
       "url": "https://github.com/AndyRBrett/overseer/issues/32"
     },
     {
-      "closed_at": null,
-      "created_at": "2026-08-31T19:47:53+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 94,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Add a secondary odds-data provider fallback for automatic failover when primary API budget is exhausted",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/94"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-31T19:08:20+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 93,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Backtest-calibrate movement_alert_threshold per weight-class/bout-position instead of a single global constant",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/93"
-    },
-    {
       "closed_at": "2026-08-24T16:49:41+00:00",
       "created_at": "2026-08-17T19:55:18+00:00",
       "delivered_by": "hand",
@@ -779,25 +829,6 @@
       "status": "not_planned",
       "title": "coachvision status frozen since 2026-08-10 (122h old) \u2014 pipeline run has lapsed, breaching 48h SLA",
       "url": "https://github.com/AndyRBrett/coachvision/issues/23"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-24T14:35:21+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 90,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Add a correlated multi-bet (parlay) risk calculator using existing implied win-probability data",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/90"
     },
     {
       "closed_at": null,
@@ -840,25 +871,6 @@
       "status": "shipped",
       "title": "Track enhancement-backlog aging and surface stale (>60-day) STILL OPEN items in the weekly digest",
       "url": "https://github.com/AndyRBrett/overseer/issues/26"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-08-15T10:35:36+00:00",
-      "delivered_by": "hand",
-      "effort": "high",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:high",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 74,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongside live odds",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/74"
     },
     {
       "closed_at": null,
@@ -1052,25 +1064,6 @@
       "status": "shipped",
       "title": "Ship a bundled demo clip + auto-generated coaching report so the pipeline shows value before real footage is added",
       "url": "https://github.com/AndyRBrett/coachvision/issues/21"
-    },
-    {
-      "closed_at": "2026-08-13T21:58:43+00:00",
-      "created_at": "2026-07-13T16:21:59+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 51,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "not_planned",
-      "title": "Detect bout-replacement/fighter-swap events to suppress phantom line-movement alerts",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/51"
     },
     {
       "closed_at": "2026-08-13T21:58:09+00:00",
@@ -1882,7 +1875,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-22T18:59:30Z",
+  "generated": "2026-09-22T22:17:43Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1924,28 +1917,28 @@
       "AndyRBrett/ufc-dashboard": {
         "duplicate": 0,
         "in_flight": 0,
-        "not_planned": 1,
-        "open": 6,
-        "proposed": 13,
-        "reject_rate": 0.143,
+        "not_planned": 0,
+        "open": 2,
+        "proposed": 12,
+        "reject_rate": 0.0,
         "sample": "sufficient",
-        "settled": 7,
-        "ship_rate": 0.857,
-        "shipped": 6
+        "settled": 10,
+        "ship_rate": 1.0,
+        "shipped": 10
       }
     },
     "min_settled": 4,
     "overall": {
       "duplicate": 10,
       "in_flight": 0,
-      "not_planned": 8,
-      "open": 15,
-      "proposed": 90,
-      "reject_rate": 0.24,
+      "not_planned": 7,
+      "open": 11,
+      "proposed": 89,
+      "reject_rate": 0.218,
       "sample": "sufficient",
-      "settled": 75,
-      "ship_rate": 0.76,
-      "shipped": 57
+      "settled": 78,
+      "ship_rate": 0.782,
+      "shipped": 61
     }
   },
   "queue": {
@@ -1966,17 +1959,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.699,
+    "delivery_rate": 0.756,
     "duplicate": 10,
-    "duplicate_rate": 0.108,
+    "duplicate_rate": 0.109,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
-    "not_planned": 10,
-    "open": 15,
-    "proposed": 93,
-    "shipped": 58,
+    "not_planned": 9,
+    "open": 11,
+    "proposed": 92,
+    "shipped": 62,
     "shipped_before_implementer": 35,
-    "shipped_by_hand": 19,
+    "shipped_by_hand": 23,
     "shipped_by_implementer": 4
   }
 }
