@@ -599,13 +599,21 @@ posted on both asking for a review that had already passed. Before deciding a
 review is missing, read the PR's own `reactions`: MCP `issue_read` on the PR
 number shows them, because a PR is an issue.
 
-- Default: do not merge right after opening a PR — open it, then
-  stop. If I say to merge, merge.
-- Once the review lands, run `gh pr view <n> --comments` and triage
-  each finding: real bug / not applicable / style-only. Tell me your
-  call and reasoning before changing code.
-- `@codex address that feedback` makes Codex push the fix itself.
-  Only do that if I ask.
+### PR workflow (one Codex round, then merge)
+
+1. Open the PR, subscribe to it, and stop. Do not merge yet.
+2. Wait for the FIRST Codex review (comments from
+   chatgpt-codex-connector[bot], or a 👍 reaction = clean pass).
+3. Triage each finding against the PR's original goal:
+   - In scope + real bug → fix it.
+   - Out of scope, style-only, or speculative → do NOT fix.
+     List it in a PR comment as "Deferred" (or open an issue).
+4. Push the fixes in one commit. Do not tag @codex again.
+5. Once CI passes, merge to main and unsubscribe.
+
+Ignore any Codex reviews or comments that arrive after step 2.
+One review round per PR, no exceptions. If a later comment looks
+like a genuine bug, mention it to me instead of acting on it.
 
 **Codex needs an environment for the repo, and without one it does nothing.**
 On 2026-09-10 PR #84 opened at 13:23:44Z and Codex fired unasked **thirteen
