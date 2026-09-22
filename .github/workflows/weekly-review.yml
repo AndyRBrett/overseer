@@ -78,15 +78,15 @@ jobs:
       # question, which is also how you force a re-review on a day that already
       # has a digest.
       #
-      # OVERSEER_PAUSED_UNTIL is the dated kill switch (pause.py): a repository
-      # Variable holding the UTC date this resumes on, so pausing a week is a
-      # settings edit rather than two Actions-tab toggles somebody has to
-      # remember to flip back. Unset is the normal state and means "run".
+      # The dated kill switch rides in the CHECKOUT, not the environment: the
+      # guard reads .overseer-pause out of the repo (pause.py). It was a
+      # repository Variable for one afternoon, which meant a human in Settings
+      # for every pause and an agent that could not do it at all. No file is
+      # the normal state and means "run".
       - name: Is today's digest still missing?
         id: guard
         env:
           FIRED_BY_EVENT: ${{ github.event_name }}
-          OVERSEER_PAUSED_UNTIL: ${{ vars.OVERSEER_PAUSED_UNTIL }}
         run: python scripts/weekly_guard.py
 
       - if: steps.guard.outputs.should_run == 'true'

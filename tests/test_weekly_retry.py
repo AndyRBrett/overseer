@@ -334,16 +334,33 @@ def test_a_pause_does_not_override_an_already_published_digest():
     assert "paused until" in reason
 
 
-def test_the_guard_reads_the_pause_from_the_environment(monkeypatch, tmp_path):
-    # The wiring, not the rule: main() must actually pass the variable through.
+def test_the_guard_reads_the_pause_file(monkeypatch, tmp_path):
+    # The wiring, not the rule: main() must actually read the file through.
     monkeypatch.setattr(wg, "DIGEST_PATH", str(tmp_path / "nope.json"))
     output = tmp_path / "github_output"
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
     monkeypatch.setenv("FIRED_BY_EVENT", CRON)
-    # Far enough out to stay in the future however long this repo lives, but
-    # inside MAX_PAUSE_DAYS so it is honoured rather than refused as a typo.
+    # Relative to the real clock, since main() reads it: far enough out to stay
+    # future however long this repo lives, inside MAX_PAUSE_DAYS so it is
+    # honoured rather than refused as a mistyped year.
     soon = (datetime.now(timezone.utc) + timedelta(days=30)).date().isoformat()
-    monkeypatch.setenv(pause.ENV_VAR, soon)
+    pause_file = tmp_path / "pause"
+    pause_file.write_text(f"# test\n{soon}\n", encoding="utf-8")
+    monkeypatch.setattr(pause, "PAUSE_FILE", str(pause_file))
 
     assert wg.main() == 0
     assert output.read_text(encoding="utf-8").strip() == "should_run=false"
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_pause(monkeypatch, tmp_path):
+    """Keep the repo's own .overseer-pause out of these tests.
+
+    The pause file is committed when a pause is in force, and main() reads it
+    from the working directory — so without this every test that exercises the
+    guard end to end silently becomes a test of whatever pause happens to be
+    live that week. It broke test_guard_survives_a_missing_digest_file the hour
+    the first real pause landed. Tests that DO want a pause point PAUSE_FILE at
+    their own fixture and override this.
+    """
+    monkeypatch.setattr(pause, "PAUSE_FILE", str(tmp_path / "no-pause-file"))
