@@ -334,6 +334,23 @@ def test_a_pause_does_not_override_an_already_published_digest():
     assert "paused until" in reason
 
 
+def test_an_undecodable_pause_file_still_leaves_a_decision(monkeypatch, tmp_path):
+    # The contract this broke is the module docstring's: "Always exits 0 — this
+    # is a decision, not a verdict, and it must never be the thing that fails
+    # the workflow." A crash here writes no should_run, so every downstream
+    # `if:` is skipped and the review does not run.
+    monkeypatch.setattr(wg, "DIGEST_PATH", str(tmp_path / "nope.json"))
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("FIRED_BY_EVENT", CRON)
+    bad = tmp_path / "pause"
+    bad.write_bytes(b"# caf\xe9\n2026-09-30\n")
+    monkeypatch.setattr(pause, "PAUSE_FILE", str(bad))
+
+    assert wg.main() == 0, "the guard must never be what fails the workflow"
+    assert output.read_text(encoding="utf-8").strip() == "should_run=true"
+
+
 def test_the_guard_reads_the_pause_file(monkeypatch, tmp_path):
     # The wiring, not the rule: main() must actually read the file through.
     monkeypatch.setattr(wg, "DIGEST_PATH", str(tmp_path / "nope.json"))

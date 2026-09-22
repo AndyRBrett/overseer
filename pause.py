@@ -106,6 +106,17 @@ def read_pause_file(path=None):
     A missing file is the normal state and returns None quietly. An unreadable
     one does too: the caller treats None as "not paused", and a permissions
     problem on this file must not be what takes the weekly review down.
+
+    UnicodeError IS caught here, and it is not a filesystem error (Codex, PR
+    #93). UnicodeDecodeError descends from ValueError, not OSError, so an
+    `except OSError` alone let it through — and because the read happens in
+    main() before anything is written, the guard died with a traceback, exited
+    1, and produced no `should_run` at all. That fails the step and skips every
+    downstream `if:`, so one non-UTF-8 byte in a COMMENT line took the weekly
+    review down and turned the workflow red: the precise inverse of fail-open,
+    and a breach of this guard's "always exits 0 — a decision, not a verdict"
+    contract. A file we cannot decode is a file we cannot trust, so it reads as
+    no pause at all.
     """
     try:
         with open(path or PAUSE_FILE, encoding="utf-8") as f:
@@ -113,7 +124,7 @@ def read_pause_file(path=None):
                 stripped = line.strip()
                 if stripped and not stripped.startswith("#"):
                     return stripped
-    except OSError:
+    except (OSError, UnicodeError):
         return None
     return None
 

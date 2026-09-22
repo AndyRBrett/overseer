@@ -193,6 +193,18 @@ def test_an_unreadable_file_does_not_pause(tmp_path):
     assert pause.read_pause_file(str(d)) is None
 
 
+def test_undecodable_bytes_do_not_pause_or_raise(tmp_path):
+    # CODEX, PR #93. UnicodeDecodeError descends from ValueError, not OSError,
+    # so `except OSError` let it through — and the read happens in main() before
+    # anything is written, so the guard died with a traceback, exited 1 and
+    # wrote no should_run at all. One non-UTF-8 byte in a COMMENT line took the
+    # weekly review down and turned the workflow red: the inverse of fail-open.
+    f = tmp_path / "pause"
+    f.write_bytes(b"# caf\xe9 \x97 spend was high\n2026-09-30\n")
+    assert pause.read_pause_file(str(f)) is None
+    assert pause.current(NOW, path=str(f))[0] is False
+
+
 def test_a_committed_pause_file_must_actually_parse():
     # THE EARLY WARNING. A malformed value fails OPEN by design, so "I paused it"
     # and "I typed the date wrong" look identical until the bill arrives. If the
