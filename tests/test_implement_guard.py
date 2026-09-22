@@ -292,3 +292,80 @@ def test_the_dispatch_step_is_gated_on_the_guard():
     workflow = (WORKFLOWS / "implement.yml").read_text(encoding="utf-8")
     assert "python scripts/implement_guard.py" in workflow
     assert "if: steps.guard.outputs.should_run == 'true'" in workflow
+
+
+# ── the dated kill switch (2026-09-20) ───────────────────────────────────
+#
+# This is the stage where a forgotten pause is worth ~$4.50 a week and a
+# forgotten un-pause is worth the delivery. Both halves are pinned here.
+
+import pause  # noqa: E402
+
+
+def _pause_date(days):
+    return (NOW + timedelta(days=days)).date().isoformat()
+
+
+@pytest.mark.parametrize("event", ["schedule", "repository_dispatch"])
+def test_a_pause_stands_the_dispatcher_down(event):
+    # Nothing dispatched today and the review landed — the state where this
+    # would otherwise hand over three issues at ~$1.50 each.
+    run, reason = ig.should_run([], now=NOW, event=event, digest=_digest(),
+                                paused_until=_pause_date(7))
+    assert run is False
+    assert "paused until" in reason
+
+
+def test_a_pause_outranks_an_unreadable_run_history():
+    # should_run treats runs=None as "could not tell, proceed". A pause is not
+    # doubt, and it must not be overridden by doubt about something else.
+    run, reason = ig.should_run(None, now=NOW, event="schedule", digest=_digest(),
+                                paused_until=_pause_date(7))
+    assert run is False
+    assert "paused until" in reason
+
+
+def test_a_human_can_still_dispatch_while_paused():
+    run, reason = ig.should_run([], now=NOW, event=ig.MANUAL_EVENT, digest=_digest(),
+                                paused_until=_pause_date(7))
+    assert run is True
+    assert "a human asked" in reason
+
+
+def test_an_expired_pause_lets_the_dispatcher_resume():
+    run, _ = ig.should_run([], now=NOW, event="schedule", digest=_digest(),
+                           paused_until=_pause_date(-1))
+    assert run is True
+
+
+@pytest.mark.parametrize("junk", ["true", "soon", "2026-02-30", "2126-09-29"])
+def test_a_pause_it_cannot_read_still_dispatches(junk):
+    # Same principle as the module docstring's: in doubt it RUNS, because a
+    # skipped week costs the week.
+    run, _ = ig.should_run([], now=NOW, event="schedule", digest=_digest(),
+                           paused_until=junk)
+    assert run is True
+
+
+def test_no_pause_configured_changes_nothing():
+    # The normal state. Guards against a bug where an unset variable reads as
+    # a pause and quietly retires the stage.
+    for empty in (None, "", "  "):
+        run, _ = ig.should_run([], now=NOW, event="schedule", digest=_digest(),
+                               paused_until=empty)
+        assert run is True
+
+
+def test_the_guard_reads_the_pause_from_the_environment(monkeypatch, tmp_path):
+    monkeypatch.setattr(ig, "recent_runs", lambda *a, **k: [])
+    monkeypatch.setattr(ig, "published_digest",
+                        lambda *a, **k: {"generated": datetime.now(timezone.utc)
+                                         .strftime("%Y-%m-%dT%H:%M:%SZ")})
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("FIRED_BY_EVENT", "schedule")
+    soon = (datetime.now(timezone.utc) + timedelta(days=30)).date().isoformat()
+    monkeypatch.setenv(pause.ENV_VAR, soon)
+
+    assert ig.main() == 0, "the guard must never be what fails the workflow"
+    assert output.read_text(encoding="utf-8").strip() == "should_run=false"

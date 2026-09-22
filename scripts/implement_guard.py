@@ -87,6 +87,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pause  # noqa: E402
 import tools  # noqa: E402
 
 WORKFLOW_FILE = os.getenv("IMPLEMENT_WORKFLOW_FILE", "implement.yml")
@@ -162,10 +163,18 @@ def reviewed_today(digest, now=None):
     return when == (now or datetime.now(timezone.utc)).date()
 
 
-def should_run(runs, now=None, exclude_id=None, event=None, digest=None):
+def should_run(runs, now=None, exclude_id=None, event=None, digest=None,
+               paused_until=None):
     """(run?, reason) for a dispatch fired by `event`, against `runs`/`digest`."""
     if (event or "").strip() == MANUAL_EVENT:
         return True, "manual dispatch — a human asked for this run."
+
+    # Before the run-history read, and before the unreadable-history path that
+    # proceeds on doubt: a dated pause is not doubt. This is the one stage where
+    # getting it wrong costs ~$4.50 rather than $0.34. See pause.py.
+    paused, why = pause.pause_state(paused_until, now)
+    if paused:
+        return False, why
 
     if runs is None:
         return True, "could not read this workflow's own run history; proceeding."
@@ -226,7 +235,11 @@ def main():
         exclude_id=os.getenv("GITHUB_RUN_ID"),
         event=os.getenv("FIRED_BY_EVENT"),
         digest=published_digest(),
+        paused_until=os.getenv(pause.ENV_VAR),
     )
+    note = pause.announcement(os.getenv(pause.ENV_VAR))
+    if note:
+        print(f"[guard] {note}")
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")
 
     out = os.getenv("GITHUB_OUTPUT")

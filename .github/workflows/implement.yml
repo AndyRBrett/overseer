@@ -110,6 +110,9 @@ jobs:
         env:
           FIRED_BY_EVENT: ${{ github.event_name }}
           OVERSEER_GITHUB_TOKEN: ${{ secrets.OVERSEER_GITHUB_TOKEN }}
+          # The dated kill switch — see pause.py and weekly-review.yml's guard.
+          # This stage is the one where a forgotten pause is worth ~$4.50 a week.
+          OVERSEER_PAUSED_UNTIL: ${{ vars.OVERSEER_PAUSED_UNTIL }}
         run: python scripts/implement_guard.py
 
       - name: Pick and dispatch
