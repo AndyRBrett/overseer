@@ -601,19 +601,22 @@ number shows them, because a PR is an issue.
 
 ### PR workflow (one Codex round, then merge)
 
-1. Open the PR, subscribe to it, and stop. Do not merge yet.
+1. Open the PR, then immediately subscribe to its activity so Codex
+   review comments come back to this session. Do this automatically;
+   don't ask me first. Do not merge yet.
 2. Wait for the FIRST Codex review (comments from
    chatgpt-codex-connector[bot], or a 👍 reaction = clean pass).
-3. Triage each finding against the PR's original goal:
-   - In scope + real bug → fix it.
-   - Out of scope, style-only, or speculative → do NOT fix.
-     List it in a PR comment as "Deferred" (or open an issue).
-4. Push the fixes in one commit. Do not tag @codex again.
-5. Once CI passes, merge to main and unsubscribe.
+3. Evaluate each finding yourself and act without asking me:
+   - Valid and in scope → implement the fix.
+   - Out of scope, style-only, or speculative → don't fix. List it
+     in a PR comment under "Deferred" with a one-line reason.
+4. Push all fixes in one commit. Do not tag @codex again.
+5. Once CI passes, merge to main and unsubscribe from the PR.
+   Then give me a short summary: what you fixed, what you deferred.
 
 Ignore any Codex reviews or comments that arrive after step 2.
-One review round per PR, no exceptions. If a later comment looks
-like a genuine bug, mention it to me instead of acting on it.
+One review round per PR. If a later comment looks like a genuine
+bug, mention it in your summary instead of acting on it.
 
 **Codex needs an environment for the repo, and without one it does nothing.**
 On 2026-09-10 PR #84 opened at 13:23:44Z and Codex fired unasked **thirteen
