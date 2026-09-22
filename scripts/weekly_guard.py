@@ -42,7 +42,12 @@ decision, not a verdict, and it must never be the thing that fails the workflow.
 
 import json
 import os
+import sys
 from datetime import datetime, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import pause  # noqa: E402
 
 DIGEST_PATH = os.getenv("DIGEST_PATH", "docs/digest.json")
 
@@ -75,10 +80,18 @@ def load_digest(path=None):
         return None
 
 
-def should_run(event, digest, now=None):
+def should_run(event, digest, now=None, paused_until=None):
     """(run?, reason) for a job fired by `event` against `digest`."""
     if (event or "").strip() in UNGUARDED_EVENTS:
         return True, "a human asked for this run — not second-guessing it."
+
+    # Asked before the digest question, and only of automated triggers. A dated
+    # pause is a deliberate "not this week"; whether today's digest is missing
+    # is exactly what it means to not care about. See pause.py.
+    paused, why = pause.pause_state(paused_until, now)
+    if paused:
+        return False, why
+
     if digest_landed_today(digest, now):
         return False, (f"today's completed digest is already published "
                        f"({digest.get('generated')}).")
@@ -87,7 +100,14 @@ def should_run(event, digest, now=None):
 
 
 def main():
-    run, reason = should_run(os.getenv("FIRED_BY_EVENT"), load_digest())
+    run, reason = should_run(
+        os.getenv("FIRED_BY_EVENT"),
+        load_digest(),
+        paused_until=os.getenv(pause.ENV_VAR),
+    )
+    note = pause.announcement(os.getenv(pause.ENV_VAR))
+    if note:
+        print(f"[guard] {note}")
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")
 
     out = os.getenv("GITHUB_OUTPUT")

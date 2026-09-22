@@ -49,6 +49,7 @@ actually failed.
 | `tools.py` | **everything shared** — tool implementations, the delivery ledger, the implementation gate, proposal outcomes, `run_agent` |
 | `attention.py` | the per-project attention score — pure, imports nothing of ours |
 | `dedupe.py` | TF-IDF duplicate detection over the filed backlog — pure, stdlib |
+| `pause.py` | the dated kill switch both guards ask — pure, stdlib, expires itself |
 | `scripts/pipeline_dryrun.py` | the whole pipeline against fixtures; CI's `e2e` job |
 | `tracer.py` | per-run recording, spend accounting, digest/history writers |
 | `scripts/dispatch_implement.py` | picks issues and hands them to the implementer |
@@ -202,6 +203,34 @@ Each of these exists because the opposite already happened here.
   a PR opened with a person's credential is auto-reviewed within seconds of
   opening (#88, #89, #90 all were). So there is no credential-free fallback and
   there never was: the token is the whole fix, for CI and for review alike.
+- **Pausing the pipeline had no switch, so it was done with a toggle that never
+  expires.** On 2026-09-20 the month's spend was high and the ask was "skip
+  tomorrow". The only lever was *Actions → Disable workflow* on
+  `weekly-review.yml` and `implement.yml`. That part is genuinely the right
+  emergency move and worth remembering: a disabled workflow ignores `schedule`,
+  `repository_dispatch` AND `workflow_dispatch`, so it stops BOTH schedulers at
+  once — Cloudflare's pokes still POST and still get their 204, and no run is
+  created — with no merge and no Worker deploy. What it has no version of is an
+  ending. Overseer stays dark until a human remembers two toggles, which is this
+  system's characteristic failure mode (a stage goes quiet; nothing is red about
+  it being quiet) reached on purpose. `OVERSEER_PAUSED_UNTIL` is the replacement:
+  a repository Variable holding the UTC date the automated triggers RESUME on, so
+  `2026-09-29` means the 29th runs and pausing one Monday means naming the
+  Tuesday. The rule is `pause.py`, asked by both guards; the date is a settings
+  field, editable without a merge. Three values are refused and RUN — unparseable,
+  already past, and further out than `MAX_PAUSE_DAYS` (a mistyped year is the
+  likeliest typo in the one field whose job is to expire) — and every refusal is
+  printed as `PAUSE NOT APPLIED`, because "in doubt it runs" is only safe if the
+  person who set the field hears that it did not take. It does NOT touch the
+  heartbeat: a deliberate pause and a dropped cron look identical to a
+  dead-man's switch, and teaching the alarm to stay quiet is how you mask the
+  outage it exists to catch. So expect `heartbeat.yml` red daily and a Telegram
+  from the Worker for every paused day past 192h — and note
+  `tests/test_heartbeat.py::test_real_committed_digest_is_healthy` goes red with
+  it, so a pause of more than a day turns CI red on every PR.
+  And do not reach for `OVERSEER_IMPLEMENT_MAX=0`: `tools.py` reads it as
+  `_int_env(...) or 3`, so zero quietly means three.
+
 - **Labels are never cleaned off a closed issue.** Anything keying on
   `overseer:implement-failed` must also check the entry is still open, or
   settled work reports as needing attention forever.

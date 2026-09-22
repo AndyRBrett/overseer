@@ -266,3 +266,84 @@ def test_the_review_wins_a_collision_on_the_files_it_regenerates():
     # the rebase instead of resolving it.
     text = (WORKFLOWS / "weekly-review.yml").read_text(encoding="utf-8")
     assert "git pull --rebase -X theirs" in text
+
+
+# ── the dated kill switch (2026-09-20) ───────────────────────────────────
+#
+# September's API spend ran high and the ask was "skip tomorrow". The only lever
+# was disabling this workflow in the Actions tab, which never expires — overseer
+# stays dark until someone remembers to flip it back. pause.py makes it a date.
+# These pin that the guard honours it, and that it cannot become permanent.
+
+import pause  # noqa: E402
+
+PAUSE_NOW = datetime(2026, 9, 22, 16, 0, tzinfo=timezone.utc)
+
+
+def _in_days(days):
+    return (PAUSE_NOW + timedelta(days=days)).date().isoformat()
+
+
+def _stale_digest():
+    """A digest from a week ago — the state where the guard would otherwise run."""
+    stamp = (PAUSE_NOW - timedelta(hours=168)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return {"generated": stamp, "status": "completed"}
+
+
+@pytest.mark.parametrize("event", [CRON, DISPATCH])
+def test_a_pause_stands_an_automated_trigger_down(event):
+    # Note the digest is stale, so without the pause this run is exactly the one
+    # the guard exists to let through. The pause outranks that.
+    run, reason = wg.should_run(event, _stale_digest(), now=PAUSE_NOW,
+                                paused_until=_in_days(7))
+    assert run is False
+    assert "paused until" in reason
+
+
+def test_a_human_can_still_force_a_run_while_paused():
+    # Same exemption as everywhere else here: a pause is a standing instruction
+    # to the schedulers, not a lock against the person who set it.
+    run, reason = wg.should_run(MANUAL, _stale_digest(), now=PAUSE_NOW,
+                                paused_until=_in_days(7))
+    assert run is True
+    assert "a human asked" in reason
+
+
+def test_an_expired_pause_lets_the_review_resume_by_itself():
+    # The property the Actions-tab toggle does not have.
+    run, _ = wg.should_run(CRON, _stale_digest(), now=PAUSE_NOW,
+                           paused_until=_in_days(-1))
+    assert run is True
+
+
+@pytest.mark.parametrize("junk", ["true", "next monday", "2026-13-01", "2126-09-29"])
+def test_a_pause_the_guard_cannot_read_does_not_stop_the_review(junk):
+    # When in doubt it RUNS. A switch that failed closed would be one typo in a
+    # settings field away from silently retiring the whole pipeline.
+    run, _ = wg.should_run(CRON, _stale_digest(), now=PAUSE_NOW, paused_until=junk)
+    assert run is True
+
+
+def test_a_pause_does_not_override_an_already_published_digest():
+    # Ordering check: both say "skip", but the reason in the log should be the
+    # pause, because that is the one a human set and will want confirmed.
+    today = PAUSE_NOW.strftime("%Y-%m-%dT%H:%M:%SZ")
+    run, reason = wg.should_run(CRON, {"generated": today, "status": "completed"},
+                                now=PAUSE_NOW, paused_until=_in_days(3))
+    assert run is False
+    assert "paused until" in reason
+
+
+def test_the_guard_reads_the_pause_from_the_environment(monkeypatch, tmp_path):
+    # The wiring, not the rule: main() must actually pass the variable through.
+    monkeypatch.setattr(wg, "DIGEST_PATH", str(tmp_path / "nope.json"))
+    output = tmp_path / "github_output"
+    monkeypatch.setenv("GITHUB_OUTPUT", str(output))
+    monkeypatch.setenv("FIRED_BY_EVENT", CRON)
+    # Far enough out to stay in the future however long this repo lives, but
+    # inside MAX_PAUSE_DAYS so it is honoured rather than refused as a typo.
+    soon = (datetime.now(timezone.utc) + timedelta(days=30)).date().isoformat()
+    monkeypatch.setenv(pause.ENV_VAR, soon)
+
+    assert wg.main() == 0
+    assert output.read_text(encoding="utf-8").strip() == "should_run=false"
