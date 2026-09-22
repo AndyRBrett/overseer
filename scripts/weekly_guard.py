@@ -100,12 +100,13 @@ def should_run(event, digest, now=None, paused_until=None):
 
 
 def main():
+    paused_until = pause.read_pause_file()
     run, reason = should_run(
         os.getenv("FIRED_BY_EVENT"),
         load_digest(),
-        paused_until=os.getenv(pause.ENV_VAR),
+        paused_until=paused_until,
     )
-    note = pause.announcement(os.getenv(pause.ENV_VAR))
+    note = pause.announcement(paused_until)
     if note:
         print(f"[guard] {note}")
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")

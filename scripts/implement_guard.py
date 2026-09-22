@@ -230,14 +230,15 @@ def published_digest(path=None):
 
 
 def main():
+    paused_until = pause.read_pause_file()
     run, reason = should_run(
         recent_runs(),
         exclude_id=os.getenv("GITHUB_RUN_ID"),
         event=os.getenv("FIRED_BY_EVENT"),
         digest=published_digest(),
-        paused_until=os.getenv(pause.ENV_VAR),
+        paused_until=paused_until,
     )
-    note = pause.announcement(os.getenv(pause.ENV_VAR))
+    note = pause.announcement(paused_until)
     if note:
         print(f"[guard] {note}")
     print(f"[guard] {'running' if run else 'skipping'}: {reason}")

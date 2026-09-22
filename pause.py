@@ -11,22 +11,33 @@ this system's characteristic failure mode wearing a different hat: a stage goes
 quiet, nothing is red about it being quiet, and the only alarm left is the
 heartbeat noticing the digest has stopped moving.
 
-So the pause is a DATE, and the date is the thing that ends it. Set
-`OVERSEER_PAUSED_UNTIL` and the automated triggers stand down until it passes;
-forget to unset it and the system comes back on its own.
+So the pause is a DATE, and the date is the thing that ends it. Write
+`.overseer-pause` and the automated triggers stand down until it passes; forget
+to delete it and the system comes back on its own.
 
-    OVERSEER_PAUSED_UNTIL=2026-09-29
+    $ cat .overseer-pause
+    # Spend was high in September. Skipping one Monday.
+    2026-09-30
 
-reads as "resume on the 29th" — the runs on the 29th happen. It is the RESUME
+reads as "resume on the 30th" — the runs on the 30th happen. It is the RESUME
 date, not the last paused day, so pausing a single Monday means naming the
 Tuesday. Stated the other way round it would be off by one in the direction
 that skips an extra week, and a pause that overruns is the expensive mistake
 here.
 
-WHERE THE VALUE LIVES. A GitHub repository Variable, read by the guard steps of
-both workflows. That is the half that has to be editable without a merge: the
-RULE is here in code, reviewed and tested, while the DATE is a settings field
-anyone can change in ten seconds. Invariant 4's split, applied to spend.
+WHY A FILE AND NOT A REPOSITORY VARIABLE (2026-09-22). It WAS a Variable, for
+one afternoon. The reasoning was invariant 4's split — the rule in code, the
+date in a settings field editable without a merge — and it was wrong about who
+would be doing the editing. Two things killed it. A settings field can only be
+changed by a human at a keyboard, so every pause meant somebody opening
+Settings and typing a date, which is the toil this whole feature exists to
+remove; and the agent that would otherwise do it cannot, because the sandbox
+proxy fences off `/actions/variables` outright (403, from the proxy rather than
+GitHub, on reads as well as writes — no token or repo permission changes that).
+A file is the opposite on both counts: anything that can open a pull request can
+set it, and `git log` then answers "who paused this, when, and why" in a way a
+settings page never will. The WHY especially — a settings field has nowhere to
+put it, and this file has a comment line.
 
 WHEN IN DOUBT IT RUNS, which is the whole reason this file is as fussy as it is
 about what it refuses to honour. Both callers are guards whose docstrings say
@@ -34,17 +45,18 @@ the same thing for the same reason: a redundant review costs $0.34 and a
 duplicate batch ~$4.50, but a skipped week costs the week, and a stage that
 silently never comes back costs however long it takes someone to notice. So a
 value this cannot make sense of does NOT pause anything — it says so loudly and
-gets out of the way. Three refusals, each one a way a pause could otherwise
-become permanent by accident:
+gets out of the way. Four ways a pause declines to happen, each one a way it
+could otherwise become permanent by accident:
 
+  * no file at all — the normal state, and deliberately the quiet one.
   * unparseable — a typo, a half-edited value, `true`, an ISO timestamp with a
     time on it. A guard that paused on anything it could not read would be one
-    fat-fingered settings field away from switching the system off forever.
+    fat-fingered commit away from switching the system off forever.
   * already past — not a refusal so much as the design working. This is what
-    makes the switch self-clearing, and it means a stale value left in the
-    settings is inert rather than a trap.
+    makes the switch self-clearing, and it means a file left behind after the
+    pause ends is inert rather than a trap.
   * absurdly far out — `2126-09-29` is a mistyped year, not a century-long
-    pause, and it is the single most likely typo to make: a digit, in the field
+    pause, and it is the single most likely typo to make: a digit, in the file
     whose whole job is to eventually expire. Past MAX_PAUSE_DAYS this is
     treated as the typo it almost certainly is. Someone who genuinely wants a
     longer stand-down can say so twice, or disable the workflows the old way.
@@ -63,9 +75,14 @@ work under.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+import os
 
-ENV_VAR = "OVERSEER_PAUSED_UNTIL"
+from datetime import datetime, timezone
+
+# Repo-root relative, because that is the working directory of every guard step
+# (they already read docs/digest.json the same way). The env var exists for
+# tests, not for configuration — the file is the only supported way to pause.
+PAUSE_FILE = os.getenv("OVERSEER_PAUSE_FILE", ".overseer-pause")
 
 # How far ahead a pause may legitimately reach. Ninety days is generous for
 # "costs are high this month" and still short enough that a mistyped year lands
@@ -78,12 +95,46 @@ def _today(now=None):
     return (now or datetime.now(timezone.utc)).date()
 
 
+def read_pause_file(path=None):
+    """The date line from the pause file, or None if there is no usable one.
+
+    Blank lines and `#` comments are skipped so the file can say WHY it exists —
+    the thing a settings field had nowhere to put. The first remaining line is
+    the value; anything after it is ignored rather than merged, because two
+    dates in one file is a question this must not have to answer.
+
+    A missing file is the normal state and returns None quietly. An unreadable
+    one does too: the caller treats None as "not paused", and a permissions
+    problem on this file must not be what takes the weekly review down.
+
+    UnicodeError IS caught here, and it is not a filesystem error (Codex, PR
+    #93). UnicodeDecodeError descends from ValueError, not OSError, so an
+    `except OSError` alone let it through — and because the read happens in
+    main() before anything is written, the guard died with a traceback, exited
+    1, and produced no `should_run` at all. That fails the step and skips every
+    downstream `if:`, so one non-UTF-8 byte in a COMMENT line took the weekly
+    review down and turned the workflow red: the precise inverse of fail-open,
+    and a breach of this guard's "always exits 0 — a decision, not a verdict"
+    contract. A file we cannot decode is a file we cannot trust, so it reads as
+    no pause at all.
+    """
+    try:
+        with open(path or PAUSE_FILE, encoding="utf-8") as f:
+            for line in f:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#"):
+                    return stripped
+    except (OSError, UnicodeError):
+        return None
+    return None
+
+
 def parse_resume_date(raw):
     """The resume date in `raw`, or None if it is not a plain ISO date.
 
     Deliberately strict. `date.fromisoformat` on newer Pythons accepts forms
     like `20260929`, and a timestamp with a time on it would silently become a
-    date — both are signs the field was filled in by someone guessing at the
+    date — both are signs the value was written by someone guessing at the
     format, which is exactly when refusing to pause is the safe answer.
 
     THE GATE IS THE ROUND TRIP, not a length check (Codex, PR #92). This first
@@ -107,35 +158,38 @@ def parse_resume_date(raw):
 
 
 def pause_state(raw, now=None):
-    """(paused?, reason) for the configured value `raw`.
+    """(paused?, reason) for the value `raw` read out of the pause file.
 
-    The reason is written to be read in a run log by someone wondering why the
-    Monday was quiet, so it always names the value it acted on.
+    Kept pure and separate from the file read so the rule is testable without a
+    filesystem. The reason is written to be read in a run log by someone
+    wondering why the Monday was quiet, so it always names the value it acted on.
     """
     if raw is None or not str(raw).strip():
-        return False, "no pause configured."
+        return False, "no pause file — running as normal."
 
     text = str(raw).strip()
     resume = parse_resume_date(text)
     if resume is None:
         return False, (
-            f"{ENV_VAR}={text!r} is not a YYYY-MM-DD date — ignoring it and "
-            "running. A pause nobody can read is how a stage goes quiet for good."
+            f"{PAUSE_FILE} says {text!r}, which is not a YYYY-MM-DD date — "
+            "ignoring it and running. A pause nobody can read is how a stage "
+            "goes quiet for good."
         )
 
     today = _today(now)
     if resume <= today:
         return False, (
             f"the pause until {resume.isoformat()} has expired (today is "
-            f"{today.isoformat()}) — running as normal."
+            f"{today.isoformat()}) — running as normal. {PAUSE_FILE} can be deleted."
         )
 
     days = (resume - today).days
     if days > MAX_PAUSE_DAYS:
         return False, (
-            f"{ENV_VAR}={text!r} is {days} days out, past the {MAX_PAUSE_DAYS}-day "
-            "limit — treating it as a mistyped year and running. Set a nearer "
-            "date, or disable the workflow if you really mean indefinitely."
+            f"{PAUSE_FILE} says {text!r}, {days} days out and past the "
+            f"{MAX_PAUSE_DAYS}-day limit — treating it as a mistyped year and "
+            "running. Set a nearer date, or disable the workflow if you really "
+            "mean indefinitely."
         )
 
     return True, (
@@ -144,15 +198,20 @@ def pause_state(raw, now=None):
     )
 
 
-def announcement(raw, now=None):
-    """A line for the run log when a value is configured at all, else None.
+def current(now=None, path=None):
+    """(paused?, reason) for the pause file as it is on disk right now."""
+    return pause_state(read_pause_file(path), now)
 
-    A REFUSED pause has to be loud. Someone set that field expecting a quiet
-    Monday; if the value is junk the run proceeds, which is correct, but staying
-    silent about it would let them believe the pause took and discover otherwise
-    on the bill. The refusals above are the safe direction precisely BECAUSE
-    they are announced — unannounced, "in doubt it runs" is just a switch that
-    doesn't work.
+
+def announcement(raw, now=None):
+    """A line for the run log when a pause file exists at all, else None.
+
+    A REFUSED pause has to be loud. Someone committed that file expecting a
+    quiet Monday; if the value is junk the run proceeds, which is correct, but
+    staying silent about it would let them believe the pause took and discover
+    otherwise on the bill. The refusals above are the safe direction precisely
+    BECAUSE they are announced — unannounced, "in doubt it runs" is just a
+    switch that doesn't work.
     """
     if raw is None or not str(raw).strip():
         return None

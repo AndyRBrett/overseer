@@ -4,7 +4,9 @@ The dated kill switch (pause.py).
 On 2026-09-20 the only way to skip an expensive Monday was to disable
 weekly-review.yml and implement.yml in the Actions tab. That works and covers
 both schedulers at once, but it never expires: overseer stays dark until a human
-remembers two toggles. These pin the replacement, and most of them exist for one
+remembers two toggles. The replacement was a repository Variable for one
+afternoon and is now a committed file, because a Variable meant a human in
+Settings for every pause and an agent that could not set it at all. These pin the replacement, and most of them exist for one
 half of it — that a value this cannot make sense of must NOT pause anything.
 A switch that fails closed is a switch one typo away from being permanent, and
 "a stage went quiet and nothing was red about it" is this system's whole
@@ -41,7 +43,7 @@ def test_unset_means_run():
     for empty in (None, "", "   ", "\n"):
         paused, why = pause.pause_state(empty, NOW)
         assert paused is False, f"{empty!r} must not pause anything"
-        assert "no pause" in why
+        assert "no pause file" in why
 
 
 def test_a_future_date_pauses():
@@ -133,15 +135,87 @@ def test_the_reason_always_names_the_date_it_acted_on():
     assert _date(3) in why
 
 
-def test_env_var_name_is_what_the_workflows_pass():
-    # Both guard steps set this by name; renaming it in one place only would
-    # silently disarm the switch.
-    assert pause.ENV_VAR == "OVERSEER_PAUSED_UNTIL"
+def test_the_switch_no_longer_rides_in_the_environment():
+    # It was `vars.OVERSEER_PAUSED_UNTIL` for one afternoon. A leftover env line
+    # would be a second, invisible source for the date — and the one nobody can
+    # edit from here, which is the whole reason it moved into the repo.
     workflows = Path(__file__).resolve().parent.parent / ".github" / "workflows"
     for name in ("weekly-review.yml", "implement.yml"):
         text = (workflows / name).read_text(encoding="utf-8")
-        assert f"{pause.ENV_VAR}: ${{{{ vars.{pause.ENV_VAR} }}}}" in text, (
-            f"{name} must pass the pause variable into its guard step")
+        assert "OVERSEER_PAUSED_UNTIL" not in text, (
+            f"{name} still passes the retired pause Variable")
+
+
+def test_both_guards_read_the_file():
+    scripts = Path(__file__).resolve().parent.parent / "scripts"
+    for name in ("weekly_guard.py", "implement_guard.py"):
+        src = (scripts / name).read_text(encoding="utf-8")
+        assert "pause.read_pause_file(" in src, f"{name} must read the pause file"
+
+
+# --- reading the file -----------------------------------------------------
+
+def test_a_missing_file_is_the_quiet_normal_state(tmp_path):
+    assert pause.read_pause_file(str(tmp_path / "nope")) is None
+    paused, why = pause.current(NOW, path=str(tmp_path / "nope"))
+    assert paused is False
+    assert "no pause file" in why
+
+
+def test_comments_and_blank_lines_are_skipped(tmp_path):
+    # The comment line is the point: it is where the WHY lives, which a
+    # settings field had nowhere to put.
+    f = tmp_path / "pause"
+    f.write_text(f"# spend was high in September\n\n{_date(5)}\n", encoding="utf-8")
+    assert pause.read_pause_file(str(f)) == _date(5)
+    assert pause.current(NOW, path=str(f))[0] is True
+
+
+def test_only_the_first_value_line_counts(tmp_path):
+    # Two dates in one file is a question this must not have to answer.
+    f = tmp_path / "pause"
+    f.write_text(f"{_date(5)}\n{_date(60)}\n", encoding="utf-8")
+    assert pause.read_pause_file(str(f)) == _date(5)
+
+
+def test_an_empty_or_comment_only_file_does_not_pause(tmp_path):
+    for body in ("", "\n\n", "# paused? no, just a note\n"):
+        f = tmp_path / "pause"
+        f.write_text(body, encoding="utf-8")
+        assert pause.read_pause_file(str(f)) is None
+        assert pause.current(NOW, path=str(f))[0] is False
+
+
+def test_an_unreadable_file_does_not_pause(tmp_path):
+    # A permissions problem on this file must not be what takes the review down.
+    d = tmp_path / "a-directory"
+    d.mkdir()
+    assert pause.read_pause_file(str(d)) is None
+
+
+def test_undecodable_bytes_do_not_pause_or_raise(tmp_path):
+    # CODEX, PR #93. UnicodeDecodeError descends from ValueError, not OSError,
+    # so `except OSError` let it through — and the read happens in main() before
+    # anything is written, so the guard died with a traceback, exited 1 and
+    # wrote no should_run at all. One non-UTF-8 byte in a COMMENT line took the
+    # weekly review down and turned the workflow red: the inverse of fail-open.
+    f = tmp_path / "pause"
+    f.write_bytes(b"# caf\xe9 \x97 spend was high\n2026-09-30\n")
+    assert pause.read_pause_file(str(f)) is None
+    assert pause.current(NOW, path=str(f))[0] is False
+
+
+def test_a_committed_pause_file_must_actually_parse():
+    # THE EARLY WARNING. A malformed value fails OPEN by design, so "I paused it"
+    # and "I typed the date wrong" look identical until the bill arrives. If the
+    # repo carries a pause file at all, CI says so here rather than on Monday.
+    committed = Path(__file__).resolve().parent.parent / pause.PAUSE_FILE
+    if not committed.exists():
+        return
+    raw = pause.read_pause_file(str(committed))
+    assert raw is not None, f"{pause.PAUSE_FILE} exists but has no value line"
+    assert pause.parse_resume_date(raw) is not None, (
+        f"{pause.PAUSE_FILE} says {raw!r}, which will NOT pause anything")
 
 
 # --- the refusal has to be audible ----------------------------------------

@@ -1,0 +1,8 @@
+# Why this pause exists, because a settings field had nowhere to put it:
+# September's API spend ran high. Skipping the Monday 2026-09-28 cycle
+# (review $0.34 + three implementation attempts ~$4.50) and resuming on the
+# 30th. Requested 2026-09-22; see CLAUDE.md and pause.py.
+#
+# This is the RESUME date, not the last paused day. Delete this file to end
+# the pause early — leaving it is harmless, it goes inert once the date passes.
+2026-09-30
