@@ -1066,28 +1066,6 @@
       "url": "https://github.com/AndyRBrett/coachvision/issues/21"
     },
     {
-      "closed_at": "2026-08-13T21:57:48+00:00",
-      "created_at": "2026-08-13T20:52:36+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "fix_ref": "PR #69",
-      "fix_sha": "1150643",
-      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/69",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 67,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Push main-event line-movement alerts to a notification channel (Discord/Telegram) with CLV context",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/67"
-    },
-    {
       "closed_at": "2026-08-13T21:57:37+00:00",
       "created_at": "2026-07-13T16:22:09+00:00",
       "delivered_by": "hand",
@@ -1247,25 +1225,6 @@
       "status": "shipped",
       "title": "Add \"signal proximity\" telemetry + dashboard panel showing how close each dormant signal came to firing",
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/38"
-    },
-    {
-      "closed_at": "2026-08-13T21:27:16+00:00",
-      "created_at": "2026-08-13T20:52:39+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 68,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Track closing-line-value (CLV) history per bout and flag \"sharp\" vs \"square\" movement patterns",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/68"
     },
     {
       "closed_at": "2026-08-13T21:27:02+00:00",
@@ -1853,7 +1812,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-23T19:44:45Z",
+  "generated": "2026-09-23T20:28:43Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1897,12 +1856,12 @@
         "in_flight": 0,
         "not_planned": 0,
         "open": 2,
-        "proposed": 11,
+        "proposed": 9,
         "reject_rate": 0.0,
         "sample": "sufficient",
-        "settled": 9,
+        "settled": 7,
         "ship_rate": 1.0,
-        "shipped": 9
+        "shipped": 7
       }
     },
     "min_settled": 4,
@@ -1911,12 +1870,12 @@
       "in_flight": 0,
       "not_planned": 7,
       "open": 11,
-      "proposed": 88,
-      "reject_rate": 0.221,
+      "proposed": 86,
+      "reject_rate": 0.227,
       "sample": "sufficient",
-      "settled": 77,
-      "ship_rate": 0.779,
-      "shipped": 60
+      "settled": 75,
+      "ship_rate": 0.773,
+      "shipped": 58
     }
   },
   "queue": {
@@ -1937,16 +1896,16 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.753,
+    "delivery_rate": 0.747,
     "duplicate": 10,
-    "duplicate_rate": 0.11,
+    "duplicate_rate": 0.112,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
     "open": 11,
-    "proposed": 91,
-    "shipped": 61,
-    "shipped_before_implementer": 34,
+    "proposed": 89,
+    "shipped": 59,
+    "shipped_before_implementer": 32,
     "shipped_by_hand": 23,
     "shipped_by_implementer": 4
   }
