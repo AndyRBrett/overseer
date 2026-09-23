@@ -613,7 +613,11 @@ number shows them, because a PR is an issue.
    hourly as a backstop. On every check-in AND every event that does
    arrive (CI finishing, a comment), read the PR's `reactions` with
    MCP `issue_read` on the PR number — the comments calls don't
-   return them. Cancel the remaining check-ins once the review lands.
+   return them. Only Codex's 👍 counts, and `issue_read` gives counts,
+   not authors: Codex marks a review in progress with 👀 and swaps it
+   for the 👍 when it passes, so read a pass as 👀 gone and 👍 present.
+   A 👍 while 👀 is still there may be someone else's — keep waiting.
+   Cancel the remaining check-ins once the review lands.
 3. Evaluate each finding yourself and act without asking me:
    - Valid and in scope → implement the fix.
    - Out of scope, style-only, or speculative → don't fix. List it
