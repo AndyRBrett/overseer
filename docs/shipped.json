@@ -23,28 +23,6 @@
       "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/90"
     },
     {
-      "closed_at": "2026-09-22T19:59:22+00:00",
-      "created_at": "2026-08-15T10:35:36+00:00",
-      "delivered_by": "hand",
-      "effort": "high",
-      "fix_ref": "PR #111",
-      "fix_sha": "bdcc11e",
-      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/111",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:high",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 74,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Add a fighter-history/style-matchup predictive overlay (Elo + stance/reach/stat differentials) shown alongside live odds",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/74"
-    },
-    {
       "closed_at": "2026-09-22T19:59:21+00:00",
       "created_at": "2026-08-31T19:08:20+00:00",
       "delivered_by": "hand",
@@ -698,28 +676,6 @@
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/51"
     },
     {
-      "closed_at": "2026-08-31T23:17:28+00:00",
-      "created_at": "2026-08-17T19:55:11+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "fix_ref": "PR #96",
-      "fix_sha": "72d3111",
-      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/96",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 76,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Surface odds_budget_exhausted as an explicit dashboard banner + Slack/Discord alert when weekly API budget cap is hit",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/76"
-    },
-    {
       "closed_at": "2026-08-31T23:10:33+00:00",
       "created_at": "2026-08-31T19:08:24+00:00",
       "delivered_by": "hand",
@@ -758,28 +714,6 @@
       "status": "shipped",
       "title": "Equity curve frozen at exactly 49205.23 for ~25h (Aug 18\u201319) \u2014 stale mark-to-market snapshot logged with no error",
       "url": "https://github.com/AndyRBrett/crypto-trading/issues/50"
-    },
-    {
-      "closed_at": "2026-08-31T22:50:38+00:00",
-      "created_at": "2026-08-15T10:17:32+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "fix_ref": "PR #95",
-      "fix_sha": "950948b",
-      "fix_url": "https://github.com/AndyRBrett/ufc-dashboard/pull/95",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 73,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Adaptive odds-API budget allocator that prioritizes calls by time-to-event and line activity",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/73"
     },
     {
       "closed_at": "2026-08-31T20:33:48+00:00",
@@ -1812,7 +1746,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-24T15:13:54Z",
+  "generated": "2026-09-24T19:16:26Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1856,12 +1790,12 @@
         "in_flight": 0,
         "not_planned": 0,
         "open": 2,
-        "proposed": 9,
+        "proposed": 6,
         "reject_rate": 0.0,
         "sample": "sufficient",
-        "settled": 7,
+        "settled": 4,
         "ship_rate": 1.0,
-        "shipped": 7
+        "shipped": 4
       }
     },
     "min_settled": 4,
@@ -1870,12 +1804,12 @@
       "in_flight": 0,
       "not_planned": 7,
       "open": 11,
-      "proposed": 86,
-      "reject_rate": 0.227,
+      "proposed": 83,
+      "reject_rate": 0.236,
       "sample": "sufficient",
-      "settled": 75,
-      "ship_rate": 0.773,
-      "shipped": 58
+      "settled": 72,
+      "ship_rate": 0.764,
+      "shipped": 55
     }
   },
   "queue": {
@@ -1896,17 +1830,17 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.747,
+    "delivery_rate": 0.737,
     "duplicate": 10,
-    "duplicate_rate": 0.112,
+    "duplicate_rate": 0.116,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
     "open": 11,
-    "proposed": 89,
-    "shipped": 59,
+    "proposed": 86,
+    "shipped": 56,
     "shipped_before_implementer": 32,
-    "shipped_by_hand": 23,
+    "shipped_by_hand": 20,
     "shipped_by_implementer": 4
   }
 }
