@@ -398,10 +398,20 @@ Each of these exists because the opposite already happened here.
   the one file that runs a coding agent with Bash, a `contents: write` token and
   an Anthropic key in four repos. The bump was right; the form was not. Taken by
   hand as SHA pins instead, and `tests/test_workflow_pins.py` now enforces the
-  convention so the next bot PR cannot quietly undo it. The one deliberate
-  exception is `anthropics/claude-code-action@v1`, recorded in that file:
-  pinning the agent itself would freeze it at whatever it was the day someone
-  last looked.
+  convention so the next bot PR cannot quietly undo it. The agent itself,
+  `anthropics/claude-code-action`, used to be the one exception (floating on
+  `@v1` so fixes landed unasked); since the 2026-09-25 security sweep it is
+  pinned too. Dependabot's weekly github-actions PRs already keep a SHA pin
+  current, so floating bought freshness nobody needed at the price of letting
+  whoever moves the tag choose what runs beside the Anthropic key.
+- **The agent reads the issue and trusted comments only, never the raw thread.**
+  The author guard trusts the issue's AUTHOR; it said nothing about the thread,
+  and the prompt opened with `gh issue view <n> --comments`. On a public repo
+  one comment from anyone reached an agent holding Bash and a write token. The
+  `issue_text` step now writes the issue plus comments from OWNER / MEMBER /
+  COLLABORATOR to a file and the prompt reads that; the rest are counted and
+  withheld. `tests/test_implement_queue.py` runs the step's own script against
+  a hostile comment to hold it.
 - **Never put a trailing `# comment` on a command someone will paste.**
   Interactive zsh does not set `interactive_comments`, so the `#` and every word
   after it are passed as arguments. A documented `wrangler secret put NAME

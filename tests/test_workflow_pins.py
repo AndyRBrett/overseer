@@ -27,14 +27,13 @@ WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml")) + \
 USES = re.compile(r"uses:\s*([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)@(\S+)")
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
-# The one deliberate exception, recorded rather than silently skipped.
-#
-# anthropics/claude-code-action is the coding agent itself, and it is published
-# to be consumed as @v1 — the major tag is where fixes to the agent land. Pinning
-# it to a SHA would freeze the agent at whatever it was the day someone last
-# looked, which for the thing running unattended every Monday is the worse of
-# the two risks. Revisit if that ever stops being true.
-FLOATING_BY_DESIGN = {"anthropics/claude-code-action"}
+# There used to be one deliberate exception: anthropics/claude-code-action
+# floated on @v1 so fixes to the agent landed without anyone looking. It is
+# pinned now (2026-09-25 security sweep): this is the job that holds the
+# Anthropic key and a write token, and Dependabot's weekly github-actions PRs
+# keep a SHA pin current anyway, as a reviewed change instead of a silent one.
+# The set stays so a future exception has to be written down here, with why.
+FLOATING_BY_DESIGN = set()
 
 
 def _references():
@@ -76,3 +75,12 @@ def test_a_pinned_sha_says_which_version_it_is(name, action, ref, line):
         pytest.skip(f"{action} is floating by design")
     assert re.search(r"#\s*v\d", line), (
         f"{name} pins {action} with no version comment: {line.strip()}")
+
+
+def test_the_coding_agent_itself_is_pinned():
+    # The most privileged `uses:` in the repo. Named on its own so reintroducing
+    # it to FLOATING_BY_DESIGN fails loudly rather than as one skipped case.
+    body = (ROOT / ".github" / "workflows" / "implementer.yml").read_text(encoding="utf-8")
+    refs = re.findall(r"uses:\s*anthropics/claude-code-action@(\S+)", body)
+    assert refs and all(SHA.match(r) for r in refs), refs
+    assert "anthropics/claude-code-action" not in FLOATING_BY_DESIGN
