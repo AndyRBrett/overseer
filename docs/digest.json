@@ -36,25 +36,25 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-26T01:40:05Z",
+      "last_ok": "2026-09-26T07:49:49Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-26T01:40:05Z",
+      "last_ok": "2026-09-26T07:49:49Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-26T01:40:05Z",
+      "last_ok": "2026-09-26T07:49:49Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "stale",
       "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-09-26T01:40:05Z",
+      "last_ok": "2026-09-26T07:49:49Z",
       "blind_cycles": 0,
       "stale_cycles": 1
     }
@@ -95,20 +95,20 @@
       "repo": "AndyRBrett/overseer"
     },
     {
-      "score": 0.108,
+      "score": 0.226,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.388,
+        "kpi": 0.978,
         "backlog": 0.2
       },
-      "why": "success_rate_7d is 55%; 2 open ideas",
+      "why": "success_rate_7d is 2%; 2 open ideas",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
       "short": "is working, but the numbers it reports look bad",
       "action": "Have a look at its numbers.",
-      "notable": false,
+      "notable": true,
       "repo": "AndyRBrett/ufc-dashboard"
     },
     {
@@ -133,11 +133,12 @@
     "flagged": true,
     "projects": [
       "coachvision",
-      "Overseer"
+      "Overseer",
+      "UFC dashboard"
     ],
-    "message": "coachvision, Overseer are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+    "message": "coachvision, Overseer, UFC dashboard are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
+  "headline": "coachvision is running, but nothing has happened there lately. 2 others could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -296,5 +297,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-26T01:40:05Z"
+  "refreshed": "2026-09-26T07:49:49Z"
 }
