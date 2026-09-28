@@ -1642,7 +1642,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-28T15:36:41Z",
+  "generated": "2026-09-28T22:08:07Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1719,7 +1719,7 @@
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "last_dispatch": {
-      "at": "2026-09-28T15:20:53Z",
+      "at": "2026-09-28T20:57:00Z",
       "conclusion": "success"
     },
     "next": [],
