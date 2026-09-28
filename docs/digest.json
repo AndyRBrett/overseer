@@ -10,20 +10,13 @@
     "duplicates_blocked": 0
   },
   "rollup": {
-    "ok": 2,
+    "ok": 3,
     "total": 4,
     "issues": 0,
     "enhancements": 0,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
-      {
-        "name": "Overseer",
-        "status": "stale",
-        "detail": "data past-due \u00b7 stale 1 cycle",
-        "cycles": 1,
-        "nudge": true
-      },
       {
         "name": "coachvision",
         "status": "idle",
@@ -36,27 +29,25 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-09-28T07:02:56Z",
+      "last_ok": "2026-09-28T15:36:57Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-09-28T07:02:56Z",
+      "last_ok": "2026-09-28T15:36:57Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-09-28T07:02:56Z",
+      "last_ok": "2026-09-28T15:36:57Z",
       "blind_cycles": 0
     },
     "Overseer": {
-      "status": "stale",
-      "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-09-28T07:02:56Z",
-      "blind_cycles": 0,
-      "stale_cycles": 1
+      "status": "ok",
+      "last_ok": "2026-09-28T15:36:57Z",
+      "blind_cycles": 0
     }
   },
   "attention": [
@@ -78,23 +69,6 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.24,
-      "signals": {
-        "staleness": 0.6,
-        "errors": 0.0,
-        "kpi": 0.0,
-        "backlog": 0.0
-      },
-      "why": "data past-due",
-      "name": "Overseer",
-      "status": "stale",
-      "plain": "Overseer has stopped sending new information",
-      "short": "has stopped sending new information",
-      "action": "Check whether it is still running.",
-      "notable": true,
-      "repo": "AndyRBrett/overseer"
-    },
-    {
       "score": 0.06,
       "signals": {
         "staleness": 0.0,
@@ -112,32 +86,45 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.028,
+      "score": 0.0,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.067,
-        "backlog": 0.1
+        "kpi": 0.0,
+        "backlog": 0.0
       },
-      "why": "1 open idea; success_rate_7d is 84%",
+      "why": "healthy \u2014 nothing is asking for attention",
+      "name": "Overseer",
+      "status": "ok",
+      "plain": "Overseer looks fine",
+      "short": "looks fine",
+      "action": "Nothing to do.",
+      "notable": false,
+      "repo": "AndyRBrett/overseer"
+    },
+    {
+      "score": 0.0,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 0.0,
+        "backlog": 0.0
+      },
+      "why": "healthy \u2014 nothing is asking for attention",
       "name": "UFC dashboard",
       "status": "ok",
-      "plain": "UFC dashboard is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
+      "plain": "UFC dashboard looks fine",
+      "short": "looks fine",
+      "action": "Nothing to do.",
       "notable": false,
       "repo": "AndyRBrett/ufc-dashboard"
     }
   ],
   "systemic_risk": {
-    "flagged": true,
-    "projects": [
-      "coachvision",
-      "Overseer"
-    ],
-    "message": "coachvision, Overseer are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+    "flagged": false,
+    "projects": []
   },
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
+  "headline": "coachvision is running, but nothing has happened there lately.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -296,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-09-28T07:02:56Z"
+  "refreshed": "2026-09-28T15:36:57Z"
 }

@@ -211,25 +211,6 @@
     },
     {
       "closed_at": null,
-      "created_at": "2026-09-07T14:10:49+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 117,
-      "repo": "AndyRBrett/ufc-dashboard",
-      "state": "open",
-      "status": "open",
-      "title": "Correlate movement-alert magnitude with actual fight outcomes to score alert predictive accuracy",
-      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/117"
-    },
-    {
-      "closed_at": null,
       "created_at": "2026-09-07T14:10:38+00:00",
       "delivered_by": "hand",
       "effort": "medium",
@@ -1661,7 +1642,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-09-28T07:02:43Z",
+  "generated": "2026-09-28T15:36:41Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1704,8 +1685,8 @@
         "duplicate": 0,
         "in_flight": 0,
         "not_planned": 0,
-        "open": 1,
-        "proposed": 2,
+        "open": 0,
+        "proposed": 1,
         "reject_rate": null,
         "sample": "too small",
         "settled": 1,
@@ -1718,8 +1699,8 @@
       "duplicate": 10,
       "in_flight": 0,
       "not_planned": 7,
-      "open": 10,
-      "proposed": 79,
+      "open": 9,
+      "proposed": 78,
       "reject_rate": 0.246,
       "sample": "sufficient",
       "settled": 69,
@@ -1738,21 +1719,21 @@
     "failed_label": "overseer:implement-failed",
     "in_flight": [],
     "last_dispatch": {
-      "at": "2026-09-14T22:08:57Z",
+      "at": "2026-09-28T15:20:53Z",
       "conclusion": "success"
     },
     "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.736,
+    "delivery_rate": 0.746,
     "duplicate": 10,
-    "duplicate_rate": 0.122,
+    "duplicate_rate": 0.123,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
-    "open": 10,
-    "proposed": 82,
+    "open": 9,
+    "proposed": 81,
     "shipped": 53,
     "shipped_before_implementer": 32,
     "shipped_by_hand": 17,
