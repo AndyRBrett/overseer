@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-01T23:57:46Z",
+      "last_ok": "2026-10-02T05:49:25Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-01T23:57:46Z",
+      "last_ok": "2026-10-02T05:49:25Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-01T23:57:46Z",
+      "last_ok": "2026-10-02T05:49:25Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-01T23:57:46Z",
+      "last_ok": "2026-10-02T05:49:25Z",
       "blind_cycles": 0
     }
   },
@@ -67,6 +67,23 @@
       "action": "Check whether it has anything to do.",
       "notable": true,
       "repo": "AndyRBrett/coachvision"
+    },
+    {
+      "score": 0.118,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 0.592,
+        "backlog": 0.0
+      },
+      "why": "success_rate_7d is 37%",
+      "name": "UFC dashboard",
+      "status": "ok",
+      "plain": "UFC dashboard is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
+      "action": "Have a look at its numbers.",
+      "notable": false,
+      "repo": "AndyRBrett/ufc-dashboard"
     },
     {
       "score": 0.06,
@@ -101,23 +118,6 @@
       "action": "Nothing to do.",
       "notable": false,
       "repo": "AndyRBrett/overseer"
-    },
-    {
-      "score": 0.0,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.0,
-        "backlog": 0.0
-      },
-      "why": "healthy \u2014 nothing is asking for attention",
-      "name": "UFC dashboard",
-      "status": "ok",
-      "plain": "UFC dashboard looks fine",
-      "short": "looks fine",
-      "action": "Nothing to do.",
-      "notable": false,
-      "repo": "AndyRBrett/ufc-dashboard"
     }
   ],
   "systemic_risk": {
@@ -283,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-01T23:57:46Z"
+  "refreshed": "2026-10-02T05:49:25Z"
 }
