@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-02T18:30:45Z",
+      "last_ok": "2026-10-02T23:02:50Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-02T18:30:45Z",
+      "last_ok": "2026-10-02T23:02:50Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-02T18:30:45Z",
+      "last_ok": "2026-10-02T23:02:50Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-02T18:30:45Z",
+      "last_ok": "2026-10-02T23:02:50Z",
       "blind_cycles": 0
     }
   },
@@ -69,23 +69,6 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.191,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.956,
-        "backlog": 0.0
-      },
-      "why": "success_rate_7d is 4%",
-      "name": "UFC dashboard",
-      "status": "ok",
-      "plain": "UFC dashboard is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
-      "notable": true,
-      "repo": "AndyRBrett/ufc-dashboard"
-    },
-    {
       "score": 0.06,
       "signals": {
         "staleness": 0.0,
@@ -101,6 +84,23 @@
       "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/crypto-trading"
+    },
+    {
+      "score": 0.01,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 0.048,
+        "backlog": 0.0
+      },
+      "why": "success_rate_7d is 86%",
+      "name": "UFC dashboard",
+      "status": "ok",
+      "plain": "UFC dashboard is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
+      "action": "Have a look at its numbers.",
+      "notable": false,
+      "repo": "AndyRBrett/ufc-dashboard"
     },
     {
       "score": 0.0,
@@ -121,14 +121,10 @@
     }
   ],
   "systemic_risk": {
-    "flagged": true,
-    "projects": [
-      "coachvision",
-      "UFC dashboard"
-    ],
-    "message": "coachvision, UFC dashboard are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+    "flagged": false,
+    "projects": []
   },
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
+  "headline": "coachvision is running, but nothing has happened there lately.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -287,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-02T18:30:45Z"
+  "refreshed": "2026-10-02T23:02:50Z"
 }
