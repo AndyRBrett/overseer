@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-04T00:44:31Z",
+      "last_ok": "2026-10-04T07:01:27Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-04T00:44:31Z",
+      "last_ok": "2026-10-04T07:01:27Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-04T00:44:31Z",
+      "last_ok": "2026-10-04T07:01:27Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-04T00:44:31Z",
+      "last_ok": "2026-10-04T07:01:27Z",
       "blind_cycles": 0
     }
   },
@@ -69,23 +69,6 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.068,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.342,
-        "backlog": 0.0
-      },
-      "why": "success_rate_7d is 59%",
-      "name": "UFC dashboard",
-      "status": "ok",
-      "plain": "UFC dashboard is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
-      "notable": false,
-      "repo": "AndyRBrett/ufc-dashboard"
-    },
-    {
       "score": 0.06,
       "signals": {
         "staleness": 0.0,
@@ -101,6 +84,23 @@
       "action": "Some ideas are waiting for you to look at them.",
       "notable": false,
       "repo": "AndyRBrett/crypto-trading"
+    },
+    {
+      "score": 0.004,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 0.022,
+        "backlog": 0.0
+      },
+      "why": "success_rate_7d is 88%",
+      "name": "UFC dashboard",
+      "status": "ok",
+      "plain": "UFC dashboard is working, but the numbers it reports look bad",
+      "short": "is working, but the numbers it reports look bad",
+      "action": "Have a look at its numbers.",
+      "notable": false,
+      "repo": "AndyRBrett/ufc-dashboard"
     },
     {
       "score": 0.0,
@@ -283,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-04T00:44:31Z"
+  "refreshed": "2026-10-04T07:01:27Z"
 }
