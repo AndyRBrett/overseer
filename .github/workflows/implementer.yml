@@ -321,7 +321,7 @@ jobs:
         # agent fixes landed unasked — but this job holds the Anthropic key and
         # a write token, and a floating tag lets whoever moves it choose what
         # runs here with them.
-        uses: anthropics/claude-code-action@9171db3e57d6a3140a37ddc2ba92788584e0ead6 # v1.0.234
+        uses: anthropics/claude-code-action@97c53473391bff1901034d4b454b5bac7ab7a029 # v1.0.239
         with:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           # See the block above: this is what decides whether the resulting PR
