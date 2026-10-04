@@ -1,8 +1,10 @@
 # Why this pause exists, because a settings field had nowhere to put it:
-# September's API spend ran high. Skipping the Monday 2026-09-28 cycle
-# (review $0.34 + three implementation attempts ~$4.50) and resuming on the
-# 30th. Requested 2026-09-22; see CLAUDE.md and pause.py.
+# Extending September's spend pause by a month. The first pause (resume
+# 2026-09-30) lapsed; requested again 2026-10-04 to push the review out
+# another month. Skips the Mondays 2026-10-05 through 2026-11-02 — reviews
+# and implementation both — so the first automated run back is Monday
+# 2026-11-09. See CLAUDE.md and pause.py.
 #
 # This is the RESUME date, not the last paused day. Delete this file to end
 # the pause early — leaving it is harmless, it goes inert once the date passes.
-2026-09-30
+2026-11-04
