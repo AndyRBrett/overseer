@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-05T22:44:31Z",
+      "last_ok": "2026-10-06T03:06:08Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-05T22:44:31Z",
+      "last_ok": "2026-10-06T03:06:08Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-05T22:44:31Z",
+      "last_ok": "2026-10-06T03:06:08Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-05T22:44:31Z",
+      "last_ok": "2026-10-06T03:06:08Z",
       "blind_cycles": 0
     }
   },
@@ -86,23 +86,6 @@
       "repo": "AndyRBrett/crypto-trading"
     },
     {
-      "score": 0.036,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 0.178,
-        "backlog": 0.0
-      },
-      "why": "success_rate_7d is 74%",
-      "name": "UFC dashboard",
-      "status": "ok",
-      "plain": "UFC dashboard is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
-      "notable": false,
-      "repo": "AndyRBrett/ufc-dashboard"
-    },
-    {
       "score": 0.0,
       "signals": {
         "staleness": 0.0,
@@ -118,6 +101,23 @@
       "action": "Nothing to do.",
       "notable": false,
       "repo": "AndyRBrett/overseer"
+    },
+    {
+      "score": 0.0,
+      "signals": {
+        "staleness": 0.0,
+        "errors": 0.0,
+        "kpi": 0.0,
+        "backlog": 0.0
+      },
+      "why": "healthy \u2014 nothing is asking for attention",
+      "name": "UFC dashboard",
+      "status": "ok",
+      "plain": "UFC dashboard looks fine",
+      "short": "looks fine",
+      "action": "Nothing to do.",
+      "notable": false,
+      "repo": "AndyRBrett/ufc-dashboard"
     }
   ],
   "systemic_risk": {
@@ -177,8 +177,8 @@
       "unpriced_runs": 0
     },
     "last_30d": {
-      "total_usd": 1.2369,
-      "runs": 3,
+      "total_usd": 0.8092,
+      "runs": 2,
       "unpriced_runs": 0
     }
   },
@@ -283,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-05T22:44:31Z"
+  "refreshed": "2026-10-06T03:06:08Z"
 }
