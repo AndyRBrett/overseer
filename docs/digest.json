@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-06T21:42:35Z",
+      "last_ok": "2026-10-07T01:38:48Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-06T21:42:35Z",
+      "last_ok": "2026-10-07T01:38:48Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-06T21:42:35Z",
+      "last_ok": "2026-10-07T01:38:48Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-06T21:42:35Z",
+      "last_ok": "2026-10-07T01:38:48Z",
       "blind_cycles": 0
     }
   },
@@ -69,14 +69,14 @@
       "repo": "AndyRBrett/coachvision"
     },
     {
-      "score": 0.084,
+      "score": 0.087,
       "signals": {
         "staleness": 0.0,
         "errors": 0.0,
-        "kpi": 0.421,
+        "kpi": 0.433,
         "backlog": 0.0
       },
-      "why": "success_rate_7d is 52%",
+      "why": "success_rate_7d is 51%",
       "name": "UFC dashboard",
       "status": "ok",
       "plain": "UFC dashboard is working, but the numbers it reports look bad",
@@ -177,8 +177,8 @@
       "unpriced_runs": 0
     },
     "last_30d": {
-      "total_usd": 0.8092,
-      "runs": 2,
+      "total_usd": 0.3807,
+      "runs": 1,
       "unpriced_runs": 0
     }
   },
@@ -283,5 +283,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-06T21:42:35Z"
+  "refreshed": "2026-10-07T01:38:48Z"
 }
