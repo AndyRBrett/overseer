@@ -29,24 +29,24 @@
   "projects": {
     "Trading bot": {
       "status": "ok",
-      "last_ok": "2026-10-07T22:04:24Z",
+      "last_ok": "2026-10-08T02:02:44Z",
       "blind_cycles": 0
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-10-07T22:04:24Z",
+      "last_ok": "2026-10-08T02:02:44Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-10-07T22:04:24Z",
+      "last_ok": "2026-10-08T02:02:44Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-10-07T22:04:24Z",
+      "last_ok": "2026-10-08T02:02:44Z",
       "blind_cycles": 0
     }
   },
@@ -76,7 +76,7 @@
         "kpi": 1.0,
         "backlog": 0.4
       },
-      "why": "sharpe is -3.98; 4 open ideas",
+      "why": "sharpe is -4.37; 4 open ideas",
       "name": "Trading bot",
       "status": "ok",
       "plain": "Trading bot is working, but the numbers it reports look bad",
@@ -287,5 +287,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-10-07T22:04:24Z"
+  "refreshed": "2026-10-08T02:02:44Z"
 }
