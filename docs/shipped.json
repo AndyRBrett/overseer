@@ -1518,25 +1518,6 @@
       "url": "https://github.com/AndyRBrett/overseer/issues/5"
     },
     {
-      "closed_at": "2026-06-20T01:30:36+00:00",
-      "created_at": "2026-06-20T01:20:10+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 4,
-      "repo": "AndyRBrett/overseer",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Flag zero-activity (\"blind\") projects as a distinct state instead of treating errors-empty as healthy",
-      "url": "https://github.com/AndyRBrett/overseer/issues/4"
-    },
-    {
       "closed_at": "2026-06-20T00:20:48+00:00",
       "created_at": "2026-06-19T17:35:22+00:00",
       "delivered_by": "hand",
@@ -1576,7 +1557,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-10-18T06:00:57Z",
+  "generated": "2026-10-18T11:19:03Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1608,12 +1589,12 @@
         "in_flight": 0,
         "not_planned": 1,
         "open": 0,
-        "proposed": 25,
-        "reject_rate": 0.24,
+        "proposed": 24,
+        "reject_rate": 0.25,
         "sample": "sufficient",
-        "settled": 25,
-        "ship_rate": 0.76,
-        "shipped": 19
+        "settled": 24,
+        "ship_rate": 0.75,
+        "shipped": 18
       }
     },
     "min_settled": 4,
@@ -1622,12 +1603,12 @@
       "in_flight": 0,
       "not_planned": 7,
       "open": 9,
-      "proposed": 75,
-      "reject_rate": 0.258,
+      "proposed": 74,
+      "reject_rate": 0.262,
       "sample": "sufficient",
-      "settled": 66,
-      "ship_rate": 0.742,
-      "shipped": 49
+      "settled": 65,
+      "ship_rate": 0.738,
+      "shipped": 48
     }
   },
   "queue": {
@@ -1648,16 +1629,16 @@
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.735,
+    "delivery_rate": 0.731,
     "duplicate": 10,
-    "duplicate_rate": 0.128,
+    "duplicate_rate": 0.13,
     "implementer_since": "2026-08-17T22:11:04+00:00",
     "in_flight": 0,
     "not_planned": 9,
     "open": 9,
-    "proposed": 78,
-    "shipped": 50,
-    "shipped_before_implementer": 30,
+    "proposed": 77,
+    "shipped": 49,
+    "shipped_before_implementer": 29,
     "shipped_by_hand": 16,
     "shipped_by_implementer": 4
   }
