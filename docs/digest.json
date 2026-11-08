@@ -10,13 +10,20 @@
     "duplicates_blocked": 0
   },
   "rollup": {
-    "ok": 3,
+    "ok": 2,
     "total": 4,
     "issues": 0,
     "enhancements": 0,
     "errors": 0,
     "nudge_threshold": 2,
     "attention": [
+      {
+        "name": "Trading bot",
+        "status": "stale",
+        "detail": "data 50.8h old, SLA 48h \u00b7 stale 1 cycle",
+        "cycles": 1,
+        "nudge": true
+      },
       {
         "name": "coachvision",
         "status": "idle",
@@ -28,29 +35,50 @@
   },
   "projects": {
     "Trading bot": {
-      "status": "ok",
-      "last_ok": "2026-11-08T19:47:57Z",
-      "blind_cycles": 0
+      "status": "stale",
+      "reason": "read OK but the project's data is past-due / stale",
+      "last_ok": "2026-11-08T23:47:27Z",
+      "blind_cycles": 0,
+      "stale_cycles": 1,
+      "age_hours": 50.8,
+      "sla_hours": 48
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-11-08T19:47:57Z",
+      "last_ok": "2026-11-08T23:47:27Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-11-08T19:47:57Z",
+      "last_ok": "2026-11-08T23:47:27Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-11-08T19:47:57Z",
+      "last_ok": "2026-11-08T23:47:27Z",
       "blind_cycles": 0
     }
   },
   "attention": [
+    {
+      "score": 0.509,
+      "signals": {
+        "staleness": 0.623,
+        "errors": 0.0,
+        "kpi": 1.0,
+        "backlog": 0.4
+      },
+      "why": "data 50.8h old against a 48h SLA; pnl is -210.51",
+      "name": "Trading bot",
+      "status": "stale",
+      "plain": "Trading bot has not sent anything new in 2 days",
+      "short": "has not sent anything new in 2 days",
+      "action": "Check whether it is still running.",
+      "notable": true,
+      "repo": "AndyRBrett/crypto-trading"
+    },
     {
       "score": 0.475,
       "signals": {
@@ -67,23 +95,6 @@
       "action": "Check whether it has anything to do.",
       "notable": true,
       "repo": "AndyRBrett/coachvision"
-    },
-    {
-      "score": 0.26,
-      "signals": {
-        "staleness": 0.0,
-        "errors": 0.0,
-        "kpi": 1.0,
-        "backlog": 0.4
-      },
-      "why": "pnl is -210.51; 4 open ideas",
-      "name": "Trading bot",
-      "status": "ok",
-      "plain": "Trading bot is working, but the numbers it reports look bad",
-      "short": "is working, but the numbers it reports look bad",
-      "action": "Have a look at its numbers.",
-      "notable": true,
-      "repo": "AndyRBrett/crypto-trading"
     },
     {
       "score": 0.0,
@@ -123,12 +134,12 @@
   "systemic_risk": {
     "flagged": true,
     "projects": [
-      "coachvision",
-      "Trading bot"
+      "Trading bot",
+      "coachvision"
     ],
-    "message": "coachvision, Trading bot are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
+    "message": "Trading bot, coachvision are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
-  "headline": "coachvision is running, but nothing has happened there lately. 1 other could use a look too.",
+  "headline": "Trading bot has not sent anything new in 2 days. 1 other could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -287,5 +298,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-11-08T19:47:57Z"
+  "refreshed": "2026-11-08T23:47:27Z"
 }
