@@ -84,11 +84,12 @@ from datetime import datetime, timezone
 # tests, not for configuration — the file is the only supported way to pause.
 PAUSE_FILE = os.getenv("OVERSEER_PAUSE_FILE", ".overseer-pause")
 
-# How far ahead a pause may legitimately reach. Ninety days is generous for
-# "costs are high this month" and still short enough that a mistyped year lands
-# outside it — which is the case this exists to catch, not a policy on how long
-# anyone may pause.
-MAX_PAUSE_DAYS = 90
+# How far ahead a pause may legitimately reach. It was ninety days until
+# 2026-11-09, when the ask was "four months" — 120 days, which this would have
+# refused as a typo and RUN on, the opposite of what was asked. 180 still sits
+# far inside the case this exists to catch: a mistyped year is 365+ days out.
+# It is that typo guard, not a policy on how long anyone may pause.
+MAX_PAUSE_DAYS = 180
 
 
 def _today(now=None):

@@ -1,10 +1,10 @@
 # Why this pause exists, because a settings field had nowhere to put it:
-# Extending September's spend pause by a month. The first pause (resume
-# 2026-09-30) lapsed; requested again 2026-10-04 to push the review out
-# another month. Skips the Mondays 2026-10-05 through 2026-11-02 — reviews
-# and implementation both — so the first automated run back is Monday
-# 2026-11-09. See CLAUDE.md and pause.py.
+# Four-month spend pause, requested 2026-11-09. The previous pause (resume
+# 2026-11-04) lapsed and the review + one implementation ran that Monday;
+# this stops everything automated from Monday 2026-11-16 through Monday
+# 2027-03-08, so the first automated run back is Monday 2027-03-15.
+# 120 days — needed MAX_PAUSE_DAYS raised from 90 to 180. See CLAUDE.md and pause.py.
 #
 # This is the RESUME date, not the last paused day. Delete this file to end
 # the pause early — leaving it is harmless, it goes inert once the date passes.
-2026-11-04
+2027-03-09
