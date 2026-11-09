@@ -1,6 +1,101 @@
 {
   "entries": [
     {
+      "closed_at": "2026-11-09T15:23:42+00:00",
+      "created_at": "2026-11-09T14:10:22+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 334,
+      "repo": "AndyRBrett/ufc-dashboard",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Prioritize re-scrape scheduling for stale events as fight date approaches",
+      "url": "https://github.com/AndyRBrett/ufc-dashboard/issues/334"
+    },
+    {
+      "closed_at": "2026-11-09T15:23:05+00:00",
+      "created_at": "2026-11-09T14:09:08+00:00",
+      "delivered_by": "implementer",
+      "kind": "bug",
+      "labels": [
+        "overseer:implementing"
+      ],
+      "number": 82,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "not_planned",
+      "title": "Trading bot status stale: no fresh run in 65h, breaching 48h SLA (daily cron appears lapsed)",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/82"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-11-09T14:10:27+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 108,
+      "repo": "AndyRBrett/overseer",
+      "state": "open",
+      "status": "open",
+      "title": "Add per-project rolling success-rate baseline regression detector to the weekly digest",
+      "url": "https://github.com/AndyRBrett/overseer/issues/108"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-11-09T14:10:17+00:00",
+      "delivered_by": "hand",
+      "effort": "medium",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:medium",
+        "enhancement",
+        "impact:medium"
+      ],
+      "number": 52,
+      "repo": "AndyRBrett/coachvision",
+      "state": "open",
+      "status": "open",
+      "title": "Add multi-athlete visual tagging to separate per-person technique stats in shared-frame clips",
+      "url": "https://github.com/AndyRBrett/coachvision/issues/52"
+    },
+    {
+      "closed_at": null,
+      "created_at": "2026-11-09T14:10:13+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "fix_ref": "PR #84",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/84",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 83,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "open",
+      "status": "in_flight",
+      "title": "Add risk-breaker trip-duration tracking with automatic de-risk/review escalation for persistently tripped accounts",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/83"
+    },
+    {
       "closed_at": "2026-09-14T15:25:01+00:00",
       "created_at": "2026-09-14T14:11:35+00:00",
       "delivered_by": "implementer",
@@ -1152,28 +1247,6 @@
       "url": "https://github.com/AndyRBrett/overseer/issues/13"
     },
     {
-      "closed_at": "2026-07-02T15:23:56+00:00",
-      "created_at": "2026-06-22T18:11:16+00:00",
-      "delivered_by": "hand",
-      "effort": "low",
-      "fix_ref": "PR #21",
-      "fix_sha": "fec74bf",
-      "fix_url": "https://github.com/AndyRBrett/overseer/pull/21",
-      "impact": "high",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:high"
-      ],
-      "number": 8,
-      "repo": "AndyRBrett/overseer",
-      "state": "closed",
-      "status": "shipped",
-      "title": "Add idle-project detection with configurable nudges and digest summary at top of dashboard",
-      "url": "https://github.com/AndyRBrett/overseer/issues/8"
-    },
-    {
       "closed_at": "2026-07-02T15:20:15+00:00",
       "created_at": "2026-06-22T18:11:05+00:00",
       "delivered_by": "hand",
@@ -1497,15 +1570,15 @@
     }
   ],
   "errors": {},
-  "generated": "2026-11-09T14:10:49Z",
+  "generated": "2026-11-09T17:38:17Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
         "duplicate": 2,
         "in_flight": 0,
         "not_planned": 3,
-        "open": 5,
-        "proposed": 22,
+        "open": 6,
+        "proposed": 23,
         "reject_rate": 0.294,
         "sample": "sufficient",
         "settled": 17,
@@ -1514,10 +1587,10 @@
       },
       "AndyRBrett/crypto-trading": {
         "duplicate": 3,
-        "in_flight": 0,
+        "in_flight": 1,
         "not_planned": 3,
         "open": 4,
-        "proposed": 28,
+        "proposed": 29,
         "reject_rate": 0.25,
         "sample": "sufficient",
         "settled": 24,
@@ -1528,27 +1601,39 @@
         "duplicate": 5,
         "in_flight": 0,
         "not_planned": 1,
-        "open": 0,
+        "open": 1,
         "proposed": 21,
-        "reject_rate": 0.286,
+        "reject_rate": 0.3,
         "sample": "sufficient",
-        "settled": 21,
-        "ship_rate": 0.714,
-        "shipped": 15
+        "settled": 20,
+        "ship_rate": 0.7,
+        "shipped": 14
+      },
+      "AndyRBrett/ufc-dashboard": {
+        "duplicate": 0,
+        "in_flight": 0,
+        "not_planned": 1,
+        "open": 0,
+        "proposed": 1,
+        "reject_rate": null,
+        "sample": "too small",
+        "settled": 1,
+        "ship_rate": null,
+        "shipped": 0
       }
     },
     "min_settled": 4,
     "overall": {
       "duplicate": 10,
-      "in_flight": 0,
-      "not_planned": 7,
-      "open": 9,
-      "proposed": 71,
-      "reject_rate": 0.274,
+      "in_flight": 1,
+      "not_planned": 8,
+      "open": 11,
+      "proposed": 74,
+      "reject_rate": 0.29,
       "sample": "sufficient",
       "settled": 62,
-      "ship_rate": 0.726,
-      "shipped": 45
+      "ship_rate": 0.71,
+      "shipped": 44
     }
   },
   "queue": {
@@ -1560,25 +1645,37 @@
     ],
     "eligible": 0,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [],
+    "in_flight": [
+      {
+        "effort": "low",
+        "fix_ref": "PR #84",
+        "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/84",
+        "impact": "medium",
+        "kind": "enhancement",
+        "number": 83,
+        "repo": "AndyRBrett/crypto-trading",
+        "title": "Add risk-breaker trip-duration tracking with automatic de-risk/review escalation for persistently tripped accounts",
+        "url": "https://github.com/AndyRBrett/crypto-trading/issues/83"
+      }
+    ],
     "last_dispatch": {
-      "at": "2026-11-03T01:28:50Z",
+      "at": "2026-11-09T17:05:22Z",
       "conclusion": "success"
     },
     "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.719,
+    "delivery_rate": 0.662,
     "duplicate": 10,
-    "duplicate_rate": 0.135,
+    "duplicate_rate": 0.128,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 0,
-    "not_planned": 9,
-    "open": 9,
-    "proposed": 74,
-    "shipped": 46,
-    "shipped_before_implementer": 26,
+    "in_flight": 1,
+    "not_planned": 11,
+    "open": 11,
+    "proposed": 78,
+    "shipped": 45,
+    "shipped_before_implementer": 25,
     "shipped_by_hand": 16,
     "shipped_by_implementer": 4
   }
