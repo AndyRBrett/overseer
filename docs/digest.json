@@ -20,7 +20,7 @@
       {
         "name": "Trading bot",
         "status": "stale",
-        "detail": "data 50.8h old, SLA 48h \u00b7 stale 1 cycle",
+        "detail": "data 57.8h old, SLA 48h \u00b7 stale 1 cycle",
         "cycles": 1,
         "nudge": true
       },
@@ -37,40 +37,40 @@
     "Trading bot": {
       "status": "stale",
       "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-11-08T23:47:27Z",
+      "last_ok": "2026-11-09T06:48:49Z",
       "blind_cycles": 0,
       "stale_cycles": 1,
-      "age_hours": 50.8,
+      "age_hours": 57.8,
       "sla_hours": 48
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-11-08T23:47:27Z",
+      "last_ok": "2026-11-09T06:48:49Z",
       "blind_cycles": 0,
       "idle_cycles": 7
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-11-08T23:47:27Z",
+      "last_ok": "2026-11-09T06:48:49Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-11-08T23:47:27Z",
+      "last_ok": "2026-11-09T06:48:49Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.509,
+      "score": 0.533,
       "signals": {
-        "staleness": 0.623,
+        "staleness": 0.682,
         "errors": 0.0,
         "kpi": 1.0,
         "backlog": 0.4
       },
-      "why": "data 50.8h old against a 48h SLA; pnl is -210.51",
+      "why": "data 57.8h old against a 48h SLA; pnl is -210.51",
       "name": "Trading bot",
       "status": "stale",
       "plain": "Trading bot has not sent anything new in 2 days",
@@ -298,5 +298,5 @@
       "text": "digest not_configured"
     }
   ],
-  "refreshed": "2026-11-08T23:47:27Z"
+  "refreshed": "2026-11-09T06:48:49Z"
 }
