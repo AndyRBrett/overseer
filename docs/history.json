@@ -543,6 +543,42 @@
         "baseline_usd": 0.5194,
         "saved_usd": 0.1387
       }
+    },
+    {
+      "date": "2026-11-09",
+      "generated": "2026-11-09T14:10:49Z",
+      "status": "completed",
+      "summary": "STALENESS ALERTS\n- Trading bot \u2014 data 65.1h old, SLA 48h \u00b7 stale 2 cycles\n\nATTENTION RANKING (WHERE AN HOUR IS WORTH MOST)\n1. Trading bot (0.56) \u2014 data 65.1h old against a 48h SLA; pnl is -210.51\n2. coachvision (0.47) \u2014 no activity for 8 cycle(s); 5 open ideas\n\nIssues Found\n- crypto-trading: Status stale \u2014 no fresh run in 65h vs 48h SLA (daily cron appears lapsed), 3 open positions (\u2212$855.82 unrealized) going unmonitored; filed as #82.\n- No other confirmed bugs (coachvision idle-but-healthy within SLA; ufc-dashboard healthy, one benign far-future stale event; overseer healthy).\n\nTop Enhancement Ideas (ranked)\n1. crypto-trading \u2014 Risk-breaker trip-duration tracking + auto-escalation (effort: low, impact: medium): breakout/regime/trend breakers tripped 11-17+ days with zero visibility \u2014 pair this with the stale-feed fix so stuck risk states don't go unnoticed again.\n2. ufc-dashboard \u2014 Prioritize re-scrape frequency for stale events as fight date nears (effort: low, impact: medium): catches late odds movement on cards like oliveira-vs-lopes without raising cadence for everything.\n3. coachvision \u2014 Multi-athlete tagging for shared-frame clips (effort: medium, impact: medium): enables real per-student stats instead of aggregated per-clip numbers.\n4. overseer \u2014 Rolling 7d-vs-30d success-rate baseline regression detector (effort: medium, impact: medium): catches gradual degradation that single-run checks miss.\n\nAGING BACKLOG (OPEN OVER 60 DAYS)\n- 7 item(s) untriaged.\n- coachvision #24 \u2014 Pose-estimation technique form-scoring that compares ingested clips against a reference-technique library (86d open)\n- coachvision #25 \u2014 Add cloud-storage / action-camera auto-import connector (Google Drive, Dropbox, GoPro Cloud API) to feed the drop-folder watcher (86d open)\n- coachvision #34 \u2014 Add a lightweight mobile quick-upload web endpoint (PWA / iOS Shortcut) to lower friction for post-session clip ingestion (76d open)\n- crypto-trading #64 \u2014 Track signal-proximity metric trends over time and alert on convergence toward trigger thresholds (63d open)\n- crypto-trading #65 \u2014 Add correlated-cluster drawdown circuit breaker distinct from portfolio Sharpe-based sizing cut (63d open)\n- coachvision #40 \u2014 Add configurable technique-taxonomy schema for multi-discipline tagging (63d open)\n- \u2026and 1 more.",
+      "counts": {
+        "tools": 17,
+        "errors": 0,
+        "issues": 1,
+        "enhancements": 4,
+        "duplicates_blocked": 0
+      },
+      "projects": {
+        "Trading bot": {
+          "status": "stale",
+          "score": 0.25
+        },
+        "coachvision": {
+          "status": "idle",
+          "score": 0.5
+        },
+        "UFC dashboard": {
+          "status": "ok",
+          "score": 1.0
+        },
+        "Overseer": {
+          "status": "ok",
+          "score": 1.0
+        }
+      },
+      "spend": {
+        "total_usd": 0.4596,
+        "baseline_usd": 0.6048,
+        "saved_usd": 0.1453
+      }
     }
   ]
 }
