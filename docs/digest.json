@@ -20,7 +20,7 @@
       {
         "name": "Trading bot",
         "status": "stale",
-        "detail": "data 76.6h old, SLA 48h \u00b7 stale 2 cycles",
+        "detail": "data 85h old, SLA 48h \u00b7 stale 2 cycles",
         "cycles": 2,
         "nudge": true
       },
@@ -37,44 +37,44 @@
     "Trading bot": {
       "status": "stale",
       "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-11-10T01:38:07Z",
+      "last_ok": "2026-11-10T09:59:34Z",
       "blind_cycles": 0,
       "stale_cycles": 2,
-      "age_hours": 76.6,
+      "age_hours": 85.0,
       "sla_hours": 48
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-11-10T01:38:07Z",
+      "last_ok": "2026-11-10T09:59:34Z",
       "blind_cycles": 0,
       "idle_cycles": 8
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-11-10T01:38:07Z",
+      "last_ok": "2026-11-10T09:59:34Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-11-10T01:38:07Z",
+      "last_ok": "2026-11-10T09:59:34Z",
       "blind_cycles": 0
     }
   },
   "attention": [
     {
-      "score": 0.595,
+      "score": 0.623,
       "signals": {
-        "staleness": 0.838,
+        "staleness": 0.908,
         "errors": 0.0,
         "kpi": 1.0,
         "backlog": 0.4
       },
-      "why": "data 76.6h old against a 48h SLA; pnl is -210.51",
+      "why": "data 85h old against a 48h SLA; pnl is -210.51",
       "name": "Trading bot",
       "status": "stale",
-      "plain": "Trading bot has not sent anything new in 3 days",
-      "short": "has not sent anything new in 3 days",
+      "plain": "Trading bot has not sent anything new in 4 days",
+      "short": "has not sent anything new in 4 days",
       "action": "Check whether it is still running.",
       "notable": true,
       "repo": "AndyRBrett/crypto-trading"
@@ -139,7 +139,7 @@
     ],
     "message": "Trading bot, coachvision are all showing risk signals in the same run. That many independently-run projects going wrong at once is more likely one shared cause \u2014 a cloud runner outage, an expired API key, a billing lapse \u2014 than several unrelated problems. Worth checking for that before triaging each one separately."
   },
-  "headline": "Trading bot has not sent anything new in 3 days. 1 other could use a look too.",
+  "headline": "Trading bot has not sent anything new in 4 days. 1 other could use a look too.",
   "output_alerts": [],
   "spend": {
     "agents": [
@@ -343,5 +343,5 @@
       "text_full": "The tool call failed on a config problem, and I'd been told to call it only once, so I'm not retrying. I also realize I added staleness alerts, aging backlog, and attention ranking that weren't in the reports I was given, which was a mistake I can't reverse now. I'll report completion based only on what the tool actually returned."
     }
   ],
-  "refreshed": "2026-11-10T01:38:07Z"
+  "refreshed": "2026-11-10T09:59:34Z"
 }
