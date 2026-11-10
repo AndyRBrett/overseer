@@ -1,6 +1,29 @@
 {
   "entries": [
     {
+      "closed_at": "2026-11-09T18:19:06+00:00",
+      "created_at": "2026-11-09T14:10:13+00:00",
+      "delivered_by": "implementer",
+      "effort": "low",
+      "fix_ref": "PR #84",
+      "fix_sha": "4d4e7a7",
+      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/84",
+      "impact": "medium",
+      "kind": "enhancement",
+      "labels": [
+        "effort:low",
+        "enhancement",
+        "impact:medium",
+        "overseer:implementing"
+      ],
+      "number": 83,
+      "repo": "AndyRBrett/crypto-trading",
+      "state": "closed",
+      "status": "shipped",
+      "title": "Add risk-breaker trip-duration tracking with automatic de-risk/review escalation for persistently tripped accounts",
+      "url": "https://github.com/AndyRBrett/crypto-trading/issues/83"
+    },
+    {
       "closed_at": "2026-11-09T15:23:42+00:00",
       "created_at": "2026-11-09T14:10:22+00:00",
       "delivered_by": "implementer",
@@ -72,28 +95,6 @@
       "status": "open",
       "title": "Add multi-athlete visual tagging to separate per-person technique stats in shared-frame clips",
       "url": "https://github.com/AndyRBrett/coachvision/issues/52"
-    },
-    {
-      "closed_at": null,
-      "created_at": "2026-11-09T14:10:13+00:00",
-      "delivered_by": "implementer",
-      "effort": "low",
-      "fix_ref": "PR #84",
-      "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/84",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:low",
-        "enhancement",
-        "impact:medium",
-        "overseer:implementing"
-      ],
-      "number": 83,
-      "repo": "AndyRBrett/crypto-trading",
-      "state": "open",
-      "status": "in_flight",
-      "title": "Add risk-breaker trip-duration tracking with automatic de-risk/review escalation for persistently tripped accounts",
-      "url": "https://github.com/AndyRBrett/crypto-trading/issues/83"
     },
     {
       "closed_at": "2026-09-14T15:25:01+00:00",
@@ -1149,25 +1150,6 @@
       "url": "https://github.com/AndyRBrett/overseer/issues/12"
     },
     {
-      "closed_at": "2026-08-13T21:26:58+00:00",
-      "created_at": "2026-06-22T18:11:20+00:00",
-      "delivered_by": "hand",
-      "effort": "medium",
-      "impact": "medium",
-      "kind": "enhancement",
-      "labels": [
-        "effort:medium",
-        "enhancement",
-        "impact:medium"
-      ],
-      "number": 9,
-      "repo": "AndyRBrett/overseer",
-      "state": "closed",
-      "status": "duplicate",
-      "title": "Add schema-validation tests for each project's overseer-status.json contract",
-      "url": "https://github.com/AndyRBrett/overseer/issues/9"
-    },
-    {
       "closed_at": "2026-08-13T21:26:43+00:00",
       "created_at": "2026-07-02T15:29:56+00:00",
       "delivered_by": "hand",
@@ -1570,7 +1552,7 @@
     }
   ],
   "errors": {},
-  "generated": "2026-11-09T17:38:17Z",
+  "generated": "2026-11-10T01:37:54Z",
   "outcomes": {
     "by_repo": {
       "AndyRBrett/coachvision": {
@@ -1587,26 +1569,26 @@
       },
       "AndyRBrett/crypto-trading": {
         "duplicate": 3,
-        "in_flight": 1,
+        "in_flight": 0,
         "not_planned": 3,
         "open": 4,
         "proposed": 29,
-        "reject_rate": 0.25,
+        "reject_rate": 0.24,
         "sample": "sufficient",
-        "settled": 24,
-        "ship_rate": 0.75,
-        "shipped": 18
+        "settled": 25,
+        "ship_rate": 0.76,
+        "shipped": 19
       },
       "AndyRBrett/overseer": {
-        "duplicate": 5,
+        "duplicate": 4,
         "in_flight": 0,
         "not_planned": 1,
         "open": 1,
-        "proposed": 21,
-        "reject_rate": 0.3,
+        "proposed": 20,
+        "reject_rate": 0.263,
         "sample": "sufficient",
-        "settled": 20,
-        "ship_rate": 0.7,
+        "settled": 19,
+        "ship_rate": 0.737,
         "shipped": 14
       },
       "AndyRBrett/ufc-dashboard": {
@@ -1624,16 +1606,16 @@
     },
     "min_settled": 4,
     "overall": {
-      "duplicate": 10,
-      "in_flight": 1,
+      "duplicate": 9,
+      "in_flight": 0,
       "not_planned": 8,
       "open": 11,
-      "proposed": 74,
-      "reject_rate": 0.29,
+      "proposed": 73,
+      "reject_rate": 0.274,
       "sample": "sufficient",
       "settled": 62,
-      "ship_rate": 0.71,
-      "shipped": 44
+      "ship_rate": 0.726,
+      "shipped": 45
     }
   },
   "queue": {
@@ -1645,38 +1627,26 @@
     ],
     "eligible": 0,
     "failed_label": "overseer:implement-failed",
-    "in_flight": [
-      {
-        "effort": "low",
-        "fix_ref": "PR #84",
-        "fix_url": "https://github.com/AndyRBrett/crypto-trading/pull/84",
-        "impact": "medium",
-        "kind": "enhancement",
-        "number": 83,
-        "repo": "AndyRBrett/crypto-trading",
-        "title": "Add risk-breaker trip-duration tracking with automatic de-risk/review escalation for persistently tripped accounts",
-        "url": "https://github.com/AndyRBrett/crypto-trading/issues/83"
-      }
-    ],
+    "in_flight": [],
     "last_dispatch": {
-      "at": "2026-11-09T17:05:22Z",
+      "at": "2026-11-10T00:32:44Z",
       "conclusion": "success"
     },
     "next": [],
     "tier": "light"
   },
   "totals": {
-    "delivery_rate": 0.662,
-    "duplicate": 10,
-    "duplicate_rate": 0.128,
+    "delivery_rate": 0.676,
+    "duplicate": 9,
+    "duplicate_rate": 0.117,
     "implementer_since": "2026-08-17T22:11:04+00:00",
-    "in_flight": 1,
+    "in_flight": 0,
     "not_planned": 11,
     "open": 11,
-    "proposed": 78,
-    "shipped": 45,
+    "proposed": 77,
+    "shipped": 46,
     "shipped_before_implementer": 25,
     "shipped_by_hand": 16,
-    "shipped_by_implementer": 4
+    "shipped_by_implementer": 5
   }
 }
