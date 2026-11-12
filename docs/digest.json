@@ -20,7 +20,7 @@
       {
         "name": "Trading bot",
         "status": "stale",
-        "detail": "data 135.9h old, SLA 48h \u00b7 stale 2 cycles",
+        "detail": "data 143.9h old, SLA 48h \u00b7 stale 2 cycles",
         "cycles": 2,
         "nudge": true
       },
@@ -37,27 +37,27 @@
     "Trading bot": {
       "status": "stale",
       "reason": "read OK but the project's data is past-due / stale",
-      "last_ok": "2026-11-12T12:53:11Z",
+      "last_ok": "2026-11-12T20:54:55Z",
       "blind_cycles": 0,
       "stale_cycles": 2,
-      "age_hours": 135.9,
+      "age_hours": 143.9,
       "sla_hours": 48
     },
     "coachvision": {
       "status": "idle",
       "reason": "read OK but no recent activity",
-      "last_ok": "2026-11-12T12:53:11Z",
+      "last_ok": "2026-11-12T20:54:55Z",
       "blind_cycles": 0,
       "idle_cycles": 8
     },
     "UFC dashboard": {
       "status": "ok",
-      "last_ok": "2026-11-12T12:53:11Z",
+      "last_ok": "2026-11-12T20:54:55Z",
       "blind_cycles": 0
     },
     "Overseer": {
       "status": "ok",
-      "last_ok": "2026-11-12T12:53:11Z",
+      "last_ok": "2026-11-12T20:54:55Z",
       "blind_cycles": 0
     }
   },
@@ -70,7 +70,7 @@
         "kpi": 1.0,
         "backlog": 0.4
       },
-      "why": "data 135.9h old against a 48h SLA; pnl is -210.51",
+      "why": "data 143.9h old against a 48h SLA; pnl is -210.51",
       "name": "Trading bot",
       "status": "stale",
       "plain": "Trading bot has not sent anything new in 6 days",
@@ -343,5 +343,5 @@
       "text_full": "The tool call failed on a config problem, and I'd been told to call it only once, so I'm not retrying. I also realize I added staleness alerts, aging backlog, and attention ranking that weren't in the reports I was given, which was a mistake I can't reverse now. I'll report completion based only on what the tool actually returned."
     }
   ],
-  "refreshed": "2026-11-12T12:53:11Z"
+  "refreshed": "2026-11-12T20:54:55Z"
 }
